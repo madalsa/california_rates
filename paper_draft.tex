@@ -1,0 +1,250 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{setspace}
+\usepackage{caption}
+\usepackage{subcaption}
+\doublespacing
+\title{Distributional Impacts of Electricity Rate Design Reform }
+\author{
+Madalsa Singh\thanks{Corresponding author. Email: [email]} \\
+\textit{[Your Institution]} \\
+\and
+Patricia Hidalgo-Gonzalez \\
+\textit{[Institution]} \\
+\and
+Rajni Bansal \\
+\textit{[Institution]}\\
+\and
+Ranjit Deshmukh \\
+\textit{[Institution]}
+}
+\date{\today}
+\begin{document}
+\maketitle
+\begin{abstract}
+This paper examines the distributional impacts of electricity rate design reforms in California's investor-owned utilities. We analyze how shifts from volumetric to fixed-charge pricing structures, combined with policy interventions such as wildfire cost removal and return-on-equity reductions, affect residential customers across income levels, consumption patterns, and climate zones. Using synthetic building profiles representative of California's building stock, we design revenue-neutral rate structures and calculate household-level bill impacts under various policy scenarios. Our findings reveal systematic distributional effects: fixed charges redistribute costs from high-consumption to low-consumption households, with impacts varying significantly by income level and geographic location. Policy interventions to remove wildfire costs and reduce utility returns on equity reduce bills across all customer groups but provide larger percentage savings to lower-income households. xxxxxx
+
+\textbf{Keywords:} Electricity pricing, rate design, fixed charges, distributional equity, California, time-of-use rates
+\end{abstract}
+
+\section{Introduction}
+California's electricity sector faces mounting financial pressures from wildfire mitigation costs, grid modernization investments, and the transition to renewable energy. The most recent cost increases have translated into residential electricity rates in the three investor-owned utilities to be among the highest in the continental United States, with San Diego Gas \& Electric (SDGE) customers facing average rates exceeding \$0.50 per kilowatt-hour (kWh) \citep{[citation needed]}. This high-rate environment has intensified policy debates over electricity rate design, particularly regarding the balance between volumetric charges (based on consumption) and fixed monthly charges.
+
+In 2024, the California Public Utilities Commission (CPUC) authorized investor-owned utilities to implement income-graduated fixed charges as part of broader rate reform efforts. SDGE introduced monthly fixed charges of \$6 for low-income California Alternate Rates for Energy (CARE) customers and \$24 for non-CARE customers, with corresponding reductions in volumetric rates \citep{[citation needed]}. Proponents argue that fixed charges improve utility cost recovery, reduce rate volatility, and better align charges with the cost structure of distribution systems. Critics contend that fixed charges reduce incentives for energy conservation, disproportionately burden low-consumption households, and undermine distributed energy resource adoption \citep{[citations needed]}.
+
+This study contributes to the electricity rate design literature by providing granular, building-level analysis of how different rate structures affect customer bills across the distribution of income, consumption, and geography. While previous studies have examined rate design impacts using aggregate or representative customer archetypes \citep{[citations]}, our approach uses detailed synthetic building profiles to capture heterogeneity within customer populations. We analyze not only the current fixed charge policy but also alternative rate designs incorporating wildfire cost removal and utility return-on-equity reductions---policy interventions under active consideration in California.
+
+Our analysis focuses on SDGE's service territory as a case study, with plans to extend the methodology to all California investor-owned utilities (Pacific Gas \& Electric and Southern California Edison). SDGE serves approximately 1.3 million residential customers across three distinct climate zones (California Energy Commission zones 7, 10, and 14), providing meaningful variation in consumption patterns and building characteristics.
+
+\section{Methods}
+
+\subsection{Data Sources}
+
+\subsubsection{Building Profiles}
+We obtained residential building energy consumption profiles from the National Renewable Energy Laboratory (NREL) ResStock dataset \citep{[ResStock citation]}, which provides synthetic hourly electricity consumption for representative building stocks across the United States. We extracted 4,898 building profiles located in San Diego County, identified via census Public Use Microdata Area (PUMA) codes corresponding to SDGE's service territory, from the California Baseline dataset. Each building profile includes:
+\begin{itemize}
+    \item Hourly electricity consumption at 15-minute resolution for a typical meteorological year (8,760 hours)
+    \item Building characteristics (square footage, vintage, construction type, HVAC systems)
+    \item Income classification based on area median income (AMI) thresholds
+    \item California Energy Commission (CEC) climate zone designation
+    \item A uniform statistical weighting factor of 252.3, representing the number of actual households each sample building represents
+\end{itemize}
+
+The 4,898 sample buildings represent approximately 1.24 million weighted households---93.4\% of SDGE's 1.32 million residential customers. The sample spans 23 PUMAs across three primary CEC climate zones: CZ~7 (coastal San Diego, 71.2\% of sample), CZ~10 (inland valleys, 27.7\%), and CZ~14 (mountain/desert, 0.8\%), with a small number of buildings in adjacent zones CZ~6 and CZ~15.
+
+\subsubsection{Sample Representativeness}
+\label{sec:representativeness}
+
+Table~\ref{tab:sample_comparison} compares key characteristics of our simulated building sample against actual SDGE service territory data and San Diego County census statistics. The sample closely reproduces the observed housing stock composition: single-family detached homes constitute 50.6\% of the sample versus approximately 51\% in ACS data, multi-family units represent 35.6\% versus approximately 35\%, and the homeownership rate of 53.0\% aligns with the county-wide estimate of 54\%.
+
+The primary discrepancy between the simulated sample and actual SDGE data is in average electricity consumption. After applying RASS calibration (described in Section~\ref{sec:rass}), the sample mean consumption of 5,309~kWh per customer per year exceeds SDGE's reported average of 3,634~kWh by approximately 46\%. This difference arises from two sources. First, SDGE's average includes very low-consumption accounts (vacant units, partial-year occupancy, common-area meters) that are not represented in ResStock's occupied-building sample. Second, ResStock's building physics simulations tend to produce higher consumption estimates than observed utility data, particularly for cooling loads in coastal climate zones---hence the RASS scaling factors below 1.0 for CZ~7 (0.713) and CZ~10 (0.841). Despite this level difference, the \textit{relative} consumption patterns across climate zones, housing types, and income groups are well-preserved, which is the relevant feature for our distributional analysis of rate design impacts.
+
+The CARE eligibility rate in our sample (25.9\% based on income classification) is modestly below SDGE's reported 28.1\% participation rate. This difference is within the range expected given that CARE eligibility depends on household size and income thresholds that are approximated by ResStock's AMI-based classifications.
+
+\input{table_sample_comparison}
+
+\subsubsection{RASS Calibration}
+\label{sec:rass}
+
+We calibrated the ResStock consumption profiles against the 2019 Residential Appliance Saturation Study (RASS) \citep{[RASS citation]}, which provides empirical estimates of residential electricity consumption by climate zone for California households.
+
+\textbf{Climate Zone Scaling Factors.} For each CEC climate zone, we computed the ratio of RASS survey mean consumption to ResStock simulated mean consumption. The resulting scaling factors were applied multiplicatively to each building's hourly load profile \textit{before} any bill calculations, ensuring that fixed charges (which are per-household, not per-kWh) are unaffected by the consumption adjustment:
+\begin{equation}
+Q_{i,h}^{\text{scaled}} = Q_{i,h}^{\text{raw}} \times s_{z(i)}
+\end{equation}
+where $Q_{i,h}$ is building $i$'s consumption in hour $h$ and $s_{z(i)}$ is the scaling factor for building $i$'s climate zone $z$. The scaling factors range from 0.713 (CZ~7, coastal) to 1.417 (CZ~15, desert), reflecting ResStock's tendency to overestimate cooling loads in mild coastal climates and underestimate them in hot desert zones. To mitigate the influence of extreme outliers, we winsorized consumption values at the 1st and 99th percentiles within each climate zone before computing scaling factors.
+
+\textbf{Income-Energy Relationship.} We estimated log-log regressions for each SDGE climate zone to quantify the elasticity of electricity consumption with respect to household income:
+\begin{equation}
+\log(E_{i}) = \beta_0 + \beta_1 \log(I_{i}) + \epsilon_i
+\end{equation}
+where $E_i$ is annual electricity consumption (kWh) and $I_i$ is household income. The estimated elasticities were:
+\begin{itemize}
+    \item Climate Zone 7 (Coastal): $\beta_1 = 0.277$ (mean consumption: 4,824 kWh/year)
+    \item Climate Zone 10 (Inland): $\beta_1 = 0.270$ (mean consumption: 6,456 kWh/year)
+    \item Climate Zone 14 (Mountain): $\beta_1 = 0.154$ (mean consumption: 7,500 kWh/year)
+\end{itemize}
+These elasticity estimates indicate that a 1\% increase in income is associated with approximately 0.15--0.28\% increase in electricity consumption, with coastal areas (CZ~7) showing higher income sensitivity than inland regions (CZ~14), where climate-driven cooling loads dominate consumption patterns regardless of income.
+
+\subsubsection{Rate Structures}
+Current SDGE residential rate structures were obtained from the utility's published tariff schedules. We analyzed four baseline rate scenarios:
+\begin{enumerate}
+    \item \textbf{DR}: Tiered rate (pre-fixed charge)
+    \item \textbf{DR-F}: Tiered rate with income-graduated fixed charges
+    \item \textbf{TOU-DR}: Time-of-use rate (pre-fixed charge)---serves 68\% of customers
+    \item \textbf{TOU-DR-F}: Time-of-use rate with fixed charges
+\end{enumerate}
+We use TOU-DR as the baseline for comparison, as it represents the majority of SDGE residential customers.
+
+\subsubsection{Utility Financial Data}
+Revenue requirements, rate base, and cost components were obtained from SDGE's General Rate Case filings and CPUC decisions \citep{[GRC citation]}. Key parameters include:
+\begin{itemize}
+    \item Total residential revenue: \$1.562 billion (2024)
+    \item Total residential sales: 4,810 GWh
+    \item CARE customers: 372,135 (28.1\% of total)
+    \item Non-CARE customers: 951,477 (71.9\% of total)
+    \item Authorized return on equity: 7.67\%
+    \item Rate base: \$13.59 billion (utility-wide)
+\end{itemize}
+Cost allocation to the residential class was calculated proportionally to residential revenue share of total utility revenue (36.9\%).
+
+\subsection{Rate Design Methodology}
+
+We developed a revenue-neutral rate design framework that maintains total utility revenue while varying the allocation between fixed and volumetric charges. The methodology ensures that scenarios with different fixed charge levels but the same policy parameters (wildfire treatment, ROE adjustment) collect identical total revenue---a critical constraint for valid distributional comparisons.
+
+\subsubsection{Time-of-Use Consumption Weights}
+
+A key element of our rate design approach is the calculation of consumption-weighted time-of-use (TOU) period weights directly from the building sample's hourly load profiles. We classified each hour of consumption into six TOU periods based on SDGE's rate schedule:
+\begin{itemize}
+    \item \textbf{Summer} (June--October): Peak (4--9pm, 14.4\%), Off-peak (10pm--6am, 12.9\%), Super off-peak (6am--4pm \& 9--10pm, 20.6\%)
+    \item \textbf{Winter} (November--May): Peak (4--9pm, 14.2\%), Off-peak (10pm--6am, 15.1\%), Super off-peak (6am--4pm \& 9--10pm, 22.8\%)
+\end{itemize}
+These empirical weights, computed from the 4,898-building sample, ensure that designed rates yield the target revenue when applied to the sample's actual consumption patterns. The weights were saved and reused consistently across all rate scenarios.
+
+\subsubsection{Revenue-Neutral Rate Calculation}
+
+For each scenario, we first determined the target revenue requirement:
+\begin{equation}
+R_{\text{target}} = R_{\text{base}} - \mathbb{1}_{\text{WF}} \cdot C_{\text{wildfire}} - \Delta_{\text{ROE}} \cdot B_{\text{rate}} \cdot s_{\text{res}}
+\end{equation}
+where $R_{\text{base}} = \$1.562$B is the baseline residential revenue, $C_{\text{wildfire}}$ is the residential share of wildfire costs (\$153M), $\Delta_{\text{ROE}}$ is the percentage-point ROE reduction, $B_{\text{rate}}$ is the utility rate base, and $s_{\text{res}}$ is the residential revenue share.
+
+Fixed charge revenue was computed based on transmission and distribution (T\&D) cost recovery:
+\begin{equation}
+R_{\text{fixed}} = (C_{\text{T}} + C_{\text{D}}) \times \frac{\alpha}{100}
+\end{equation}
+where $C_{\text{T}}$ and $C_{\text{D}}$ are residential transmission and distribution costs, and $\alpha \in \{0, 25, 50, 75\}$ is the percentage of T\&D costs recovered through fixed charges.
+
+Income-graduated monthly fixed charges were set as:
+\begin{equation}
+F_{\text{non-CARE}} = \frac{R_{\text{fixed}}}{12 \times (N_{\text{non-CARE}} + \beta \cdot N_{\text{CARE}})}, \qquad F_{\text{CARE}} = \beta \cdot F_{\text{non-CARE}}
+\end{equation}
+where $\beta = 0.4$ is the CARE discount factor, reflecting the policy that CARE customers pay 40\% of the standard fixed charge.
+
+The target average volumetric rate was then:
+\begin{equation}
+\bar{r}_{\text{target}} = \frac{R_{\text{target}} - R_{\text{fixed}}}{Q_{\text{total}}}
+\end{equation}
+where $Q_{\text{total}} = 4{,}810$ GWh is total residential sales. Finally, all six TOU rates were scaled proportionally from the baseline rate structure:
+\begin{equation}
+r_{p,s}^{\text{new}} = r_{p,s}^{\text{baseline}} \times \frac{\bar{r}_{\text{target}}}{\sum_{p,s} r_{p,s}^{\text{baseline}} \cdot w_{p,s}}
+\end{equation}
+where $r_{p,s}^{\text{baseline}}$ is the current rate for period $p$ in season $s$, and $w_{p,s}$ is the empirical consumption weight.
+
+This proportional scaling preserves the relative price signals across TOU periods (i.e., the peak-to-off-peak ratio remains constant) while adjusting the overall rate level to achieve revenue neutrality. We verified that for all scenarios with the same policy parameters, the coefficient of variation of total revenue across fixed charge levels was exactly 0\%.
+
+\subsection{Scenario Design}
+
+We analyzed a factorial design combining three policy dimensions:
+\begin{enumerate}
+    \item \textbf{Fixed charge levels}: 0\%, 25\%, 50\%, 75\% of T\&D costs recovered through fixed charges (4 levels)
+    \item \textbf{Wildfire cost treatment}: Include or remove \$153 million in residential wildfire mitigation costs (2 levels)
+    \item \textbf{Return on equity adjustment}: Baseline (7.67\%), or reduce by 0.5, 1.0, or 1.5 percentage points (4 levels)
+\end{enumerate}
+This produces $4 \times 2 \times 4 = 32$ rate scenarios, allowing us to isolate the distributional effect of each policy lever while controlling for the others.
+
+\subsection{Bill Calculation}
+
+Total annual bills were calculated as the sum of fixed and volumetric components, accounting for the temporal structure of electricity consumption and rate schedules.
+
+\subsubsection{Fixed Charge Component}
+Monthly fixed charges were applied based on CARE eligibility:
+\begin{equation}
+C_{\text{fixed}} = 12 \times F_{j(i)}
+\end{equation}
+where $F_{j(i)} \in \{F_{\text{CARE}}, F_{\text{non-CARE}}\}$ depends on customer $i$'s income classification.
+
+\subsubsection{Volumetric Charge Component}
+For time-of-use rates, volumetric charges were computed by matching each hour's (RASS-scaled) consumption to the corresponding rate:
+\begin{equation}
+C_{\text{vol}} = \sum_{h=1}^{8760} Q_{i,h}^{\text{scaled}} \times r_{p(h),s(h)}
+\end{equation}
+where $p(h)$ and $s(h)$ map hour $h$ to its TOU period and season.
+
+\subsubsection{Total Bill and Revenue Neutrality}
+The complete annual bill is:
+\begin{equation}
+B_{i} = C_{\text{fixed},i} + C_{\text{vol},i}
+\end{equation}
+
+Revenue neutrality was verified by computing weighted total revenue across the sample:
+\begin{equation}
+R_{\text{total}} = \sum_{i=1}^{N} B_{i} \times w_i
+\end{equation}
+and confirming that scenarios with identical policy parameters yield identical total revenue regardless of fixed charge level. Revenue deviations were required to be within $\pm$1\% of the target for all scenarios.
+
+\subsubsection{Reconciling Sample and Utility Revenue}
+\label{sec:revenue_reconciliation}
+
+Because the simulated sample's average consumption (5,309~kWh) exceeds SDGE's reported average (3,634~kWh), applying SDGE's published rates to our sample generates total revenue that exceeds the utility's actual residential revenue of \$1.562B. This discrepancy arises from the sample composition (ResStock represents occupied dwelling units with complete load profiles, excluding very low-consumption accounts in SDGE's customer base).
+
+For our rate design, we use SDGE's actual total residential sales (4,810~GWh) and customer counts in the revenue-neutrality equations, ensuring that the \textit{designed rates} are calibrated to SDGE's real economics. When these rates are applied to the simulated buildings for bill calculation, the resulting per-building bills reflect what households with those consumption profiles would actually pay under each rate scenario. The distributional analysis---comparing bill changes across income groups, consumption levels, and climate zones---is valid because it depends on the \textit{relative} structure of rates and consumption, not on aggregate revenue matching. We discuss this limitation further in Section~\ref{sec:limitations}.
+
+\subsection{Distributional Analysis}
+
+We analyzed bill impacts across three dimensions:
+\begin{enumerate}
+    \item \textbf{Income level}: Low (CARE-eligible), Medium, High based on AMI thresholds
+    \item \textbf{Annual consumption}: Deciles from lowest to highest consumers
+    \item \textbf{Climate zone}: CZ~7 (coastal San Diego), CZ~10 (inland valleys), CZ~14 (mountain/desert)
+\end{enumerate}
+
+For each scenario relative to the TOU-DR baseline (no fixed charge, no policy intervention), we calculated percentage and absolute bill changes:
+\begin{equation}
+\Delta B_i^{\%} = \frac{B_i^{\text{scenario}} - B_i^{\text{baseline}}}{B_i^{\text{baseline}}} \times 100\%, \qquad
+\Delta B_i^{\$} = B_i^{\text{scenario}} - B_i^{\text{baseline}}
+\end{equation}
+
+Results are presented as distributions (median, interquartile range) within each customer segment to capture within-group heterogeneity.
+
+\section{Results}
+[Results sections to be filled in]
+
+\subsection{Baseline Rate Comparison}
+
+\subsection{Fixed Charge Impacts}
+
+\subsection{Policy Interventions}
+
+\subsection{Geographic Variation}
+
+\section{Discussion}
+\label{sec:limitations}
+[Discussion to be filled in, including limitations of sample-utility mismatch]
+
+\section{Conclusion}
+[Conclusion to be filled in]
+
+\section{Acknowledgments}
+[To be filled in]
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

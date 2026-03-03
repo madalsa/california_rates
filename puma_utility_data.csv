@@ -1,0 +1,268 @@
+,puma,utility,utility_acronym,utility_type,climate_zone,utility_baseline_territory,summer_baseline_allowance,winter_baseline_allowance,PUMA
+0,101,Pacific Gas & Electric Company,PGE,IOU,3,X,9.8,9.7,G06000101
+1,111,Pacific Gas & Electric Company,PGE,IOU,3,X,9.8,9.7,G06000111
+2,112,Pacific Gas & Electric Company,PGE,IOU,3,X,9.8,9.7,G06000112
+3,113,Pacific Gas & Electric Company,PGE,IOU,3,X,9.8,9.7,G06000113
+4,114,Pacific Gas & Electric Company,PGE,IOU,3,X,9.8,9.7,G06000114
+5,115,Pacific Gas & Electric Company,PGE,IOU,3,X,9.8,9.7,G06000115
+6,116,Pacific Gas & Electric Company,PGE,IOU,3,X,9.8,9.7,G06000116
+7,117,Pacific Gas & Electric Company,PGE,IOU,3,X,9.8,9.7,G06000117
+8,118,Pacific Gas & Electric Company,PGE,IOU,3,X,9.8,9.7,G06000118
+9,119,Pacific Gas & Electric Company,PGE,IOU,12,X,9.8,9.7,G06000119
+10,120,Pacific Gas & Electric Company,PGE,IOU,12,X,9.8,9.7,G06000120
+11,121,Pacific Gas & Electric Company,PGE,IOU,3,X,9.8,9.7,G06000121
+12,122,Pacific Gas & Electric Company,PGE,IOU,3,X,9.8,9.7,G06000122
+13,123,Pacific Gas & Electric Company,PGE,IOU,3,X,9.8,9.7,G06000123
+14,300,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06000300
+15,700,Pacific Gas & Electric Company,PGE,IOU,11,S,15.0,10.2,G06000700
+16,1100,Pacific Gas & Electric Company,PGE,IOU,11,S,15.0,10.2,G06001100
+17,1301,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06001301
+18,1305,Pacific Gas & Electric Company,PGE,IOU,12,X,9.8,9.7,G06001305
+19,1308,Pacific Gas & Electric Company,PGE,IOU,12,R,17.7,10.4,G06001308
+20,1309,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06001309
+21,1310,Pacific Gas & Electric Company,PGE,IOU,3,X,9.8,9.7,G06001310
+22,1311,Pacific Gas & Electric Company,PGE,IOU,12,X,9.8,9.7,G06001311
+23,1312,Pacific Gas & Electric Company,PGE,IOU,12,X,9.8,9.7,G06001312
+24,1313,Pacific Gas & Electric Company,PGE,IOU,12,X,9.8,9.7,G06001313
+25,1314,Pacific Gas & Electric Company,PGE,IOU,12,X,9.8,9.7,G06001314
+26,1700,Pacific Gas & Electric Company,PGE,IOU,12,Y,10.5,11.1,G06001700
+27,1901,Pacific Gas & Electric Company,PGE,IOU,13,R,17.7,10.4,G06001901
+28,1902,Pacific Gas & Electric Company,PGE,IOU,13,R,17.7,10.4,G06001902
+29,1903,Pacific Gas & Electric Company,PGE,IOU,13,R,17.7,10.4,G06001903
+30,1904,Pacific Gas & Electric Company,PGE,IOU,13,R,17.7,10.4,G06001904
+31,1905,Pacific Gas & Electric Company,PGE,IOU,13,R,17.7,10.4,G06001905
+32,1906,Pacific Gas & Electric Company,PGE,IOU,13,R,17.7,10.4,G06001906
+33,1907,Pacific Gas & Electric Company,PGE,IOU,13,R,17.7,10.4,G06001907
+34,2300,Pacific Gas & Electric Company,PGE,IOU,1,V,7.1,8.1,G06002300
+35,2903,Pacific Gas & Electric Company,PGE,IOU,13,W,19.2,9.8,G06002903
+36,2904,Pacific Gas & Electric Company,PGE,IOU,13,W,19.2,9.8,G06002904
+37,2905,Southern California Edison,SCE,IOU,16,16,14.7,12.4,G06002905
+38,2906,Pacific Gas & Electric Company,PGE,IOU,13,W,19.2,9.8,G06002906
+39,2907,Pacific Gas & Electric Company,PGE,IOU,13,W,19.2,9.8,G06002907
+40,2908,Pacific Gas & Electric Company,PGE,IOU,13,W,19.2,9.8,G06002908
+41,3100,Pacific Gas & Electric Company,PGE,IOU,13,W,19.2,9.8,G06003100
+42,3300,Pacific Gas & Electric Company,PGE,IOU,2,P,13.5,11.0,G06003300
+43,3703,Southern California Edison,SCE,IOU,14,14,19.2,11.9,G06003703
+44,3704,Southern California Edison,SCE,IOU,14,14,19.2,11.9,G06003704
+45,3705,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 2,16.66667,16.66667,G06003705
+46,3706,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 2,16.66667,16.66667,G06003706
+47,3707,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 2,16.66667,16.66667,G06003707
+48,3708,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 2,16.66667,16.66667,G06003708
+49,3709,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003709
+50,3710,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003710
+51,3711,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003711
+52,3712,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003712
+53,3713,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003713
+54,3714,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003714
+55,3715,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003715
+56,3716,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003716
+57,3717,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003717
+58,3718,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003718
+59,3719,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 2,16.66667,16.66667,G06003719
+60,3720,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 2,16.66667,16.66667,G06003720
+61,3721,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 2,16.66667,16.66667,G06003721
+62,3722,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 2,16.66667,16.66667,G06003722
+63,3723,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 2,16.66667,16.66667,G06003723
+64,3724,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 2,16.66667,16.66667,G06003724
+65,3725,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 2,16.66667,16.66667,G06003725
+66,3728,Los Angeles Department of Water & Power,LADWP,POU,6,Zone 1,11.66667,11.66667,G06003728
+67,3730,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 1,11.66667,11.66667,G06003730
+68,3731,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 1,11.66667,11.66667,G06003731
+69,3732,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 1,11.66667,11.66667,G06003732
+70,3733,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 2,16.66667,16.66667,G06003733
+71,3734,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 2,16.66667,16.66667,G06003734
+72,3735,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 2,16.66667,16.66667,G06003735
+73,3736,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003736
+74,3737,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003737
+75,3738,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003738
+76,3739,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003739
+77,3740,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003740
+78,3741,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06003741
+79,3742,Los Angeles Department of Water & Power,LADWP,POU,8,Zone 2,16.66667,16.66667,G06003742
+80,3743,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003743
+81,3744,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 2,16.66667,16.66667,G06003744
+82,3745,Los Angeles Department of Water & Power,LADWP,POU,8,Zone 2,16.66667,16.66667,G06003745
+83,3746,Los Angeles Department of Water & Power,LADWP,POU,8,Zone 2,16.66667,16.66667,G06003746
+84,3747,Los Angeles Department of Water & Power,LADWP,POU,8,Zone 1,11.66667,11.66667,G06003747
+85,3748,Los Angeles Department of Water & Power,LADWP,POU,6,Zone 1,11.66667,11.66667,G06003748
+86,3750,Los Angeles Department of Water & Power,LADWP,POU,8,Zone 2,16.66667,16.66667,G06003750
+87,3751,Los Angeles Department of Water & Power,LADWP,POU,8,Zone 2,16.66667,16.66667,G06003751
+88,3752,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06003752
+89,3753,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06003753
+90,3754,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003754
+91,3757,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06003757
+92,3758,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06003758
+93,3759,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06003759
+94,3760,Southern California Edison,SCE,IOU,6,6,11.4,11.0,G06003760
+95,3761,Southern California Edison,SCE,IOU,6,6,11.4,11.0,G06003761
+96,3762,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06003762
+97,3763,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06003763
+98,3764,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06003764
+99,3766,Southern California Edison,SCE,IOU,6,6,11.4,11.0,G06003766
+100,3767,Los Angeles Department of Water & Power,LADWP,POU,6,Zone 1,11.66667,11.66667,G06003767
+101,3768,Southern California Edison,SCE,IOU,6,6,11.4,11.0,G06003768
+102,3770,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 1,11.66667,11.66667,G06003770
+103,3771,Southern California Edison,SCE,IOU,"6, 16",9,16.9,12.0,G06003771
+104,3772,Southern California Edison,SCE,IOU,14,14,19.2,11.9,G06003772
+105,3773,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06003773
+106,3774,Southern California Edison,SCE,IOU,6,6,11.4,11.0,G06003774
+107,3775,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 2,16.66667,16.66667,G06003775
+108,3776,Los Angeles Department of Water & Power,LADWP,POU,9,Zone 1,11.66667,11.66667,G06003776
+109,3778,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06003778
+110,3779,Southern California Edison,SCE,IOU,6,6,11.4,11.0,G06003779
+111,3780,Southern California Edison,SCE,IOU,8,6,11.4,11.0,G06003780
+112,3781,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06003781
+113,3782,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06003782
+114,3900,Pacific Gas & Electric Company,PGE,IOU,13,R,17.7,10.4,G06003900
+115,4103,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06004103
+116,4104,Pacific Gas & Electric Company,PGE,IOU,2,P,13.5,11.0,G06004104
+117,4701,Pacific Gas & Electric Company,PGE,IOU,12,R,17.7,10.4,G06004701
+118,4702,Pacific Gas & Electric Company,PGE,IOU,12,R,17.7,10.4,G06004702
+119,5301,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06005301
+120,5302,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06005302
+121,5303,Pacific Gas & Electric Company,PGE,IOU,4,X,9.8,9.7,G06005303
+122,5500,Pacific Gas & Electric Company,PGE,IOU,2,P,13.5,11.0,G06005500
+123,5700,Pacific Gas & Electric Company,PGE,IOU,16,S,15.0,10.2,G06005700
+124,5906,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06005906
+125,5907,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06005907
+126,5908,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06005908
+127,5909,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06005909
+128,5912,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06005912
+129,5913,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06005913
+130,5914,Southern California Edison,SCE,IOU,6,6,11.4,11.0,G06005914
+131,5916,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06005916
+132,5917,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06005917
+133,5918,Southern California Edison,SCE,IOU,6,6,11.4,11.0,G06005918
+134,5919,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06005919
+135,5920,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06005920
+136,5921,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06005921
+137,5922,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06005922
+138,5923,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06005923
+139,5924,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06005924
+140,5925,Southern California Edison,SCE,IOU,6,6,11.4,11.0,G06005925
+141,5926,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06005926
+142,5927,Southern California Edison,SCE,IOU,8,8,12.8,10.3,G06005927
+143,5928,San Diego Gas & Electric,SDGE,IOU,6,Coastal,11.7,11.96666667,G06005928
+144,6101,Pacific Gas & Electric Company,PGE,IOU,11,S,15.0,10.2,G06006101
+145,6102,Pacific Gas & Electric Company,PGE,IOU,11,S,15.0,10.2,G06006102
+146,6103,Pacific Gas & Electric Company,PGE,IOU,16,S,15.0,10.2,G06006103
+147,6502,Southern California Edison,SCE,IOU,15,15,45.0,9.7,G06006502
+148,6507,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06006507
+149,6509,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06006509
+150,6511,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06006511
+151,6514,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06006514
+152,6515,Southern California Edison,SCE,IOU,15,15,45.0,9.7,G06006515
+153,6516,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06006516
+154,6517,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06006517
+155,6518,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06006518
+156,6519,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06006519
+157,6520,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06006520
+158,6521,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06006521
+159,6522,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06006522
+160,6523,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06006523
+161,6524,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06006524
+162,6525,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06006525
+163,6705,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06006705
+164,6706,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06006706
+165,6707,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06006707
+166,6709,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06006709
+167,6712,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06006712
+168,6717,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06006717
+169,7101,Southern California Edison,SCE,IOU,14,14,19.2,11.9,G06007101
+170,7102,Southern California Edison,SCE,IOU,14,14,19.2,11.9,G06007102
+171,7103,Southern California Edison,SCE,IOU,14,14,19.2,11.9,G06007103
+172,7104,Southern California Edison,SCE,IOU,16,16,14.7,12.4,G06007104
+173,7105,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06007105
+174,7107,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06007107
+175,7108,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06007108
+176,7110,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06007110
+177,7111,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06007111
+178,7112,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06007112
+179,7115,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06007115
+180,7116,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06007116
+181,7117,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06007117
+182,7118,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06007118
+183,7119,Southern California Edison,SCE,IOU,10,10,19.3,12.1,G06007119
+184,7301,San Diego Gas & Electric,SDGE,IOU,7,Coastal,11.7,11.96666667,G06007301
+185,7302,San Diego Gas & Electric,SDGE,IOU,14,Mountain,17.66666667,16.76666667,G06007302
+186,7306,San Diego Gas & Electric,SDGE,IOU,10,Inland,13.53333333,12.46666667,G06007306
+187,7307,San Diego Gas & Electric,SDGE,IOU,10,Inland,13.53333333,12.46666667,G06007307
+188,7308,San Diego Gas & Electric,SDGE,IOU,10,Inland,13.53333333,12.46666667,G06007308
+189,7310,San Diego Gas & Electric,SDGE,IOU,7,Coastal,11.7,11.96666667,G06007310
+190,7311,San Diego Gas & Electric,SDGE,IOU,7,Coastal,11.7,11.96666667,G06007311
+191,7312,San Diego Gas & Electric,SDGE,IOU,7,Coastal,11.7,11.96666667,G06007312
+192,7313,San Diego Gas & Electric,SDGE,IOU,10,Inland,13.53333333,12.46666667,G06007313
+193,7314,San Diego Gas & Electric,SDGE,IOU,7,Coastal,11.7,11.96666667,G06007314
+194,7315,San Diego Gas & Electric,SDGE,IOU,7,Coastal,11.7,11.96666667,G06007315
+195,7316,San Diego Gas & Electric,SDGE,IOU,7,Coastal,11.7,11.96666667,G06007316
+196,7317,San Diego Gas & Electric,SDGE,IOU,7,Coastal,11.7,11.96666667,G06007317
+197,7322,San Diego Gas & Electric,SDGE,IOU,7,Coastal,11.7,11.96666667,G06007322
+198,7323,San Diego Gas & Electric,SDGE,IOU,7,Coastal,11.7,11.96666667,G06007323
+199,7324,San Diego Gas & Electric,SDGE,IOU,7,Coastal,11.7,11.96666667,G06007324
+200,7325,San Diego Gas & Electric,SDGE,IOU,10,Inland,13.53333333,12.46666667,G06007325
+201,7326,San Diego Gas & Electric,SDGE,IOU,7,Coastal,11.7,11.96666667,G06007326
+202,7327,San Diego Gas & Electric,SDGE,IOU,7,Coastal,11.7,11.96666667,G06007327
+203,7328,San Diego Gas & Electric,SDGE,IOU,10,Inland,13.53333333,12.46666667,G06007328
+204,7329,San Diego Gas & Electric,SDGE,IOU,7,Coastal,11.7,11.96666667,G06007329
+205,7330,San Diego Gas & Electric,SDGE,IOU,7,Coastal,11.7,11.96666667,G06007330
+206,7507,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06007507
+207,7508,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06007508
+208,7509,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06007509
+209,7510,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06007510
+210,7511,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06007511
+211,7512,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06007512
+212,7513,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06007513
+213,7514,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06007514
+214,7705,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06007705
+215,7706,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06007706
+216,7707,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06007707
+217,7708,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06007708
+218,7709,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06007709
+219,7901,Pacific Gas & Electric Company,PGE,IOU,5,T,6.5,7.5,G06007901
+220,7902,Pacific Gas & Electric Company,PGE,IOU,4,X,9.8,9.7,G06007902
+221,8101,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06008101
+222,8102,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06008102
+223,8103,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06008103
+224,8104,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06008104
+225,8105,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06008105
+226,8106,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06008106
+227,8302,Pacific Gas & Electric Company,PGE,IOU,5,X,9.8,9.7,G06008302
+228,8303,Southern California Edison,SCE,IOU,6,6,11.4,11.0,G06008303
+229,8505,Pacific Gas & Electric Company,PGE,IOU,4,X,9.8,9.7,G06008505
+230,8506,Pacific Gas & Electric Company,PGE,IOU,4,X,9.8,9.7,G06008506
+231,8507,Pacific Gas & Electric Company,PGE,IOU,4,X,9.8,9.7,G06008507
+232,8508,Pacific Gas & Electric Company,PGE,IOU,4,X,9.8,9.7,G06008508
+233,8510,Pacific Gas & Electric Company,PGE,IOU,4,X,9.8,9.7,G06008510
+234,8511,Pacific Gas & Electric Company,PGE,IOU,4,X,9.8,9.7,G06008511
+235,8512,Pacific Gas & Electric Company,PGE,IOU,4,X,9.8,9.7,G06008512
+236,8515,Pacific Gas & Electric Company,PGE,IOU,4,X,9.8,9.7,G06008515
+237,8516,Pacific Gas & Electric Company,PGE,IOU,4,X,9.8,9.7,G06008516
+238,8517,Pacific Gas & Electric Company,PGE,IOU,4,X,9.8,9.7,G06008517
+239,8519,Pacific Gas & Electric Company,PGE,IOU,4,X,9.8,9.7,G06008519
+240,8520,Pacific Gas & Electric Company,PGE,IOU,4,X,9.8,9.7,G06008520
+241,8521,Pacific Gas & Electric Company,PGE,IOU,4,X,9.8,9.7,G06008521
+242,8522,Pacific Gas & Electric Company,PGE,IOU,4,X,9.8,9.7,G06008522
+243,8701,Pacific Gas & Electric Company,PGE,IOU,3,Q,9.8,11.0,G06008701
+244,8702,Pacific Gas & Electric Company,PGE,IOU,3,T,6.5,7.5,G06008702
+245,8900,Pacific Gas & Electric Company,PGE,IOU,11,S,15.0,10.2,G06008900
+246,9501,Pacific Gas & Electric Company,PGE,IOU,3,S,9.8,11.0,G06009501
+247,9502,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06009502
+248,9503,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06009503
+249,9702,Pacific Gas & Electric Company,PGE,IOU,2,P,13.5,11.0,G06009702
+250,9704,Pacific Gas & Electric Company,PGE,IOU,2,P,13.5,11.0,G06009704
+251,9705,Pacific Gas & Electric Company,PGE,IOU,2,P,13.5,11.0,G06009705
+252,9706,Pacific Gas & Electric Company,PGE,IOU,2,P,13.5,11.0,G06009706
+253,9901,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06009901
+254,9903,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06009903
+255,10100,Pacific Gas & Electric Company,PGE,IOU,11,S,15.0,10.2,G06010100
+256,10701,Southern California Edison,SCE,IOU,13,13,22.2,12.2,G06010701
+257,10702,Southern California Edison,SCE,IOU,13,13,22.2,12.2,G06010702
+258,10703,Southern California Edison,SCE,IOU,13,13,22.2,12.2,G06010703
+259,11102,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06011102
+260,11103,Southern California Edison,SCE,IOU,6,6,11.4,11.0,G06011103
+261,11104,Southern California Edison,SCE,IOU,6,6,11.4,11.0,G06011104
+262,11107,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06011107
+263,11108,Southern California Edison,SCE,IOU,9,9,16.9,12.0,G06011108
+264,11109,Southern California Edison,SCE,IOU,6,6,11.4,11.0,G06011109
+265,11301,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06011301
+266,11302,Pacific Gas & Electric Company,PGE,IOU,12,S,15.0,10.2,G06011302

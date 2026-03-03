@@ -1,0 +1,15 @@
+# Large data files
+*.parquet
+
+# Whitelist metadata parquet files
+!CA_Baseline_metadata_rescaled.parquet
+!CA_Baseline_metadata_rescaled_twoincomes_puma20.parquet
+!CA_baseline_tmy_metadata_and_annual_results.parquet
+
+# Cache
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store

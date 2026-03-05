@@ -91,6 +91,11 @@ EV_DAILY_KWH = 10.0  # ~30 miles/day at 3 mi/kWh
 EV_CHARGE_START_HOUR = 22  # 10 PM
 EV_CHARGE_HOURS = 5        # 10 PM – 3 AM
 
+# Filed utility revenue and customer counts (for anchored billing)
+FILED_RESIDENTIAL_REVENUE = 1.5617e9  # $1.562B
+TOTAL_RESIDENTIAL_CUSTOMERS = 1_323_612
+BUILDING_WEIGHT = 252.3  # uniform ResStock weight per sample building
+
 
 # ---------------------------------------------------------------------------
 # Stage 1: Generate fresh rate scenarios
@@ -152,6 +157,32 @@ def build_tou_rate_array(scenario):
     return rates
 
 
+def build_tou_rate_array_from_dict(rate_dict):
+    """Build 8760-length rate array from a dict with keys like 'summer_peak', etc."""
+    hours = np.arange(8760)
+    days_per_month = np.array([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
+    hours_per_month = days_per_month * 24
+    month_boundaries = np.concatenate(([0], np.cumsum(hours_per_month)))
+    months = np.searchsorted(month_boundaries[1:], hours) + 1
+
+    hour_of_day = hours % 24
+    is_summer = (months >= 6) & (months <= 10)
+    is_peak = (hour_of_day >= 16) & (hour_of_day < 21)
+    is_midpeak = ((hour_of_day >= 6) & (hour_of_day < 16)) | \
+                 ((hour_of_day >= 21) & (hour_of_day < 22))
+
+    rates = np.where(
+        is_summer,
+        np.where(is_peak, rate_dict['summer_peak'],
+                 np.where(is_midpeak, rate_dict['summer_midpeak'],
+                          rate_dict['summer_offpeak'])),
+        np.where(is_peak, rate_dict['winter_peak'],
+                 np.where(is_midpeak, rate_dict['winter_midpeak'],
+                          rate_dict['winter_offpeak']))
+    )
+    return rates
+
+
 def calculate_bill_vectorized(hourly_load, rate_array, fixed_annual):
     """Calculate bill from hourly load and rate array."""
     return np.dot(hourly_load, rate_array) + fixed_annual
@@ -185,18 +216,24 @@ def calculate_actual_sdge_bill_vectorized(hourly_load, rate_code, puma_str,
     daily_summer_baseline = baseline_entry['summer_baseline_allowance'].values[0]
     daily_winter_baseline = baseline_entry['winter_baseline_allowance'].values[0]
 
+    def _safe(val):
+        """Convert NaN/None to 0."""
+        if val is None or (isinstance(val, float) and np.isnan(val)):
+            return 0.0
+        return float(val)
+
     # TOU rates (tier 1 = tier 2 for SDGE)
     tou_rates = {
-        'summer_peak': weekday_rate.get('peak_rate_summer1', 0) or 0,
-        'summer_midpeak': weekday_rate.get('midpeak_rate_summer1', 0) or 0,
-        'summer_offpeak': weekday_rate.get('offpeak_rate_summer1', 0) or 0,
-        'winter_peak': weekday_rate.get('peak_rate_winter1', 0) or 0,
-        'winter_midpeak': weekday_rate.get('midpeak_rate_winter1', 0) or 0,
-        'winter_offpeak': weekday_rate.get('offpeak_rate_winter1', 0) or 0,
+        'summer_peak': _safe(weekday_rate.get('peak_rate_summer1', 0)),
+        'summer_midpeak': _safe(weekday_rate.get('midpeak_rate_summer1', 0)),
+        'summer_offpeak': _safe(weekday_rate.get('offpeak_rate_summer1', 0)),
+        'winter_peak': _safe(weekday_rate.get('peak_rate_winter1', 0)),
+        'winter_midpeak': _safe(weekday_rate.get('midpeak_rate_winter1', 0)),
+        'winter_offpeak': _safe(weekday_rate.get('offpeak_rate_winter1', 0)),
     }
 
-    baseline_credit = weekday_rate.get('baseline_credit', 0) or 0
-    care_discount = abs(weekday_rate.get('care_discount', 0) or 0)
+    baseline_credit = _safe(weekday_rate.get('baseline_credit', 0))
+    care_discount = abs(_safe(weekday_rate.get('care_discount', 0)))
 
     # Build 8760 TOU rate array
     hours = np.arange(8760)
@@ -243,18 +280,18 @@ def calculate_actual_sdge_bill_vectorized(hourly_load, rate_code, puma_str,
         energy_after_credit *= (1 - care_discount)
 
     # Fixed charges
-    fixed_charges = weekday_rate.get('base_service_charge_per_day', 0) or 0
+    fixed_charges = _safe(weekday_rate.get('base_service_charge_per_day', 0))
     annual_base_fixed = fixed_charges * 365
 
     monthly_fixed = 0.0
     has_fixed = weekday_rate.get('Fixed', '') == 'Yes'
     if has_fixed:
         if income == 'low':
-            monthly_fixed = weekday_rate.get('fixedcharge_low', 0) or 0
+            monthly_fixed = _safe(weekday_rate.get('fixedcharge_low', 0))
         elif income == 'medium':
-            monthly_fixed = weekday_rate.get('fixedcharge_med', 0) or 0
+            monthly_fixed = _safe(weekday_rate.get('fixedcharge_med', 0))
         else:
-            monthly_fixed = weekday_rate.get('fixedcharge_high', 0) or 0
+            monthly_fixed = _safe(weekday_rate.get('fixedcharge_high', 0))
     annual_fixed = annual_base_fixed + monthly_fixed * 12
 
     total_bill = energy_after_credit + annual_fixed
@@ -330,18 +367,17 @@ def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
           f"({', '.join(selected_designed['Scenario'].tolist())})")
     print(f"  Actual SDGE rates: {', '.join(ACTUAL_SDGE_RATES.keys())}")
 
-    # Pre-build rate arrays for designed scenarios
-    scenario_rate_arrays = {}
-    scenario_fixed = {}
+    # Build scenario info for anchored billing (computed after building loop)
+    scenario_info = {}
     for _, scenario in selected_designed.iterrows():
         name = scenario['Scenario']
-        scenario_rate_arrays[name] = build_tou_rate_array(scenario)
-        scenario_fixed[name] = {
-            'care': scenario['Fixed_CARE'] * 12,
-            'non_care': scenario['Fixed_NonCARE'] * 12,
+        scenario_info[name] = {
+            'revenue_target': scenario['Total_Revenue'],
+            'fixed_care_monthly': scenario['Fixed_CARE'],
+            'fixed_noncare_monthly': scenario['Fixed_NonCARE'],
         }
 
-    # Process buildings
+    # Process buildings — compute actual tariff bills
     results = []
     start_time = time.time()
     errors = 0
@@ -371,6 +407,7 @@ def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
                 'building_id': int(building_id),
                 'puma': metadata[building_id]['puma'],
                 'income': income,
+                'is_care': is_care,
                 'annual_kwh': hourly_load_scaled.sum(),
                 'scaling_factor': sf,
             }
@@ -388,12 +425,6 @@ def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
                     if errors <= 3:
                         print(f"    Bill calc error ({rate_code}, bldg {building_id}): {e}")
 
-            # --- Designed rate scenarios (vectorized) ---
-            for scenario_name, rate_arr in scenario_rate_arrays.items():
-                fixed = scenario_fixed[scenario_name]['care' if is_care else 'non_care']
-                bill = calculate_bill_vectorized(hourly_load_scaled, rate_arr, fixed)
-                row[f'{scenario_name}_bill'] = bill
-
             results.append(row)
 
         except Exception as e:
@@ -409,14 +440,54 @@ def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
                   f"{elapsed:.0f}s elapsed | ~{remaining:.0f}s remaining")
 
     df_bills = pd.DataFrame(results)
-    df_bills.to_csv(BASELINE_BILLS_OUT, index=False)
 
     elapsed = time.time() - start_time
     print(f"\n  Completed: {len(results)} buildings in {elapsed:.1f}s")
     print(f"  Errors/skipped: {errors}")
-    print(f"  Saved to: {BASELINE_BILLS_OUT}")
 
-    # Quick revenue check
+    # --- Anchored billing: compute designed scenario bills from actual TOU-DR ---
+    # V_i = actual TOU-DR bill (the volumetric component, since TOU-DR has no fixed charges)
+    # For scenario j: B_ij = α_j × V_i + F_ij
+    # where α_j = (R_0 × r_j - F_j_total) / R_0
+    #   R_0 = sample weighted TOU-DR revenue
+    #   r_j = scenario revenue target / filed baseline revenue
+    #   F_j_total = sample weighted fixed charge revenue
+
+    V = df_bills['tou_dr_bill'].values
+    valid = ~np.isnan(V)
+    R_0 = np.nansum(V * BUILDING_WEIGHT)
+
+    print(f"\n  Anchored billing (TOU-DR as base):")
+    print(f"    Valid TOU-DR bills: {valid.sum()}/{len(V)}")
+    print(f"    Sample weighted baseline revenue (R_0): ${R_0/1e9:.4f}B")
+    print(f"    Mean TOU-DR bill: ${np.nanmean(V):,.0f}/yr")
+
+    for scenario_name, info in scenario_info.items():
+        r_j = info['revenue_target'] / FILED_RESIDENTIAL_REVENUE
+
+        # Fixed charges per building (annual)
+        F_annual = np.where(
+            df_bills['is_care'].values,
+            info['fixed_care_monthly'] * 12,
+            info['fixed_noncare_monthly'] * 12,
+        )
+        F_j_total = np.sum(F_annual * BUILDING_WEIGHT)
+
+        # Solve for volumetric scaling factor
+        alpha_j = (R_0 * r_j - F_j_total) / R_0
+
+        # Compute anchored bills
+        bills = alpha_j * V + F_annual
+        df_bills[f'{scenario_name}_bill'] = bills
+
+        print(f"    {scenario_name}: α={alpha_j:.4f}, r={r_j:.4f}, "
+              f"Fixed NC=${info['fixed_noncare_monthly']:.2f}/mo, "
+              f"mean bill=${np.nanmean(bills):,.0f}/yr")
+
+    df_bills.to_csv(BASELINE_BILLS_OUT, index=False)
+    print(f"\n  Saved to: {BASELINE_BILLS_OUT}")
+
+    # Revenue check
     if len(results) > 0:
         print("\n  Revenue check (sample mean annual bill):")
         bill_cols = [c for c in df_bills.columns if c.endswith('_bill')]
@@ -961,6 +1032,55 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
         rate_scenarios_df['Scenario'].isin(DESIGNED_SCENARIOS)
     ]
 
+    # Compute α_j for each scenario (same as stage 2 anchored billing)
+    R_0 = merged['tou_dr_bill'].dropna().sum() * BUILDING_WEIGHT
+    scenario_alphas = {}
+    scenario_fixed_charges = {}
+    for _, scenario in selected_designed.iterrows():
+        sname = scenario['Scenario']
+        r_j = scenario['Total_Revenue'] / FILED_RESIDENTIAL_REVENUE
+        fc_care = scenario['Fixed_CARE'] * 12
+        fc_noncare = scenario['Fixed_NonCARE'] * 12
+
+        # Fixed charge total from sample
+        F_j_total = np.sum(np.where(
+            merged['is_care'].values, fc_care, fc_noncare
+        ) * BUILDING_WEIGHT)
+
+        alpha_j = (R_0 * r_j - F_j_total) / R_0
+        scenario_alphas[sname] = alpha_j
+        scenario_fixed_charges[sname] = {'care': fc_care, 'noncare': fc_noncare}
+
+    # Build actual TOU-DR rate array for import cost calculation
+    from corrected_bill_calc import load_excel_data
+    rates_df_xl, baseline_df_xl = load_excel_data(EXCEL_FILE)
+    tou_dr_rates = rates_df_xl[rates_df_xl['rate_type'] == 'TOU-DR']
+    wd_rate = tou_dr_rates[tou_dr_rates['weekday'] == 'weekday'].iloc[0].to_dict()
+
+    def _safe(val):
+        if val is None or (isinstance(val, float) and np.isnan(val)):
+            return 0.0
+        return float(val)
+
+    tou_dr_rate_dict = {
+        'summer_peak': _safe(wd_rate.get('peak_rate_summer1', 0)),
+        'summer_midpeak': _safe(wd_rate.get('midpeak_rate_summer1', 0)),
+        'summer_offpeak': _safe(wd_rate.get('offpeak_rate_summer1', 0)),
+        'winter_peak': _safe(wd_rate.get('peak_rate_winter1', 0)),
+        'winter_midpeak': _safe(wd_rate.get('midpeak_rate_winter1', 0)),
+        'winter_offpeak': _safe(wd_rate.get('offpeak_rate_winter1', 0)),
+    }
+    tou_dr_baseline_credit = _safe(wd_rate.get('baseline_credit', 0))
+    tou_dr_care_discount = abs(_safe(wd_rate.get('care_discount', 0)))
+
+    # Build 8760 TOU-DR rate array (actual tariff posted rates)
+    tou_dr_rate_arr = build_tou_rate_array_from_dict(tou_dr_rate_dict)
+
+    print(f"  Anchored post-adoption billing:")
+    for sname, alpha in scenario_alphas.items():
+        fc = scenario_fixed_charges[sname]
+        print(f"    {sname}: α={alpha:.4f}, FC=${fc['noncare']/12:.2f}/mo")
+
     for idx, row in has_tech.iterrows():
         bid = int(row['building_id'])
         pq_file = baseline_dir / f"{bid}-0.parquet"
@@ -988,47 +1108,82 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
             # Solar generation
             bldg_solar = solar_profile if row['assigned_pv'] == 1 else np.zeros(8760)
 
-            # Calculate bills under each rate scenario
+            # Calculate bills under each scenario using anchored approach
             update_row = {'building_id': bid}
 
-            for _, scenario in selected_designed.iterrows():
-                sname = scenario['Scenario']
-                rate_arr = build_tou_rate_array(scenario)
-                fixed = scenario['Fixed_CARE'] * 12 if is_care else scenario['Fixed_NonCARE'] * 12
+            if row['assigned_pv'] == 1:
+                # Net billing: compute import cost at actual TOU-DR rates, then scale
+                net = modified_load - bldg_solar
+                hourly_import = np.maximum(net, 0)
+                hourly_export = np.maximum(-net, 0)
 
-                if row['assigned_pv'] == 1:
-                    # Net billing: import at retail, export at EEC
-                    net = modified_load - bldg_solar
-                    hourly_import = np.maximum(net, 0)
-                    hourly_export = np.maximum(-net, 0)
+                # Import cost at actual TOU-DR posted rates
+                import_cost_base = np.dot(hourly_import, tou_dr_rate_arr)
 
-                    import_cost = np.dot(hourly_import, rate_arr)
-                    export_credit = np.dot(hourly_export, eec_rates)
-
-                    if row['assigned_battery'] == 1:
-                        # Battery dispatch on net-of-solar load
-                        if use_lp:
-                            batt_result = stage5_battery_dispatch(
-                                modified_load, bldg_solar, rate_arr)
+                # Baseline credit on import (applied to within-baseline consumption)
+                puma_str = row.get('puma', '')
+                bl_entry = baseline_df_xl[baseline_df_xl['puma'] == puma_str]
+                if not bl_entry.empty:
+                    days_per_month = np.array([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
+                    hours_per_month = days_per_month * 24
+                    month_boundaries = np.concatenate(([0], np.cumsum(hours_per_month)))
+                    total_bl_credit = 0.0
+                    d_sum_bl = bl_entry['summer_baseline_allowance'].values[0]
+                    d_win_bl = bl_entry['winter_baseline_allowance'].values[0]
+                    for m in range(12):
+                        s, e = month_boundaries[m], month_boundaries[m + 1]
+                        monthly_import = hourly_import[s:e].sum()
+                        if 6 <= (m + 1) <= 10:
+                            monthly_bl = d_sum_bl * days_per_month[m]
                         else:
-                            batt_result = stage5_battery_dispatch_heuristic(
-                                modified_load, bldg_solar, rate_arr)
+                            monthly_bl = d_win_bl * days_per_month[m]
+                        total_bl_credit += tou_dr_baseline_credit * min(monthly_import, monthly_bl)
+                    import_cost_base -= total_bl_credit
 
-                        if batt_result is not None:
-                            energy_bill = batt_result['bill_energy']
-                            # Subtract export credits (heuristic doesn't handle exports perfectly)
-                            bill = max(energy_bill - export_credit, 0) + fixed
-                        else:
-                            lp_failures += 1
-                            bill = max(import_cost - export_credit, 0) + fixed
+                # CARE discount on import cost
+                if is_care and tou_dr_care_discount > 0:
+                    import_cost_base *= (1 - tou_dr_care_discount)
+
+                # Export credit (EEC rates, same regardless of scenario)
+                export_credit = np.dot(hourly_export, eec_rates)
+
+                if row['assigned_battery'] == 1:
+                    # Battery dispatch on net-of-solar load using actual TOU-DR rates
+                    if use_lp:
+                        batt_result = stage5_battery_dispatch(
+                            modified_load, bldg_solar, tou_dr_rate_arr)
                     else:
-                        # PV only, no battery
-                        bill = max(import_cost - export_credit, 0) + fixed
-                else:
-                    # No PV — just modified load (with EV)
-                    bill = np.dot(modified_load, rate_arr) + fixed
+                        batt_result = stage5_battery_dispatch_heuristic(
+                            modified_load, bldg_solar, tou_dr_rate_arr)
 
-                update_row[f'{sname}_bill_postadopt'] = bill
+                    if batt_result is not None:
+                        # Battery optimized import cost (at base rates)
+                        import_cost_base = batt_result['bill_energy']
+                        # Apply CARE to battery-optimized cost
+                        if is_care and tou_dr_care_discount > 0:
+                            import_cost_base *= (1 - tou_dr_care_discount)
+                    else:
+                        lp_failures += 1
+
+                # For each scenario: scale import cost by α_j, subtract export, add fixed
+                for sname, alpha in scenario_alphas.items():
+                    fc = scenario_fixed_charges[sname]
+                    fixed = fc['care'] if is_care else fc['noncare']
+                    bill = max(alpha * import_cost_base - export_credit, 0) + fixed
+                    update_row[f'{sname}_bill_postadopt'] = bill
+
+            else:
+                # No PV — EV-only building: compute V_postadopt under actual TOU-DR
+                # then scale by α_j
+                v_postadopt = calculate_actual_sdge_bill_vectorized(
+                    modified_load, 'TOU-DR', row.get('puma', ''),
+                    income, is_care
+                )
+                for sname, alpha in scenario_alphas.items():
+                    fc = scenario_fixed_charges[sname]
+                    fixed = fc['care'] if is_care else fc['noncare']
+                    bill = alpha * v_postadopt + fixed
+                    update_row[f'{sname}_bill_postadopt'] = bill
 
             results_update[bid] = update_row
             processed += 1

@@ -305,7 +305,16 @@ The complete methodology for technology adoption assignment, including the MRP m
 
 The analysis is implemented as an end-to-end pipeline that processes all 4,898 SDGE buildings through seven stages: (1)~rate scenario generation, (2)~baseline bill calculation under all scenarios, (3)~technology adoption assignment, (4)~solar profile generation with pvlib, (5)~battery dispatch optimization via linear programming, (6)~post-adoption bill calculation under the Net Billing Tariff, and (7)~distributional analysis and summary statistics.
 
-Bill calculation for designed rate scenarios is fully vectorized: each scenario's six TOU rates are mapped to an 8,760-element rate array, and annual volumetric charges are computed as a dot product between the building's hourly load profile and the rate array. For actual SDGE tariff rates, the full bill calculator handles baseline credits, tier structures, minimum bill provisions, and CARE discounts. All calculations use RASS-calibrated load profiles and scenario-specific fixed charges.
+Bill calculation uses an \textit{anchored billing} approach that ties all designed scenarios to the actual SDGE TOU-DR tariff. First, each building's actual TOU-DR bill $V_i$ is computed using the full tariff calculator, which applies posted TOU rates, subtracts baseline credits ($\sim$\$0.11/kWh on within-baseline consumption), and applies CARE discounts (37\% on volumetric charges). This $V_i$ serves as the building's volumetric component---the bill it would pay under current rates with no fixed charges.
+
+For each designed scenario $j$ with target revenue $R_j^{\text{target}}$ and monthly fixed charges $F_{ij}$, we compute a volumetric scaling factor $\alpha_j$ and anchored bills:
+\begin{equation}
+\alpha_j = \frac{R_0 \cdot (R_j^{\text{target}} / R^{\text{filed}}) - \sum_i w_i F_{ij}}{R_0}, \qquad
+B_{ij} = \alpha_j \cdot V_i + F_{ij}
+\end{equation}
+where $R_0 = \sum_i w_i V_i$ is the sample's weighted baseline revenue and $R^{\text{filed}}$ is SDGE's filed residential revenue (\$1.562B). This ensures that: (a) the baseline scenario F0\_WF0\_ROE0 ($\alpha = 1$, $F = 0$) produces bills identical to actual TOU-DR; (b) all scenario comparisons preserve the nonlinear tariff structure (baseline credits, CARE discounts); and (c) revenue neutrality holds across scenarios with identical policy parameters.
+
+For post-adoption bills (buildings with solar PV), the anchored approach computes import costs at actual TOU-DR posted rates (including baseline credits and CARE), scales by $\alpha_j$, and subtracts export credits at EEC rates: $B_{ij}^{\text{post}} = \max(\alpha_j \cdot C_{\text{import},i} - C_{\text{export},i},\; 0) + F_{ij}$.
 
 \section{Results}
 [Results sections to be filled in]

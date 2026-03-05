@@ -1070,25 +1070,73 @@ def stage7_summary(final_df, rate_scenarios_df):
     # All bill columns
     all_bill_cols = [c for c in final_df.columns if c.endswith('_bill') and 'postadopt' not in c]
 
-    # Revenue neutrality check (designed scenarios should be revenue-neutral)
-    print("\n--- Revenue Neutrality (sample-level) ---")
-    designed_cols = [f'{s}_bill' for s in DESIGNED_SCENARIOS if f'{s}_bill' in final_df.columns]
-    if designed_cols:
-        base_total = final_df[designed_cols[0]].sum()
-        print(f"  Baseline ({designed_cols[0]}): ${base_total:,.0f} (sample total)")
-        for col in designed_cols[1:]:
-            total = final_df[col].sum()
-            pct = (total - base_total) / base_total * 100
-            print(f"  {col}: ${total:,.0f} ({pct:+.2f}%)")
+    # Revenue neutrality check: extrapolate to population-level revenue
+    # and compare designed scenarios against actual TOU-DR
+    from rate_designer import RESIDENTIAL_REVENUE, CUSTOMERS
+    total_customers = CUSTOMERS['total']
 
-    # Actual SDGE rates comparison
-    actual_cols = [f'{v}_bill' for v in ACTUAL_SDGE_RATES.values()
-                   if f'{v}_bill' in final_df.columns]
-    if actual_cols:
-        print("\n--- Actual SDGE Tariff Bills ---")
-        for col in actual_cols:
-            valid = final_df[col].dropna()
-            print(f"  {col}: mean=${valid.mean():,.0f}  median=${valid.median():,.0f}  (n={len(valid)})")
+    print("\n--- Revenue Neutrality Check (population-level) ---")
+    print(f"  EIA/SDGE filed residential revenue: ${RESIDENTIAL_REVENUE/1e9:.4f}B")
+    print(f"  Total residential customers: {total_customers:,}")
+
+    tou_dr_col = 'tou_dr_bill'
+    designed_cols = [f'{s}_bill' for s in DESIGNED_SCENARIOS if f'{s}_bill' in final_df.columns]
+
+    # Use only buildings with valid TOU-DR bills for apples-to-apples comparison
+    if tou_dr_col in final_df.columns and final_df[tou_dr_col].notna().sum() > 0:
+        valid_mask = final_df[tou_dr_col].notna()
+        n_valid = valid_mask.sum()
+
+        # Population-level revenue = mean(bill) × total_customers
+        tou_dr_mean = final_df.loc[valid_mask, tou_dr_col].mean()
+        tou_dr_pop_rev = tou_dr_mean * total_customers
+
+        print(f"\n  Sample size: {n_valid} buildings "
+              f"(each represents ~{total_customers/n_valid:.0f} households)")
+        print(f"\n  {'Rate':<25s} {'Mean Bill':>12s} {'Pop Revenue':>14s} "
+              f"{'vs TOU-DR':>10s} {'vs Filed':>10s}")
+        print(f"  {'-'*71}")
+
+        # Actual TOU-DR
+        pct_vs_filed = (tou_dr_pop_rev - RESIDENTIAL_REVENUE) / RESIDENTIAL_REVENUE * 100
+        print(f"  {'Actual TOU-DR':<25s} ${tou_dr_mean:>10,.0f} "
+              f"${tou_dr_pop_rev/1e9:>12.4f}B {'—':>10s} "
+              f"{pct_vs_filed:>+9.2f}%")
+
+        # Actual TOU-DR-F if available
+        tou_drf_col = 'tou_dr_f_bill'
+        if tou_drf_col in final_df.columns:
+            drf_valid = valid_mask & final_df[tou_drf_col].notna()
+            if drf_valid.sum() > 0:
+                drf_mean = final_df.loc[drf_valid, tou_drf_col].mean()
+                drf_pop_rev = drf_mean * total_customers
+                pct_vs_dr = (drf_pop_rev - tou_dr_pop_rev) / tou_dr_pop_rev * 100
+                pct_vs_filed = (drf_pop_rev - RESIDENTIAL_REVENUE) / RESIDENTIAL_REVENUE * 100
+                print(f"  {'Actual TOU-DR-F':<25s} ${drf_mean:>10,.0f} "
+                      f"${drf_pop_rev/1e9:>12.4f}B {pct_vs_dr:>+9.2f}% "
+                      f"{pct_vs_filed:>+9.2f}%")
+
+        # Designed scenarios
+        for col in designed_cols:
+            mean_bill = final_df.loc[valid_mask, col].mean()
+            pop_rev = mean_bill * total_customers
+            pct_vs_dr = (pop_rev - tou_dr_pop_rev) / tou_dr_pop_rev * 100
+            pct_vs_filed = (pop_rev - RESIDENTIAL_REVENUE) / RESIDENTIAL_REVENUE * 100
+            label = col.replace('_bill', '')
+            print(f"  {label:<25s} ${mean_bill:>10,.0f} "
+                  f"${pop_rev/1e9:>12.4f}B {pct_vs_dr:>+9.2f}% "
+                  f"{pct_vs_filed:>+9.2f}%")
+    else:
+        # Fallback: compare designed scenarios against each other
+        print("\n  WARNING: No valid TOU-DR bills — comparing designed scenarios only")
+        if designed_cols:
+            for col in designed_cols:
+                mean_bill = final_df[col].mean()
+                pop_rev = mean_bill * total_customers
+                pct_vs_filed = (pop_rev - RESIDENTIAL_REVENUE) / RESIDENTIAL_REVENUE * 100
+                label = col.replace('_bill', '')
+                print(f"  {label:<25s} ${mean_bill:>10,.0f} "
+                      f"${pop_rev/1e9:>12.4f}B {pct_vs_filed:>+9.2f}% vs filed")
 
     # Bill distribution by income
     print("\n--- Mean Annual Bill by Income ---")

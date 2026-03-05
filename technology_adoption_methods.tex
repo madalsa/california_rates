@@ -1,0 +1,172 @@
+% technology_adoption_methods.tex
+% Supplementary methods section: Technology adoption and bill impact analysis
+% Signal: [update to tex] to revise this file
+%
+% NOTES (not for publication):
+% - PUMAs are NOT useless: tiered rates require PUMA-to-baseline-territory mapping
+% - RASS 2019 data is outdated and should not be used for adoption rates
+% - ResStock uses 2020 PUMAs; puma_utility_data.csv has 2010 PUMAs (mismatch)
+% - Correct SDGE sample: county-based filter = 4,898 buildings, 1,235,773 weighted HH
+%   (NOT PUMA-based filter which gives 3,280 / 827,549 due to vintage mismatch)
+
+\subsection{Technology Adoption Characterization}
+\label{sec:tech_adoption}
+
+A limitation of the baseline analysis in the preceding sections is that bill impacts are calculated for static load profiles that do not account for distributed energy resources (DERs) and electrification technologies increasingly prevalent in SDGE's service territory. To address this, we develop a supplemental technology adoption methodology that assigns solar photovoltaics (PV), battery energy storage systems (BESS), electric vehicles (EVs), and heat pumps (HPs) to buildings in our sample based on empirically-grounded adoption probabilities.
+
+\subsubsection{Current Technology Penetration in SDGE Territory}
+\label{sec:actual_adoption}
+
+Table~\ref{tab:tech_adoption_comparison} compares technology adoption rates in the ResStock baseline sample against current estimates for SDGE's service territory derived from programmatic and administrative data sources.
+
+\begin{table}[htbp]
+\centering
+\caption{Technology adoption: ResStock baseline vs.\ current SDGE estimates}
+\label{tab:tech_adoption_comparison}
+\begin{tabular}{lrrrl}
+\toprule
+Technology & ResStock & ResStock & Actual SDGE & \\
+           & (bldgs)  & (wtd \%) & (est.\ \%)  & Primary source \\
+\midrule
+Solar PV          & 306 & 6.2\%  & 15--20\% & CA DG Stats \\
+Battery storage   &   0 & 0.0\%  & $\sim$2.3\% & SGIP program data \\
+Electric vehicle  &   0 & 0.0\%  & 11--14\% & CEC ZEV Dashboard \\
+Heat pump (HVAC)  & 408 & 8.3\%  & 12--15\% & TECH Clean California \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item \textit{Notes:} ResStock counts are unweighted building counts from the 4,898-building San Diego County sample (1,235,773 weighted households). ``Actual SDGE'' estimates are based on the most recent available data: solar from California Distributed Generation Statistics (californiadgstats.ca.gov); battery from Self-Generation Incentive Program reports and Cleantech San Diego (June 2025); EVs from CEC Light-Duty Vehicle Dashboard and DMV registration data for San Diego County; heat pumps from TECH Clean California program data and the California Heat Pump Partnership Blueprint, supplemented with proportional estimates from CEC building permit data. Solar adoption has declined sharply post-NEM 3.0 ($\sim$47\% reduction in new installations in 2024), though approximately 70\% of new solar systems now include paired battery storage.
+\end{tablenotes}
+\end{table}
+
+The ResStock baseline substantially underrepresents solar PV adoption ($\sim$2.5$\times$ below current levels), completely omits battery storage and electric vehicles, and modestly underrepresents heat pump penetration. These gaps mean that applying rate scenarios to unmodified ResStock load profiles does not capture the bill impacts experienced by the approximately 25--35\% of SDGE households that have adopted at least one of these technologies.
+
+\subsubsection{Supplemental Adoption Methodology}
+\label{sec:supplemental_adoption}
+
+We use a two-step approach to assign technologies to buildings in the ResStock sample, combining survey-based adoption probabilities with the existing ResStock technology assignments.
+
+\paragraph{Step 1: Survey-based adoption probabilities.}
+We conducted a survey of California residential customers to estimate technology adoption rates across the state's climate zones, stratified by disadvantaged community (DAC) and non-DAC status. Survey responses were weighted to be representative of the population. The survey provides adoption probabilities for each technology conditional on geographic and socioeconomic characteristics:
+\begin{equation}
+P(\text{adopt}_k \mid \text{CZ}, \text{DAC}) = \hat{\pi}_{k,\text{CZ},\text{DAC}}
+\end{equation}
+where $k \in \{\text{solar, battery, EV, HP}\}$, CZ is the CEC climate zone, and DAC status is determined by income thresholds.
+
+% TODO: Insert actual survey adoption rates by CZ and DAC/non-DAC when MRP data is integrated
+% Format expected: tract-level MRP probabilities aggregated to PUMA level
+% Covariates: income, home type (and potentially tenure, climate zone)
+
+\paragraph{Step 2: Supplemental assignment to ResStock buildings.}
+The ResStock sample already contains some technology adoption---specifically, 6.2\% of buildings have solar PV and 8.3\% have heat pumps. Rather than replacing these assignments, we \textit{supplement} them to reach current SDGE penetration levels. For each technology $k$:
+
+\begin{enumerate}
+    \item Let $N_k^{\text{RS}}$ denote the number of ResStock buildings already assigned technology $k$, and $N_k^{\text{target}}$ the target count based on actual SDGE penetration applied to our 4,898-building sample.
+    \item The supplemental assignment target is $\Delta N_k = N_k^{\text{target}} - N_k^{\text{RS}}$ additional buildings.
+    \item Among buildings \textit{not} already assigned technology $k$, compute adoption scores using the survey-derived probabilities, adjusted by building-level characteristics available in ResStock:
+    \begin{equation}
+    S_{i,k} = P(\text{adopt}_k \mid \text{CZ}_i, \text{DAC}_i) \times f_k(\text{income}_i, \text{housing type}_i, \text{tenure}_i)
+    \end{equation}
+    where $f_k(\cdot)$ adjusts the base probability for individual building characteristics. For instance, solar adoption is higher among single-family owner-occupied homes with higher incomes.
+    \item Rank non-adopter buildings by $S_{i,k}$ in descending order and assign technology $k$ to the top $\Delta N_k$ buildings.
+\end{enumerate}
+
+Table~\ref{tab:supplemental_targets} shows the supplemental assignment targets for each technology.
+
+\begin{table}[htbp]
+\centering
+\caption{Supplemental technology assignment targets}
+\label{tab:supplemental_targets}
+\begin{tabular}{lrrrr}
+\toprule
+Technology & ResStock & Target & Supplemental & Target \\
+           & existing & penetration & additions & count \\
+\midrule
+Solar PV         & 306 & $\sim$17\% & $\sim$527 & $\sim$833 \\
+Battery storage  &   0 & $\sim$2.3\% & $\sim$113 & $\sim$113 \\
+Electric vehicle &   0 & $\sim$12\% & $\sim$588 & $\sim$588 \\
+Heat pump (HVAC) & 408 & $\sim$13\% & $\sim$229 & $\sim$637 \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item \textit{Notes:} Target penetration rates are midpoint estimates from Table~\ref{tab:tech_adoption_comparison}. Supplemental additions are computed as (target count $-$ ResStock existing). Target counts are rounded; actual assignments depend on survey probability rankings. Some buildings may be assigned multiple technologies (e.g., solar + battery).
+\end{tablenotes}
+\end{table}
+
+\paragraph{DAC classification.}
+ResStock does not include a direct DAC indicator. We proxy DAC status using area median income (AMI) thresholds: buildings with AMI $\leq$ 80\% are classified as DAC-equivalent, consistent with California's CalEnviroScreen methodology that identifies communities disproportionately burdened by pollution and socioeconomic disadvantage. In the SDGE sample, this corresponds to approximately 41\% of buildings (AMI categories 0--30\%, 30--60\%, and 60--80\%).
+
+% NOTE: ResStock geographic resolution is PUMA (22 PUMAs in SD County), not census tract.
+% MRP results are at census tract level. Crosswalk strategy:
+%   P(adopt | PUMA) = sum_tracts [ P(adopt | tract) * tract_pop ] / PUMA_pop
+% Then within PUMA, use building-level income and housing type to differentiate.
+
+\paragraph{Geographic crosswalk.}
+The survey-based adoption probabilities (via multilevel regression and poststratification, MRP) are estimated at the census tract level, while ResStock buildings are identified at the PUMA level (22 PUMAs in San Diego County). We aggregate tract-level MRP probabilities to PUMAs using tract population weights:
+\begin{equation}
+P(\text{adopt}_k \mid \text{PUMA}_j) = \frac{\sum_{t \in j} P(\text{adopt}_k \mid \text{tract}_t) \times \text{Pop}_t}{\sum_{t \in j} \text{Pop}_t}
+\end{equation}
+Within each PUMA, building-level variation in adoption probability is driven by income and housing type covariates from the MRP model, which map directly to ResStock metadata fields (\texttt{in.income}, \texttt{in.geometry\_building\_type\_recs}, \texttt{in.tenure}).
+
+\subsubsection{Interpretation}
+\label{sec:adoption_interpretation}
+
+This supplemental adoption approach allows us to interpret the ResStock baseline profiles as representing \textit{current} electricity demand patterns for SDGE customers. Specifically:
+\begin{itemize}
+    \item Buildings assigned solar PV will have their load profiles modified to include behind-the-meter generation, reducing net consumption during daytime hours.
+    \item Buildings assigned battery storage will have load-shifting capabilities modeled, reducing peak-period consumption and increasing off-peak consumption.
+    \item Buildings assigned electric vehicles will have additional charging load added to their profiles, typically concentrated in evening and overnight hours.
+    \item Buildings assigned heat pumps (supplemental) will have their heating load profiles converted from gas furnace to electric heat pump characteristics, increasing winter electricity consumption while reducing natural gas use.
+\end{itemize}
+
+The bill impact analysis then captures not only the direct effect of rate design changes on existing consumption patterns, but also the interaction between rate structure and technology adoption---for example, how fixed charges affect the bill savings from solar self-consumption, or how TOU rate spreads influence the value of battery arbitrage.
+
+% NOTE on PUMAs and tiered rates:
+% PUMAs are essential for the tiered rate calculation because baseline territory
+% allocations (which determine tier 1 vs tier 2 thresholds) are mapped via PUMA.
+% The puma_utility_data.csv provides this PUMA-to-baseline-territory mapping.
+% Current file uses 2010 PUMA codes; metadata uses 2020 PUMAs. A crosswalk
+% between PUMA10 and PUMA20 is available in the metadata (GEOID10, GEOID20 columns).
+
+\subsubsection{Bill Calculation with Technology Adoption}
+\label{sec:bill_calc_tech}
+
+For buildings with assigned technologies, the bill calculation from Section~\ref{sec:bill_calc} is modified as follows.
+
+\paragraph{Solar PV.}
+For buildings with solar PV, net consumption in each hour is:
+\begin{equation}
+Q_{i,h}^{\text{net}} = Q_{i,h}^{\text{scaled}} - G_{i,h}^{\text{PV}}
+\end{equation}
+where $G_{i,h}^{\text{PV}}$ is the solar generation in hour $h$ based on the building's PV system size and local irradiance. Under NEM 3.0 (net billing tariff), export compensation is at the avoided cost rate rather than the retail rate, creating an asymmetry between consumption and export pricing.
+
+% TODO: Specify NEM 3.0 export rates and whether to model NEM 2.0 grandfathered customers
+
+\paragraph{Battery storage.}
+Battery dispatch is modeled as load shifting from peak to off-peak periods:
+\begin{equation}
+Q_{i,h}^{\text{net}} = Q_{i,h}^{\text{scaled}} - D_{i,h}^{\text{discharge}} + C_{i,h}^{\text{charge}}
+\end{equation}
+subject to battery capacity, state-of-charge, and round-trip efficiency constraints. A simple peak-shaving heuristic or TOU-arbitrage strategy determines the dispatch schedule.
+
+% TODO: Specify battery parameters (capacity, power, efficiency) and dispatch strategy
+
+\paragraph{Electric vehicles.}
+EV charging load is added to the building's base consumption:
+\begin{equation}
+Q_{i,h}^{\text{net}} = Q_{i,h}^{\text{scaled}} + L_{i,h}^{\text{EV}}
+\end{equation}
+where $L_{i,h}^{\text{EV}}$ is the charging load profile, which depends on charging behavior (e.g., immediate upon arrival vs.\ scheduled off-peak charging).
+
+% TODO: Specify EV charging profiles (Level 1 vs Level 2, timing assumptions)
+
+\paragraph{Heat pumps.}
+For supplementally-assigned heat pump buildings, the heating load profile is converted from the gas furnace baseline:
+\begin{equation}
+Q_{i,h}^{\text{net}} = Q_{i,h}^{\text{scaled}} - Q_{i,h}^{\text{resistance}} + Q_{i,h}^{\text{HP}}
+\end{equation}
+where $Q_{i,h}^{\text{resistance}}$ is any existing electric resistance heating and $Q_{i,h}^{\text{HP}}$ is the heat pump electricity consumption, determined by heating load and COP (coefficient of performance) as a function of outdoor temperature.
+
+% TODO: Specify HP COP curves and whether to model both space heating and water heating

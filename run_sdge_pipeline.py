@@ -93,9 +93,26 @@ BATTERY_POWER_KW = 5.0       # max charge/discharge rate
 BATTERY_EFFICIENCY = 0.90    # round-trip efficiency
 
 # Default EV charging parameters
-EV_DAILY_KWH = 10.0  # ~30 miles/day at 3 mi/kWh
+EV_MILES_PER_KWH = 3.0    # wall-to-wheels efficiency
 EV_CHARGE_START_HOUR = 22  # 10 PM
 EV_CHARGE_HOURS = 5        # 10 PM – 3 AM
+
+# BEV daily VMT empirical CDF (from vehicletrends.us, BEV All)
+# Columns: (DVMT miles, cumulative probability 0-1)
+BEV_DVMT_CDF = np.array([
+    [0,  0.00],
+    [5,  0.03],
+    [10, 0.12],
+    [15, 0.25],
+    [20, 0.42],
+    [25, 0.58],
+    [30, 0.70],
+    [35, 0.80],
+    [40, 0.87],
+    [50, 0.95],
+    [60, 0.98],
+    [70, 1.00],
+])
 
 # Filed utility revenue and customer counts (for anchored billing)
 FILED_RESIDENTIAL_REVENUE = 1.5617e9  # $1.562B
@@ -1002,11 +1019,42 @@ def stage5_battery_dispatch_heuristic(hourly_load, solar_gen, rate_array):
 # Stage 6: Post-adoption bills
 # ---------------------------------------------------------------------------
 
-def make_ev_profile():
-    """Generate a typical Level 2 EV charging profile (8760 hours)."""
-    profile = np.zeros(8760)
-    hourly_charge_rate = EV_DAILY_KWH / EV_CHARGE_HOURS  # kW
+def sample_ev_dvmt(n, seed=44):
+    """Sample daily VMT for *n* EV buildings from the empirical BEV CDF.
 
+    Uses inverse-CDF (linear interpolation) so each building gets a
+    persistent daily driving distance drawn from the vehicletrends.us
+    BEV-All distribution.
+
+    Returns
+    -------
+    np.ndarray, shape (n,)
+        Daily VMT for each building (miles).
+    """
+    rng = np.random.default_rng(seed)
+    u = rng.uniform(0, 1, size=n)
+    # Inverse CDF: given uniform quantile u, interpolate to DVMT
+    dvmt = np.interp(u, BEV_DVMT_CDF[:, 1], BEV_DVMT_CDF[:, 0])
+    return dvmt
+
+
+def make_ev_profile(daily_miles=None):
+    """Generate a Level 2 EV charging profile (8760 hours).
+
+    Parameters
+    ----------
+    daily_miles : float or None
+        Daily VMT for this building. If None, uses the distribution mean
+        (~25 mi/day).  Converted to daily kWh via EV_MILES_PER_KWH.
+    """
+    if daily_miles is None:
+        # Distribution mean (trapezoidal integration of the CDF)
+        daily_miles = np.trapz(BEV_DVMT_CDF[:, 0],
+                               BEV_DVMT_CDF[:, 1])  # ≈25 mi
+    daily_kwh = daily_miles / EV_MILES_PER_KWH
+    hourly_charge_rate = daily_kwh / EV_CHARGE_HOURS  # kW
+
+    profile = np.zeros(8760)
     for day in range(365):
         for h in range(EV_CHARGE_HOURS):
             hour = day * 24 + (EV_CHARGE_START_HOUR + h) % 24
@@ -1067,7 +1115,19 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
         print("  Using 0 export credit (conservative)")
         eec_rates = np.zeros(8760)
 
-    ev_profile = make_ev_profile()
+    # Sample per-building daily VMT from BEV empirical CDF
+    ev_buildings = has_tech[has_tech['assigned_ev'] == 1]
+    ev_dvmt_map = {}
+    if len(ev_buildings) > 0:
+        dvmt_samples = sample_ev_dvmt(len(ev_buildings))
+        for i, (_, ev_row) in enumerate(ev_buildings.iterrows()):
+            ev_dvmt_map[int(ev_row['building_id'])] = dvmt_samples[i]
+        print(f"  EV daily VMT distribution (sampled from BEV CDF):")
+        print(f"    Mean: {dvmt_samples.mean():.1f} mi | "
+              f"Median: {np.median(dvmt_samples):.1f} mi | "
+              f"Range: {dvmt_samples.min():.1f}–{dvmt_samples.max():.1f} mi")
+        print(f"    → Mean daily charging: "
+              f"{dvmt_samples.mean() / EV_MILES_PER_KWH:.1f} kWh/day")
 
     # Resolve per-kW annual generation for PV sizing
     if annual_kwh_per_kw is None:
@@ -1155,8 +1215,10 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
             # Modify load profile based on tech
             modified_load = hourly_load.copy()
 
-            # Add EV charging
+            # Add EV charging (per-building DVMT from empirical CDF)
             if row['assigned_ev'] == 1:
+                bldg_dvmt = ev_dvmt_map.get(bid, 30.0)  # fallback 30 mi
+                ev_profile = make_ev_profile(daily_miles=bldg_dvmt)
                 modified_load += ev_profile
 
             # Solar generation — sized per building based on consumption
@@ -1170,7 +1232,9 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
                 pv_size_kw = 0.0
 
             # Calculate bills under each scenario using anchored approach
-            update_row = {'building_id': bid, 'pv_size_kw': pv_size_kw}
+            ev_miles = ev_dvmt_map.get(bid, 0.0) if row['assigned_ev'] == 1 else 0.0
+            update_row = {'building_id': bid, 'pv_size_kw': pv_size_kw,
+                          'ev_daily_miles': ev_miles}
 
             if row['assigned_pv'] == 1:
                 # Net billing: compute import cost at actual TOU-DR rates, then scale

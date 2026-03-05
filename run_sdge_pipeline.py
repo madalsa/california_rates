@@ -1127,7 +1127,7 @@ def stage7_summary(final_df, rate_scenarios_df):
     # Tech adoption impact
     if 'assigned_pv' in final_df.columns:
         print("\n--- Tech Adoption Bill Impact ---")
-        for sname in [baseline_scenario, 'F50_WF0_ROE0']:
+        for sname in ['F0_WF0_ROE0', 'F50_WF0_ROE0']:
             base_col = f'{sname}_bill'
             post_col = f'{sname}_bill_postadopt'
             if base_col in final_df.columns and post_col in final_df.columns:

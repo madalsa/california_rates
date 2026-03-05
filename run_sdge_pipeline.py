@@ -157,7 +157,7 @@ def calculate_bill_vectorized(hourly_load, rate_array, fixed_annual):
     return np.dot(hourly_load, rate_array) + fixed_annual
 
 
-def calculate_actual_sdge_bill_vectorized(hourly_load, rate_code, puma_numeric,
+def calculate_actual_sdge_bill_vectorized(hourly_load, rate_code, puma_str,
                                           income, is_care):
     """
     Vectorized bill calculation for actual SDGE tariff rates (TOU-DR, TOU-DR-F).
@@ -178,8 +178,8 @@ def calculate_actual_sdge_bill_vectorized(hourly_load, rate_code, puma_numeric,
     rate_entries = rates_df[rates_df['rate_type'] == rate_code]
     weekday_rate = rate_entries[rate_entries['weekday'] == 'weekday'].iloc[0].to_dict()
 
-    # Get baseline allowance for this PUMA
-    baseline_entry = baseline_df[baseline_df['puma'] == puma_numeric]
+    # Get baseline allowance for this PUMA (string format like 'G06005928')
+    baseline_entry = baseline_df[baseline_df['puma'] == puma_str]
     if baseline_entry.empty:
         return np.nan
     daily_summer_baseline = baseline_entry['summer_baseline_allowance'].values[0]
@@ -301,14 +301,9 @@ def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
     # Build metadata lookup
     metadata = {}
     for _, row in sdge_meta.iterrows():
-        # Extract numeric PUMA for corrected_bill_calc (needs int PUMA)
-        puma_clean = row.get('puma_clean', 0)
-        # puma_clean is like 6005928 → need just 5928 for the bill calc
-        puma_numeric = int(puma_clean) % 1000000 if puma_clean else 0
-
         metadata[str(row['building_id'])] = {
             'puma': row['puma20'],
-            'puma_numeric': puma_numeric,
+            'puma_str': row['puma20'],  # string PUMA like 'G06005928' for baseline lookup
             'income_category': normalize_income(row.get('income_category', 'medium')),
             'scaling_factor': row.get('scaling_factor', 1.0),
         }
@@ -370,7 +365,7 @@ def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
 
             income = metadata[building_id]['income_category']
             is_care = (income == 'low')
-            puma_numeric = metadata[building_id]['puma_numeric']
+            puma_str = metadata[building_id]['puma_str']
 
             row = {
                 'building_id': int(building_id),
@@ -384,7 +379,7 @@ def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
             for rate_code, col_prefix in ACTUAL_SDGE_RATES.items():
                 try:
                     bill = calculate_actual_sdge_bill_vectorized(
-                        hourly_load_scaled, rate_code, puma_numeric,
+                        hourly_load_scaled, rate_code, puma_str,
                         income, is_care
                     )
                     row[f'{col_prefix}_bill'] = bill
@@ -460,7 +455,7 @@ def stage3_tech_assignments(bills_df):
     print(f"  Buildings with bills: {len(sdge_meta)}")
 
     # Try to use the full survey-based assignment
-    survey_path = 'Final19_SW_CleanedSurvey.csv'
+    survey_path = 'survey_responses.csv'
     try:
         from assign_technologies import (
             prepare_survey, compute_survey_adoption_rates,

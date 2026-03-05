@@ -637,3 +637,224 @@ def clear_excel_cache():
     """Clear the Excel data cache."""
     global _EXCEL_CACHE
     _EXCEL_CACHE.clear()
+
+
+# ============================================================
+# NET BILLING (NEM 3.0) FUNCTIONS
+# ============================================================
+
+# Cache for EEC data
+_EEC_CACHE = {}
+
+def load_eec_data(eec_file="eec_hourly_2025_wide.csv"):
+    """Load and cache EEC hourly data."""
+    global _EEC_CACHE
+    if eec_file not in _EEC_CACHE:
+        _EEC_CACHE[eec_file] = pd.read_csv(eec_file, parse_dates=['datetime'])
+    return _EEC_CACHE[eec_file]
+
+
+def get_eec_rates(utility, eec_file="eec_hourly_2025_wide.csv"):
+    """
+    Get 8760 hourly EEC rates for a utility.
+
+    Parameters
+    ----------
+    utility : str
+        'PGE', 'SCE', or 'SDGE'
+    eec_file : str
+        Path to the wide-format EEC CSV
+
+    Returns
+    -------
+    dict with keys 'produced', 'delivered', 'total' — each a numpy array of length 8760
+    """
+    df = load_eec_data(eec_file)
+    u = utility.upper().replace('PG&E', 'PGE').replace('SDG&E', 'SDGE')
+
+    if u == 'SDGE':
+        total = df['sdge_total'].values
+        return {'produced': total, 'delivered': np.zeros(8760), 'total': total}
+    elif u == 'PGE':
+        return {
+            'produced': df['pge_produced'].values,
+            'delivered': df['pge_delivered'].values,
+            'total': df['pge_total'].values,
+        }
+    elif u == 'SCE':
+        return {
+            'produced': df['sce_produced'].values,
+            'delivered': df['sce_delivered'].values,
+            'total': df['sce_total'].values,
+        }
+    else:
+        raise ValueError(f"Unknown utility: {utility}")
+
+
+def calculate_net_billing(hourly_consumption, hourly_generation, puma, rate_code,
+                          excel_file=None, eec_file="eec_hourly_2025_wide.csv",
+                          care_eligible=False, income_level='medium',
+                          bundled=True, acc_adder=0.0):
+    """
+    Calculate annual bill under Net Billing Tariff (NEM 3.0 / Solar Billing Plan).
+
+    Under net billing, each hour is settled independently:
+      - Import hours (consumption > generation): pay retail rate on net import
+      - Export hours (generation > consumption): earn EEC credit on net export
+
+    Export credits offset import charges. Excess monthly credits roll forward.
+    At annual true-up, remaining credits are forfeited (valued at $0).
+
+    Parameters
+    ----------
+    hourly_consumption : array-like
+        Hourly electricity consumption (kWh), length 8760
+    hourly_generation : array-like
+        Hourly solar generation (kWh), length 8760
+    puma : int
+        PUMA code for baseline allowance lookup
+    rate_code : str
+        Retail rate schedule code
+    excel_file : str, optional
+        Path to retail rates Excel file
+    eec_file : str, optional
+        Path to EEC hourly CSV
+    care_eligible : bool
+        Whether customer qualifies for CARE discount
+    income_level : str
+        'low', 'medium', or 'high' for fixed charge determination
+    bundled : bool
+        If True, use full EEC (produced + delivered). If False (CCA/DA), use delivered only.
+    acc_adder : float
+        ACC Plus adder in $/kWh (e.g., 0.0088 standard, 0.036 low-income for 2026)
+
+    Returns
+    -------
+    dict with billing details
+    """
+    hourly_consumption = np.array(hourly_consumption, dtype=float)
+    hourly_generation = np.array(hourly_generation, dtype=float)
+
+    if len(hourly_consumption) != 8760 or len(hourly_generation) != 8760:
+        raise ValueError("Both consumption and generation must be 8760 hours")
+
+    # Get retail rates for import
+    rates_result = calculate_hourly_rates_with_consumption(
+        puma, rate_code, hourly_consumption, excel_file=excel_file,
+        care_eligible=care_eligible
+    )
+    retail_rates = rates_result['hourly_rates']  # $/kWh with CARE applied
+    rate_info = rates_result['rate_info']
+    utility = rate_info['utility']
+
+    # Get EEC rates for export
+    eec = get_eec_rates(utility, eec_file)
+    if bundled:
+        eec_rates = eec['total']
+    else:
+        eec_rates = eec['delivered']
+
+    # Add ACC adder to EEC rates
+    eec_rates = eec_rates + acc_adder
+
+    # Calculate hourly net consumption
+    net_consumption = hourly_consumption - hourly_generation
+
+    # Hourly import and export
+    hourly_import = np.maximum(net_consumption, 0)  # kWh imported from grid
+    hourly_export = np.maximum(-net_consumption, 0)  # kWh exported to grid
+
+    # Hourly charges and credits
+    hourly_import_charges = hourly_import * retail_rates
+    hourly_export_credits = hourly_export * eec_rates
+
+    # Monthly aggregation with credit rollover
+    days_per_month = np.array([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
+    hours_per_month = days_per_month * 24
+    month_start = np.concatenate(([0], np.cumsum(hours_per_month)))
+    month_names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+    monthly_import = np.zeros(12)
+    monthly_export = np.zeros(12)
+    monthly_import_charges = np.zeros(12)
+    monthly_export_credits = np.zeros(12)
+    monthly_net_charges = np.zeros(12)
+
+    credit_balance = 0.0  # rolling credit from previous months
+
+    for m in range(12):
+        s, e = month_start[m], month_start[m + 1]
+        monthly_import[m] = hourly_import[s:e].sum()
+        monthly_export[m] = hourly_export[s:e].sum()
+        monthly_import_charges[m] = hourly_import_charges[s:e].sum()
+        monthly_export_credits[m] = hourly_export_credits[s:e].sum()
+
+        # Net = import charges - export credits - rolled-over credits
+        net = monthly_import_charges[m] - monthly_export_credits[m] - credit_balance
+
+        if net < 0:
+            # Excess credits roll forward
+            credit_balance = -net
+            monthly_net_charges[m] = 0.0
+        else:
+            credit_balance = 0.0
+            monthly_net_charges[m] = net
+
+    # Annual true-up: remaining credit_balance is forfeited
+    total_energy_charges = monthly_net_charges.sum()
+
+    # Fixed charges (same as non-solar bill)
+    fixed_charges = rate_info['fixed_charges']
+    daily_fixed = fixed_charges['base_service_charge_per_day'] * 365
+
+    monthly_fixed = 0
+    if rate_info['has_fixed_component']:
+        key = f'fixedcharge_{income_level.lower()}'
+        monthly_fixed = fixed_charges.get(key, 0) or 0
+    annual_fixed = daily_fixed + monthly_fixed * 12
+
+    # Minimum bill
+    min_bill_day = rate_info.get('minimum_bill_per_day', 0)
+    if pd.isna(min_bill_day) or min_bill_day is None:
+        min_bill_day = 0
+    annual_min = min_bill_day * 365
+
+    total_bill = max(total_energy_charges + annual_fixed, annual_min + annual_fixed)
+
+    return {
+        'total_bill': total_bill,
+        'energy_charges': total_energy_charges,
+        'fixed_charges': annual_fixed,
+        'credit_forfeited': credit_balance,
+        'total_import_charges': monthly_import_charges.sum(),
+        'total_export_credits': monthly_export_credits.sum(),
+        'monthly': {
+            month_names[m]: {
+                'import_kwh': monthly_import[m],
+                'export_kwh': monthly_export[m],
+                'import_charges': monthly_import_charges[m],
+                'export_credits': monthly_export_credits[m],
+                'net_charges': monthly_net_charges[m],
+            } for m in range(12)
+        },
+        'hourly_import': hourly_import,
+        'hourly_export': hourly_export,
+        'hourly_import_charges': hourly_import_charges,
+        'hourly_export_credits': hourly_export_credits,
+        'eec_rates_used': eec_rates,
+        'retail_rates_used': retail_rates,
+        'rate_info': rate_info,
+        'summary': {
+            'total_consumption_kwh': hourly_consumption.sum(),
+            'total_generation_kwh': hourly_generation.sum(),
+            'total_import_kwh': hourly_import.sum(),
+            'total_export_kwh': hourly_export.sum(),
+            'net_consumption_kwh': net_consumption.sum(),
+            'avg_import_rate': (monthly_import_charges.sum() / hourly_import.sum()
+                               if hourly_import.sum() > 0 else 0),
+            'avg_export_rate': (monthly_export_credits.sum() / hourly_export.sum()
+                               if hourly_export.sum() > 0 else 0),
+            'bundled': bundled,
+            'acc_adder': acc_adder,
+        }
+    }

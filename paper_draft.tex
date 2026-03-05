@@ -28,9 +28,9 @@ Ranjit Deshmukh \\
 \begin{document}
 \maketitle
 \begin{abstract}
-This paper examines the distributional impacts of electricity rate design reforms in California's investor-owned utilities. We analyze how shifts from volumetric to fixed-charge pricing structures, combined with policy interventions such as wildfire cost removal and return-on-equity reductions, affect residential customers across income levels, consumption patterns, and climate zones. Using synthetic building profiles representative of California's building stock, we design revenue-neutral rate structures and calculate household-level bill impacts under various policy scenarios. Our findings reveal systematic distributional effects: fixed charges redistribute costs from high-consumption to low-consumption households, with impacts varying significantly by income level and geographic location. Policy interventions to remove wildfire costs and reduce utility returns on equity reduce bills across all customer groups but provide larger percentage savings to lower-income households. xxxxxx
+This paper examines the distributional impacts of electricity rate design reforms in California's investor-owned utilities. We analyze how shifts from volumetric to fixed-charge pricing structures, combined with policy interventions such as wildfire cost removal and return-on-equity reductions, affect residential customers across income levels, consumption patterns, and climate zones. Using 4,898 synthetic building profiles representative of San Diego Gas \& Electric's (SDGE) 1.3 million residential customers, we design revenue-neutral rate structures and calculate household-level bill impacts under 40 policy scenarios. We extend the analysis to account for distributed energy resource adoption---rooftop solar, battery storage, electric vehicles, and heat pumps---by assigning technologies to buildings using survey-derived adoption probabilities and computing bills under California's Net Billing Tariff (NEM~3.0). Our findings reveal systematic distributional effects: fixed charges redistribute costs from high-consumption to low-consumption households, with impacts varying significantly by income level and geographic location. Policy interventions to remove wildfire costs and reduce utility returns on equity reduce bills across all customer groups but provide larger percentage savings to lower-income households. The interaction between rate design and technology adoption is substantial: fixed charges reduce the bill savings from solar self-consumption, while time-of-use rate spreads influence the value of battery arbitrage.
 
-\textbf{Keywords:} Electricity pricing, rate design, fixed charges, distributional equity, California, time-of-use rates
+\textbf{Keywords:} Electricity pricing, rate design, fixed charges, distributional equity, California, time-of-use rates, net billing, distributed energy resources
 \end{abstract}
 
 \section{Introduction}
@@ -39,6 +39,8 @@ California's electricity sector faces mounting financial pressures from wildfire
 In 2024, the California Public Utilities Commission (CPUC) authorized investor-owned utilities to implement income-graduated fixed charges as part of broader rate reform efforts. SDGE introduced monthly fixed charges of \$6 for low-income California Alternate Rates for Energy (CARE) customers and \$24 for non-CARE customers, with corresponding reductions in volumetric rates \citep{[citation needed]}. Proponents argue that fixed charges improve utility cost recovery, reduce rate volatility, and better align charges with the cost structure of distribution systems. Critics contend that fixed charges reduce incentives for energy conservation, disproportionately burden low-consumption households, and undermine distributed energy resource adoption \citep{[citations needed]}.
 
 This study contributes to the electricity rate design literature by providing granular, building-level analysis of how different rate structures affect customer bills across the distribution of income, consumption, and geography. While previous studies have examined rate design impacts using aggregate or representative customer archetypes \citep{[citations]}, our approach uses detailed synthetic building profiles to capture heterogeneity within customer populations. We analyze not only the current fixed charge policy but also alternative rate designs incorporating wildfire cost removal and utility return-on-equity reductions---policy interventions under active consideration in California.
+
+A critical gap in existing rate design analyses is the omission of distributed energy resources (DERs). Approximately 15--20\% of SDGE residential customers have adopted rooftop solar PV, and battery storage, electric vehicles, and heat pumps are increasingly prevalent. These technologies fundamentally alter households' net consumption profiles and, consequently, how rate design changes affect their bills. We address this by supplementing the baseline building stock with empirically-grounded technology adoption assignments derived from a survey of California residential customers, and by modeling bill impacts under California's Net Billing Tariff (NEM~3.0), which compensates solar exports at hourly avoided-cost rates rather than retail rates.
 
 Our analysis focuses on SDGE's service territory as a case study, with plans to extend the methodology to all California investor-owned utilities (Pacific Gas \& Electric and Southern California Edison). SDGE serves approximately 1.3 million residential customers across three distinct climate zones (California Energy Commission zones 7, 10, and 14), providing meaningful variation in consumption patterns and building characteristics.
 
@@ -93,14 +95,14 @@ where $E_i$ is annual electricity consumption (kWh) and $I_i$ is household incom
 These elasticity estimates indicate that a 1\% increase in income is associated with approximately 0.15--0.28\% increase in electricity consumption, with coastal areas (CZ~7) showing higher income sensitivity than inland regions (CZ~14), where climate-driven cooling loads dominate consumption patterns regardless of income.
 
 \subsubsection{Rate Structures}
-Current SDGE residential rate structures were obtained from the utility's published tariff schedules. We analyzed four baseline rate scenarios:
+Current SDGE residential rate structures were obtained from the utility's published tariff schedules (October 2025). We analyzed four actual rate schedules:
 \begin{enumerate}
     \item \textbf{DR}: Tiered rate (pre-fixed charge)
     \item \textbf{DR-F}: Tiered rate with income-graduated fixed charges
     \item \textbf{TOU-DR}: Time-of-use rate (pre-fixed charge)---serves 68\% of customers
-    \item \textbf{TOU-DR-F}: Time-of-use rate with fixed charges
+    \item \textbf{TOU-DR-F}: Time-of-use rate with fixed charges (\$6.11/month CARE, \$24.60/month non-CARE)
 \end{enumerate}
-We use TOU-DR as the baseline for comparison, as it represents the majority of SDGE residential customers.
+We use TOU-DR as the primary benchmark, as it represents the majority of SDGE residential customers. The TOU-DR tariff has summer peak rates of \$0.60/kWh, summer off-peak of \$0.45/kWh, and a baseline credit of \$0.11/kWh applied to consumption within the baseline allowance. CARE customers receive a 37\% discount on volumetric rates. These actual tariff rates serve as the starting point for the designed rate scenarios described in Section~\ref{sec:tariff_validation}.
 
 \subsubsection{Utility Financial Data}
 Revenue requirements, rate base, and cost components were obtained from SDGE's General Rate Case filings and CPUC decisions \citep{[GRC citation]}. Key parameters include:
@@ -109,10 +111,25 @@ Revenue requirements, rate base, and cost components were obtained from SDGE's G
     \item Total residential sales: 4,810 GWh
     \item CARE customers: 372,135 (28.1\% of total)
     \item Non-CARE customers: 951,477 (71.9\% of total)
-    \item Authorized return on equity: 7.67\%
+    \item Authorized return on equity: 10.22\%
     \item Rate base: \$13.59 billion (utility-wide)
+    \item Capital structure: 52\% equity / 48\% debt
+    \item Wildfire fund recovery: \$414 million (utility-wide)
+    \item Transmission costs: \$685 million (utility-wide)
+    \item Distribution costs: \$1.722 billion (utility-wide)
 \end{itemize}
-Cost allocation to the residential class was calculated proportionally to residential revenue share of total utility revenue (36.9\%).
+Cost allocation to the residential class was calculated proportionally to residential revenue share of total utility revenue (36.9\%), yielding residential wildfire costs of \$153M, residential transmission costs of \$253M, and residential distribution costs of \$636M.
+
+\subsubsection{Energy Export Credit (EEC) Data}
+\label{sec:eec_data}
+
+For net billing calculations, we constructed an 8,760-hour table of Energy Export Credit rates for all three California IOUs from utility-published pricing files for the 2025 interconnection vintage:
+\begin{itemize}
+    \item \textbf{PG\&E}: Extracted from the ``Solar Billing Plan EEC Values Price Sheet 2025'' PDF, which provides separate ``Produced'' and ``Delivered'' components by hour-of-day, month, and day type (weekday/weekend).
+    \item \textbf{SCE}: Parsed from the ``NBT25 MIDAS File'' Excel workbook, with Produced (code USCA-XXSC) and Delivered (code USCA-SCXX) components separated.
+    \item \textbf{SDGE}: Parsed from the ``LY2025 NBT Pricing Upload MIDAS'' CSV, which provides a single combined rate.
+\end{itemize}
+MIDAS files use an 8am-to-8am day cycle, which we remapped to calendar hours. Holidays follow the NERC schedule plus California-observed holidays. The resulting table provides hourly EEC rates that vary substantially across hours and seasons, with near-zero midday values reflecting high solar penetration and higher evening values reflecting scarcity pricing.
 
 \subsection{Rate Design Methodology}
 
@@ -131,9 +148,9 @@ These empirical weights, computed from the 4,898-building sample, ensure that de
 
 For each scenario, we first determined the target revenue requirement:
 \begin{equation}
-R_{\text{target}} = R_{\text{base}} - \mathbb{1}_{\text{WF}} \cdot C_{\text{wildfire}} - \Delta_{\text{ROE}} \cdot B_{\text{rate}} \cdot s_{\text{res}}
+R_{\text{target}} = R_{\text{base}} - \mathbb{1}_{\text{WF}} \cdot C_{\text{wildfire}} - \Delta_{\text{ROE}} \cdot B_{\text{rate}} \cdot \phi_{\text{eq}} \cdot s_{\text{res}}
 \end{equation}
-where $R_{\text{base}} = \$1.562$B is the baseline residential revenue, $C_{\text{wildfire}}$ is the residential share of wildfire costs (\$153M), $\Delta_{\text{ROE}}$ is the percentage-point ROE reduction, $B_{\text{rate}}$ is the utility rate base, and $s_{\text{res}}$ is the residential revenue share.
+where $R_{\text{base}} = \$1.562$B is the baseline residential revenue, $C_{\text{wildfire}}$ is the residential share of wildfire costs (\$153M), $\Delta_{\text{ROE}}$ is the percentage-point ROE reduction, $B_{\text{rate}}$ is the utility rate base (\$13.59B), $\phi_{\text{eq}} = 0.52$ is the equity share of the utility's capital structure (since ROE applies only to the equity portion, not debt), and $s_{\text{res}} = 0.369$ is the residential revenue share. SDGE's authorized ROE of 10.22\% and its 52\%/48\% equity-debt capital structure imply that a 1 percentage-point ROE reduction lowers the residential revenue requirement by approximately \$26M.
 
 Fixed charge revenue was computed based on transmission and distribution (T\&D) cost recovery:
 \begin{equation}
@@ -163,11 +180,22 @@ This proportional scaling preserves the relative price signals across TOU period
 
 We analyzed a factorial design combining three policy dimensions:
 \begin{enumerate}
-    \item \textbf{Fixed charge levels}: 0\%, 25\%, 50\%, 75\% of T\&D costs recovered through fixed charges (4 levels)
+    \item \textbf{Fixed charge levels}: 0\%, 25\%, 50\%, 75\%, 100\% of T\&D costs recovered through fixed charges (5 levels)
     \item \textbf{Wildfire cost treatment}: Include or remove \$153 million in residential wildfire mitigation costs (2 levels)
-    \item \textbf{Return on equity adjustment}: Baseline (7.67\%), or reduce by 0.5, 1.0, or 1.5 percentage points (4 levels)
+    \item \textbf{Return on equity adjustment}: Baseline (10.22\%), or reduce by 0.5, 1.0, or 1.5 percentage points (4 levels)
 \end{enumerate}
-This produces $4 \times 2 \times 4 = 32$ rate scenarios, allowing us to isolate the distributional effect of each policy lever while controlling for the others.
+The full factorial produces $5 \times 2 \times 4 = 40$ rate scenarios. For the primary analysis, we focus on a subset of eight scenarios that isolate each policy lever and their key combinations, plus the two actual SDGE tariff rates for benchmarking:
+\begin{enumerate}
+    \item \textbf{TOU-DR}: Actual SDGE time-of-use rate (no fixed charges)---the benchmark
+    \item \textbf{TOU-DR-F}: Actual SDGE rate with income-graduated fixed charges (\$6.11/\$24.60 per month)
+    \item \textbf{F0\_WF0\_ROE0}: Designed status quo (all volumetric, revenue-neutral baseline)
+    \item \textbf{F50\_WF0\_ROE0}: 50\% of T\&D costs to fixed charges
+    \item \textbf{F100\_WF0\_ROE0}: 100\% of T\&D costs to fixed charges
+    \item \textbf{F0\_WF1\_ROE0}: Remove wildfire costs (all volumetric)
+    \item \textbf{F0\_WF0\_ROE1.0}: 1 percentage-point ROE reduction
+    \item \textbf{F50\_WF1\_ROE1.0}: Combined scenario (50\% fixed + wildfire removal + 1pp ROE cut)
+\end{enumerate}
+This focused set allows us to isolate the distributional effect of each policy lever individually and in combination, while the full 40-scenario grid supports sensitivity analysis.
 
 \subsection{Bill Calculation}
 
@@ -222,6 +250,62 @@ For each scenario relative to the TOU-DR baseline (no fixed charge, no policy in
 \end{equation}
 
 Results are presented as distributions (median, interquartile range) within each customer segment to capture within-group heterogeneity.
+
+\subsection{Tariff-Based Rate Validation}
+\label{sec:tariff_validation}
+
+To benchmark our designed rate scenarios against actual customer experience, we implemented a parallel bill calculation using SDGE's published tariff rates. The actual TOU-DR tariff has volumetric rates substantially higher than the revenue-divided average (e.g., summer peak of \$0.60/kWh vs.\ the revenue-average of \$0.3247/kWh), because the tariff rates incorporate baseline credits ($\sim$\$0.11/kWh applied to within-baseline consumption) and CARE discounts (37\% on volumetric rates) that reduce effective rates below the posted tariff.
+
+We validated the designed rate scenarios by confirming that the actual TOU-DR-F tariff---which represents the CPUC's fixed charge ruling at approximately 35\% of T\&D costs in fixed charges---is reproduced by our rate design framework to within $<$1\% error on all six TOU period rates and the income-graduated fixed charges (\$6.11 CARE, \$24.60 non-CARE). This cross-validation ensures that the designed scenarios (which vary fixed charge levels parametrically) are anchored to the real tariff structure.
+
+For baseline bill comparisons, we compute bills under both the actual SDGE tariff (using the full bill calculator with baseline credits, tier structures, and CARE discounts) and the designed revenue-neutral rates. We report bills under the actual TOU-DR tariff as the primary benchmark, with designed scenarios providing the counterfactual rate structures for policy analysis.
+
+\subsection{Net Billing (NEM 3.0)}
+\label{sec:net_billing}
+
+For buildings with rooftop solar PV, we calculate bills under California's Net Billing Tariff (also known as the Solar Billing Plan or NEM~3.0), which replaced net energy metering in April 2023. Under net billing, import and export are settled asymmetrically within each hour:
+\begin{itemize}
+    \item \textbf{Import hours} ($Q_{i,h}^{\text{net}} > 0$): The customer pays the full retail TOU rate on net consumption.
+    \item \textbf{Export hours} ($Q_{i,h}^{\text{net}} < 0$): The customer earns an Energy Export Credit (EEC) on net exports, valued at the hourly avoided cost rate.
+\end{itemize}
+
+The EEC rates are published by each utility and vary by hour, reflecting the time-varying avoided cost of generation, capacity, transmission, and distribution. For SDGE, we constructed an 8,760-hour EEC table from the utility's MIDAS pricing files for the 2025 interconnection vintage. Mean annual EEC rates are approximately \$0.06/kWh for SDGE, \$0.09/kWh for PG\&E, and \$0.08/kWh for SCE---substantially below retail rates of \$0.45--0.60/kWh, creating a strong incentive for self-consumption over export.
+
+Monthly export credits offset import charges, with excess credits rolling forward. At annual true-up, remaining credits are forfeited (valued at \$0). The annual net billing calculation is:
+\begin{equation}
+B_i^{\text{NB}} = \sum_{m=1}^{12} \max\left(0,\; C_{\text{import},m} - C_{\text{export},m} + F_m - \text{Credits}_{m-1}\right)
+\end{equation}
+where $C_{\text{import},m}$ and $C_{\text{export},m}$ are the monthly import charges and export credits, $F_m$ is the monthly fixed charge, and $\text{Credits}_{m-1}$ is the carried-forward credit from the previous month.
+
+\subsection{Technology Adoption and Load Modification}
+\label{sec:tech_adoption_main}
+
+The ResStock baseline profiles represent static load profiles without distributed energy resources increasingly prevalent in SDGE's territory. To capture the interaction between rate design and technology adoption, we assign four technologies---solar PV, battery energy storage, electric vehicles, and heat pumps---to buildings in the sample using survey-derived adoption probabilities calibrated to current administrative penetration rates.
+
+\subsubsection{Adoption Assignment}
+
+We use a supplemental adoption approach that preserves ResStock's existing assignments (6.2\% solar PV, 8.3\% heat pumps) and adds additional adopters to reach current SDGE penetration levels ($\sim$17\% solar PV, $\sim$2.3\% battery storage, $\sim$12\% EVs, $\sim$13\% heat pumps). Adoption probabilities are derived from a survey of California residential customers using multilevel regression and poststratification (MRP), with covariates---income, housing type, home size, and climate zone---that map directly to ResStock metadata fields. Buildings are ranked by their predicted adoption probability and assigned technologies from highest to lowest until the target penetration is reached. All solar PV adopters are assigned paired battery storage, reflecting current market trends where approximately 70\% of new California solar installations include batteries \citep{[citation needed]}.
+
+\subsubsection{Load Profile Modification}
+
+For each assigned technology, hourly load profiles are modified as follows:
+\begin{itemize}
+    \item \textbf{Solar PV}: A default 5~kW$_{\text{DC}}$ system is simulated using pvlib with San Diego irradiance data. Net consumption is $Q_{i,h}^{\text{net}} = Q_{i,h}^{\text{scaled}} - G_{i,h}^{\text{PV}}$, with export hours compensated at hourly EEC rates under the Net Billing Tariff.
+    \item \textbf{Battery storage}: A 13.5~kWh / 5~kW system (Tesla Powerwall equivalent) is dispatched via linear programming to minimize the customer's TOU bill, subject to capacity, power, and round-trip efficiency (90\%) constraints.
+    \item \textbf{Electric vehicles}: A daily charging load of 10~kWh ($\sim$30 miles/day) is added during off-peak hours (10~PM--3~AM), reflecting the default TOU-optimized charging schedule.
+    \item \textbf{Heat pumps}: Supplementally-assigned buildings have their heating load converted from gas furnace to heat pump characteristics, with COP varying by outdoor temperature.
+\end{itemize}
+
+The complete methodology for technology adoption assignment, including the MRP model specification, covariate mapping, and supplemental assignment algorithm, is described in the Supplementary Methods (Section~\ref{sec:tech_adoption}).
+
+\input{technology_adoption_methods}
+
+\subsection{Computational Pipeline}
+\label{sec:pipeline}
+
+The analysis is implemented as an end-to-end pipeline that processes all 4,898 SDGE buildings through seven stages: (1)~rate scenario generation, (2)~baseline bill calculation under all scenarios, (3)~technology adoption assignment, (4)~solar profile generation with pvlib, (5)~battery dispatch optimization via linear programming, (6)~post-adoption bill calculation under the Net Billing Tariff, and (7)~distributional analysis and summary statistics.
+
+Bill calculation for designed rate scenarios is fully vectorized: each scenario's six TOU rates are mapped to an 8,760-element rate array, and annual volumetric charges are computed as a dot product between the building's hourly load profile and the rate array. For actual SDGE tariff rates, the full bill calculator handles baseline credits, tier structures, minimum bill provisions, and CARE discounts. All calculations use RASS-calibrated load profiles and scenario-specific fixed charges.
 
 \section{Results}
 [Results sections to be filled in]

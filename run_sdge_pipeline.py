@@ -15,6 +15,7 @@ Usage:
   python run_sdge_pipeline.py --test             # test with 50 buildings
   python run_sdge_pipeline.py --stage 2          # run from stage 2 onward
   python run_sdge_pipeline.py --skip-tech        # skip tech adoption (stages 3-6)
+  python run_sdge_pipeline.py --tech-only        # run only tech stages (3-6)
 
 Run unattended (Mac):
   caffeinate -s python run_sdge_pipeline.py > pipeline.log 2>&1 &
@@ -78,8 +79,13 @@ SDGE_LATITUDE = 32.9
 SDGE_LONGITUDE = -117.1
 SDGE_ALTITUDE = 130  # meters
 
-# Default solar system size for residential PV (kW DC)
-DEFAULT_PV_SIZE_KW = 5.0
+# Solar sizing parameters
+DEFAULT_PV_SIZE_KW = 5.0          # Fallback if consumption data unavailable
+PV_OFFSET_TARGET = 0.80           # Size PV to offset 80% of annual consumption
+PV_MIN_SIZE_KW = 2.0              # Floor: smallest system worth installing
+PV_MAX_SIZE_KW = 12.0             # Cap: typical residential roof limit
+# San Diego ~1,700 kWh/kWp/yr (PVGIS TMY); computed from profile in stage 4
+SDGE_ANNUAL_KWH_PER_KW = 1700.0  # Updated at runtime from actual pvlib profile
 
 # Default battery parameters
 BATTERY_CAPACITY_KWH = 13.5  # Tesla Powerwall equivalent
@@ -665,13 +671,41 @@ def _assign_simplified(meta, weights):
 # Stage 4: Generate solar profiles with pvlib
 # ---------------------------------------------------------------------------
 
+def size_pv_system(annual_kwh, annual_kwh_per_kw):
+    """Size a PV system to offset PV_OFFSET_TARGET of annual consumption.
+
+    Parameters
+    ----------
+    annual_kwh : float
+        Building annual electricity consumption (kWh).
+    annual_kwh_per_kw : float
+        Annual generation per kW of installed PV (kWh/kW), from the
+        pvlib profile or SDGE_ANNUAL_KWH_PER_KW default.
+
+    Returns
+    -------
+    float
+        PV system size in kW DC, clamped to [PV_MIN_SIZE_KW, PV_MAX_SIZE_KW].
+    """
+    if annual_kwh_per_kw <= 0:
+        return DEFAULT_PV_SIZE_KW
+    ideal_kw = (annual_kwh * PV_OFFSET_TARGET) / annual_kwh_per_kw
+    return float(np.clip(ideal_kw, PV_MIN_SIZE_KW, PV_MAX_SIZE_KW))
+
+
 def stage4_solar_profiles(tech_df, bills_df):
     """
-    Generate 8760 hourly solar generation profiles using pvlib.
+    Generate a *per-kW* 8760 hourly solar generation profile using pvlib.
 
-    Uses a single representative location for SDGE territory.
-    Individual building PV sizes could be varied but we use a default.
+    Returns
+    -------
+    solar_per_kw : np.ndarray, shape (8760,)
+        Hourly generation in kWh per 1 kW DC installed.
+    annual_kwh_per_kw : float
+        Sum of solar_per_kw — used by stage 6 to size each building's PV.
     """
+    global SDGE_ANNUAL_KWH_PER_KW
+
     print("\n" + "=" * 80)
     print("STAGE 4: GENERATE SOLAR PROFILES (pvlib)")
     print("=" * 80)
@@ -681,7 +715,7 @@ def stage4_solar_profiles(tech_df, bills_df):
 
     if len(pv_buildings) == 0:
         print("  No PV buildings — skipping")
-        return np.zeros(8760)
+        return np.zeros(8760), SDGE_ANNUAL_KWH_PER_KW
 
     try:
         import pvlib
@@ -691,39 +725,45 @@ def stage4_solar_profiles(tech_df, bills_df):
         from pvlib.temperature import TEMPERATURE_MODEL_PARAMETERS
     except ImportError:
         print("  pvlib not installed — using synthetic solar profile")
-        return _synthetic_solar_profile()
+        profile = _synthetic_solar_profile()
+        per_kw = profile / DEFAULT_PV_SIZE_KW
+        annual = per_kw.sum()
+        SDGE_ANNUAL_KWH_PER_KW = annual
+        return per_kw, annual
 
     print(f"  Location: lat={SDGE_LATITUDE}, lon={SDGE_LONGITUDE}")
-    print(f"  System size: {DEFAULT_PV_SIZE_KW} kW DC")
+    print(f"  Solar sizing: {PV_OFFSET_TARGET*100:.0f}% offset target, "
+          f"{PV_MIN_SIZE_KW}-{PV_MAX_SIZE_KW} kW range")
 
     # Create location and get solar data
     location = Location(SDGE_LATITUDE, SDGE_LONGITUDE, 'US/Pacific',
                         SDGE_ALTITUDE, 'San Diego')
 
-    # Use TMY data from pvlib's built-in sources
     try:
-        # Try to get TMY data
         tmy_data, tmy_meta = pvlib.iotools.get_pvgis_tmy(
             SDGE_LATITUDE, SDGE_LONGITUDE, map_variables=True)
         print("  Retrieved TMY data from PVGIS")
     except Exception as e:
         print(f"  Could not fetch TMY data: {e}")
         print("  Using synthetic solar profile instead")
-        return _synthetic_solar_profile()
+        profile = _synthetic_solar_profile()
+        per_kw = profile / DEFAULT_PV_SIZE_KW
+        annual = per_kw.sum()
+        SDGE_ANNUAL_KWH_PER_KW = annual
+        return per_kw, annual
 
     # Set up PV system
     sandia_modules = pvlib.pvsystem.retrieve_sam('SandiaMod')
     cec_inverters = pvlib.pvsystem.retrieve_sam('cecinverter')
 
-    # Pick a representative module and inverter
     module = sandia_modules.iloc[0]
     inverter = cec_inverters.iloc[0]
 
     temp_params = TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_glass']
 
     system = PVSystem(
-        surface_tilt=SDGE_LATITUDE,  # tilt = latitude (optimal annual)
-        surface_azimuth=180,  # south-facing
+        surface_tilt=SDGE_LATITUDE,
+        surface_azimuth=180,
         module_parameters=module,
         inverter_parameters=inverter,
         temperature_model_parameters=temp_params,
@@ -734,15 +774,12 @@ def stage4_solar_profiles(tech_df, bills_df):
 
     # Prepare weather data (ensure 8760 hours)
     weather = tmy_data.copy()
-    # Resample to hourly if needed
     if len(weather) != 8760:
         weather = weather.resample('h').mean()
     weather = weather.iloc[:8760]
 
-    # Run model
     mc.run_model(weather)
 
-    # Get AC power output, normalize to per-kW, scale to system size
     ac_power = mc.results.ac.values
     ac_power = np.nan_to_num(ac_power, nan=0.0)
     ac_power = np.maximum(ac_power, 0)
@@ -750,34 +787,38 @@ def stage4_solar_profiles(tech_df, bills_df):
     # Normalize: module STC rating → per kW
     stc_rating = module['Impo'] * module['Vmpo']  # watts
     if stc_rating > 0:
-        hourly_kwh_per_kw = ac_power / stc_rating
+        solar_per_kw = ac_power / stc_rating
     else:
-        hourly_kwh_per_kw = ac_power / 1000.0
+        solar_per_kw = ac_power / 1000.0
 
-    # Scale to default system size
-    hourly_generation = hourly_kwh_per_kw * DEFAULT_PV_SIZE_KW
+    annual_kwh_per_kw = solar_per_kw.sum()
+    SDGE_ANNUAL_KWH_PER_KW = annual_kwh_per_kw
 
-    annual_gen = hourly_generation.sum()
-    capacity_factor = annual_gen / (DEFAULT_PV_SIZE_KW * 8760) * 100
-    print(f"  Annual generation: {annual_gen:,.0f} kWh ({capacity_factor:.1f}% CF)")
+    capacity_factor = annual_kwh_per_kw / 8760 * 100
+    print(f"  Per-kW annual generation: {annual_kwh_per_kw:,.0f} kWh/kW "
+          f"({capacity_factor:.1f}% CF)")
+    print(f"  Example sizes at {PV_OFFSET_TARGET*100:.0f}% offset: "
+          f"5000 kWh/yr → {size_pv_system(5000, annual_kwh_per_kw):.1f} kW, "
+          f"10000 kWh/yr → {size_pv_system(10000, annual_kwh_per_kw):.1f} kW, "
+          f"20000 kWh/yr → {size_pv_system(20000, annual_kwh_per_kw):.1f} kW")
 
-    return hourly_generation
+    return solar_per_kw, annual_kwh_per_kw
 
 
 def _synthetic_solar_profile():
-    """Generate a synthetic solar profile for San Diego."""
+    """Generate a synthetic solar profile for San Diego (per 1 kW DC).
+
+    Returns total-system kWh array for backward compatibility when called
+    directly; stage4 divides by DEFAULT_PV_SIZE_KW to get per-kW.
+    """
     print("  Generating synthetic solar profile for San Diego")
     hours = np.arange(8760)
     day_of_year = hours // 24
     hour_of_day = hours % 24
 
-    # Solar declination (simplified)
     declination = 23.45 * np.sin(np.radians((284 + day_of_year) * 360 / 365))
-
-    # Hour angle (solar noon = hour 12)
     hour_angle = (hour_of_day - 12) * 15
 
-    # Solar altitude (simplified for 33°N)
     lat_rad = np.radians(SDGE_LATITUDE)
     decl_rad = np.radians(declination)
     ha_rad = np.radians(hour_angle)
@@ -786,19 +827,20 @@ def _synthetic_solar_profile():
                np.cos(lat_rad) * np.cos(decl_rad) * np.cos(ha_rad))
     sin_alt = np.maximum(sin_alt, 0)
 
-    # Clear-sky GHI approximation (W/m²)
     ghi = 1000 * sin_alt ** 1.2
 
-    # Convert to kWh for DEFAULT_PV_SIZE_KW system
-    # Assume 18% module efficiency, 85% system losses
-    panel_area = DEFAULT_PV_SIZE_KW / 0.18  # m² of panels
-    hourly_gen = ghi * panel_area * 0.18 * 0.85 / 1000  # kWh
+    # Per-kW: 1 kW nameplate → panel_area = 1/0.18 m²
+    panel_area_per_kw = 1.0 / 0.18
+    hourly_gen = ghi * panel_area_per_kw * 0.18 * 0.85 / 1000  # kWh per kW
 
-    annual = hourly_gen.sum()
+    # Scale to DEFAULT_PV_SIZE_KW for backward compatibility
+    hourly_gen_total = hourly_gen * DEFAULT_PV_SIZE_KW
+
+    annual = hourly_gen_total.sum()
     cf = annual / (DEFAULT_PV_SIZE_KW * 8760) * 100
     print(f"  Synthetic annual generation: {annual:,.0f} kWh ({cf:.1f}% CF)")
 
-    return hourly_gen
+    return hourly_gen_total
 
 
 # ---------------------------------------------------------------------------
@@ -975,13 +1017,20 @@ def make_ev_profile():
 
 
 def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_df,
-                               use_lp=False):
+                               use_lp=False, annual_kwh_per_kw=None):
     """
     Compute post-adoption bills for buildings with technology assignments.
 
+    Parameters
+    ----------
+    solar_profile : np.ndarray, shape (8760,)
+        Per-kW hourly generation (kWh per kW DC installed).
+    annual_kwh_per_kw : float or None
+        Annual kWh per kW DC (for sizing). Falls back to SDGE_ANNUAL_KWH_PER_KW.
+
     For each tech-adopted building:
-    - PV: net billing (import at retail, export at EEC)
-    - Battery: LP or heuristic dispatch optimization
+    - PV: sized to offset PV_OFFSET_TARGET of consumption, net billing
+    - Battery: LP or heuristic dispatch optimization (Tesla Powerwall 13.5 kWh)
     - EV: add EV charging load
     - HP: already reflected in ResStock load (no change needed)
     """
@@ -1020,12 +1069,17 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
 
     ev_profile = make_ev_profile()
 
+    # Resolve per-kW annual generation for PV sizing
+    if annual_kwh_per_kw is None:
+        annual_kwh_per_kw = SDGE_ANNUAL_KWH_PER_KW
+
     # For each tech-adopted building, re-read hourly load and compute new bill
     baseline_dir = Path(BASELINE_DIR)
     results_update = {}
     start_time = time.time()
     processed = 0
     lp_failures = 0
+    pv_sizes = []  # Track PV sizes for summary
 
     # Filter to selected designed scenarios only
     selected_designed = rate_scenarios_df[
@@ -1105,11 +1159,18 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
             if row['assigned_ev'] == 1:
                 modified_load += ev_profile
 
-            # Solar generation
-            bldg_solar = solar_profile if row['assigned_pv'] == 1 else np.zeros(8760)
+            # Solar generation — sized per building based on consumption
+            if row['assigned_pv'] == 1:
+                bldg_annual_kwh = row.get('annual_kwh', hourly_load.sum())
+                pv_size_kw = size_pv_system(bldg_annual_kwh, annual_kwh_per_kw)
+                bldg_solar = solar_profile * pv_size_kw
+                pv_sizes.append(pv_size_kw)
+            else:
+                bldg_solar = np.zeros(8760)
+                pv_size_kw = 0.0
 
             # Calculate bills under each scenario using anchored approach
-            update_row = {'building_id': bid}
+            update_row = {'building_id': bid, 'pv_size_kw': pv_size_kw}
 
             if row['assigned_pv'] == 1:
                 # Net billing: compute import cost at actual TOU-DR rates, then scale
@@ -1203,6 +1264,11 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
 
     elapsed = time.time() - start_time
     print(f"\n  Processed {processed} buildings in {elapsed:.1f}s")
+    if pv_sizes:
+        pv_arr = np.array(pv_sizes)
+        print(f"  PV sizing (consumption-based, {PV_OFFSET_TARGET*100:.0f}% offset target):")
+        print(f"    Mean: {pv_arr.mean():.1f} kW | Median: {np.median(pv_arr):.1f} kW")
+        print(f"    Range: {pv_arr.min():.1f}–{pv_arr.max():.1f} kW | Std: {pv_arr.std():.1f} kW")
     if lp_failures > 0:
         print(f"  LP failures (fell back to no-battery): {lp_failures}")
 
@@ -1375,14 +1441,22 @@ def main():
                         help='Use LP for battery dispatch (slower but optimal)')
     parser.add_argument('--n-buildings', type=int, default=None,
                         help='Number of buildings to process')
+    parser.add_argument('--tech-only', action='store_true',
+                        help='Run only tech stages (3-6), skip rate design and summary')
     args = parser.parse_args()
 
     n_buildings = 50 if args.test else args.n_buildings
 
+    # --tech-only: force stage >= 3 (load existing rate scenarios & bills)
+    if args.tech_only:
+        args.stage = max(args.stage, 3)
+        args.skip_tech = False  # override conflicting flag
+
     print("=" * 80)
     print("SDGE RATE ANALYSIS PIPELINE")
     print(f"Started: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"Mode: {'TEST' if args.test else 'FULL'}")
+    print(f"Mode: {'TEST' if args.test else 'FULL'}"
+          f"{' (tech-only)' if args.tech_only else ''}")
     print(f"Starting stage: {args.stage}")
     print("=" * 80)
 
@@ -1413,25 +1487,30 @@ def main():
             tech_df = pd.read_csv(TECH_ASSIGNMENTS_OUT)
             print(f"\nLoaded tech assignments from {TECH_ASSIGNMENTS_OUT}")
 
-        # Stage 4: Solar profiles
+        # Stage 4: Solar profiles (returns per-kW profile + annual kWh/kW)
         if args.stage <= 4:
-            solar_profile = stage4_solar_profiles(tech_df, bills_df)
+            solar_per_kw, annual_kwh_per_kw = stage4_solar_profiles(tech_df, bills_df)
         else:
-            solar_profile = _synthetic_solar_profile()
+            synth = _synthetic_solar_profile()
+            solar_per_kw = synth / DEFAULT_PV_SIZE_KW
+            annual_kwh_per_kw = solar_per_kw.sum()
 
         # Stage 5 is integrated into Stage 6
 
         # Stage 6: Post-adoption bills
         if args.stage <= 6:
             final_df = stage6_post_adoption_bills(
-                bills_df, tech_df, solar_profile, rate_scenarios,
-                use_lp=args.use_lp)
+                bills_df, tech_df, solar_per_kw, rate_scenarios,
+                use_lp=args.use_lp, annual_kwh_per_kw=annual_kwh_per_kw)
         else:
             final_df = pd.read_csv(POSTADOPT_BILLS_OUT)
             print(f"\nLoaded post-adoption bills from {POSTADOPT_BILLS_OUT}")
 
-        # Stage 7: Summary
-        stage7_summary(final_df, rate_scenarios)
+        # Stage 7: Summary (skip if --tech-only)
+        if not getattr(args, 'tech_only', False):
+            stage7_summary(final_df, rate_scenarios)
+        else:
+            print("\n  --tech-only: skipping summary stage")
 
     total_time = time.time() - pipeline_start
     print("\n" + "=" * 80)

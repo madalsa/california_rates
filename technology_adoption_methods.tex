@@ -48,15 +48,31 @@ The ResStock baseline substantially underrepresents solar PV adoption ($\sim$2.5
 We use a two-step approach to assign technologies to buildings in the ResStock sample, combining survey-based adoption probabilities with the existing ResStock technology assignments.
 
 \paragraph{Step 1: Survey-based adoption probabilities.}
-We conducted a survey of California residential customers to estimate technology adoption rates across the state's climate zones, stratified by disadvantaged community (DAC) and non-DAC status. Survey responses were weighted to be representative of the population. The survey provides adoption probabilities for each technology conditional on geographic and socioeconomic characteristics:
+We conducted a survey of California residential customers to estimate technology adoption rates across the state's climate zones. Survey responses were weighted to be representative of the population. Using multilevel regression and poststratification (MRP), we estimated adoption probabilities at the census tract level as a function of household and dwelling characteristics:
 \begin{equation}
-P(\text{adopt}_k \mid \text{CZ}, \text{DAC}) = \hat{\pi}_{k,\text{CZ},\text{DAC}}
+P(\text{adopt}_k \mid \mathbf{x}_i) = \hat{\pi}_{k}(\text{income}_i, \text{housing type}_i, \text{home size}_i, \text{CZ}_i)
 \end{equation}
-where $k \in \{\text{solar, battery, EV, HP}\}$, CZ is the CEC climate zone, and DAC status is determined by income thresholds.
+where $k \in \{\text{solar, battery, EV, HP}\}$ and $\mathbf{x}_i$ denotes the vector of building-level covariates. The MRP covariates---income, single-family vs.\ multi-family status, home size, and other building characteristics---map directly to fields available in the ResStock metadata (Table~\ref{tab:covariate_mapping}).
 
-% TODO: Insert actual survey adoption rates by CZ and DAC/non-DAC when MRP data is integrated
-% Format expected: tract-level MRP probabilities aggregated to PUMA level
-% Covariates: income, home type (and potentially tenure, climate zone)
+\begin{table}[htbp]
+\centering
+\caption{Covariate mapping between survey MRP model and ResStock metadata}
+\label{tab:covariate_mapping}
+\begin{tabular}{lll}
+\toprule
+Survey covariate & ResStock field & Resolution \\
+\midrule
+Income & \texttt{in.income} (20 bins) & Per-building \\
+SF / MF status & \texttt{in.geometry\_building\_type\_recs} (5 types) & Per-building \\
+Home size & \texttt{in.geometry\_floor\_area} (9 bins) / \texttt{in.sqft} & Per-building \\
+Building characteristics & \texttt{in.vintage}, \texttt{in.geometry\_stories}, etc. & Per-building \\
+Climate zone & \texttt{in.cec\_climate\_zone} (5 zones in SDGE) & Per-building \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% TODO: Insert actual MRP adoption rates when survey data is uploaded
+% Format expected: tract-level MRP probabilities with covariates (income, home type, home size)
 
 \paragraph{Step 2: Supplemental assignment to ResStock buildings.}
 The ResStock sample already contains some technology adoption---specifically, 6.2\% of buildings have solar PV and 8.3\% have heat pumps. Rather than replacing these assignments, we \textit{supplement} them to reach current SDGE penetration levels. For each technology $k$:
@@ -66,9 +82,9 @@ The ResStock sample already contains some technology adoption---specifically, 6.
     \item The supplemental assignment target is $\Delta N_k = N_k^{\text{target}} - N_k^{\text{RS}}$ additional buildings.
     \item Among buildings \textit{not} already assigned technology $k$, compute adoption scores using the survey-derived probabilities, adjusted by building-level characteristics available in ResStock:
     \begin{equation}
-    S_{i,k} = P(\text{adopt}_k \mid \text{CZ}_i, \text{DAC}_i) \times f_k(\text{income}_i, \text{housing type}_i, \text{tenure}_i)
+    S_{i,k} = P(\text{adopt}_k \mid \text{income}_i, \text{housing type}_i, \text{home size}_i, \text{CZ}_i)
     \end{equation}
-    where $f_k(\cdot)$ adjusts the base probability for individual building characteristics. For instance, solar adoption is higher among single-family owner-occupied homes with higher incomes.
+    computed directly from the MRP model using the building's characteristics. Since the MRP covariates map to ResStock fields (Table~\ref{tab:covariate_mapping}), each building receives an individualized adoption probability without requiring additional adjustment factors.
     \item Rank non-adopter buildings by $S_{i,k}$ in descending order and assign technology $k$ to the top $\Delta N_k$ buildings.
 \end{enumerate}
 
@@ -95,20 +111,11 @@ Heat pump (HVAC) & 408 & $\sim$13\% & $\sim$229 & $\sim$637 \\
 \end{tablenotes}
 \end{table}
 
-\paragraph{DAC classification.}
-ResStock does not include a direct DAC indicator. We proxy DAC status using area median income (AMI) thresholds: buildings with AMI $\leq$ 80\% are classified as DAC-equivalent, consistent with California's CalEnviroScreen methodology that identifies communities disproportionately burdened by pollution and socioeconomic disadvantage. In the SDGE sample, this corresponds to approximately 41\% of buildings (AMI categories 0--30\%, 30--60\%, and 60--80\%).
+\paragraph{Direct covariate matching.}
+Because the MRP model's covariates (income, housing type, home size, climate zone) map directly to ResStock metadata fields (Table~\ref{tab:covariate_mapping}), we compute building-level adoption probabilities without requiring geographic crosswalks or proxy classifications. Each ResStock building receives an individualized $S_{i,k}$ based on its own characteristics, preserving the joint distribution of adoption determinants within the sample. The MRP results are estimated at the census tract level; we use the covariate-based probabilities rather than tract-level aggregates, since ResStock's geographic resolution is PUMA (22 PUMAs in San Diego County) and tract identifiers are not available.
 
-% NOTE: ResStock geographic resolution is PUMA (22 PUMAs in SD County), not census tract.
-% MRP results are at census tract level. Crosswalk strategy:
-%   P(adopt | PUMA) = sum_tracts [ P(adopt | tract) * tract_pop ] / PUMA_pop
-% Then within PUMA, use building-level income and housing type to differentiate.
-
-\paragraph{Geographic crosswalk.}
-The survey-based adoption probabilities (via multilevel regression and poststratification, MRP) are estimated at the census tract level, while ResStock buildings are identified at the PUMA level (22 PUMAs in San Diego County). We aggregate tract-level MRP probabilities to PUMAs using tract population weights:
-\begin{equation}
-P(\text{adopt}_k \mid \text{PUMA}_j) = \frac{\sum_{t \in j} P(\text{adopt}_k \mid \text{tract}_t) \times \text{Pop}_t}{\sum_{t \in j} \text{Pop}_t}
-\end{equation}
-Within each PUMA, building-level variation in adoption probability is driven by income and housing type covariates from the MRP model, which map directly to ResStock metadata fields (\texttt{in.income}, \texttt{in.geometry\_building\_type\_recs}, \texttt{in.tenure}).
+% NOTE: If tract-to-PUMA crosswalk is needed in the future, the metadata contains
+% both GEOID10 and GEOID20 columns for PUMA vintage crosswalking.
 
 \subsubsection{Interpretation}
 \label{sec:adoption_interpretation}

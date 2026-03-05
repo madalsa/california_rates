@@ -50,6 +50,26 @@ TECH_ASSIGNMENTS_OUT = 'tech_assignments_sdge.csv'
 POSTADOPT_BILLS_OUT = 'post_adoption_bills_sdge.csv'
 SUMMARY_OUT = 'pipeline_summary_sdge.csv'
 
+# ---------------------------------------------------------------------------
+# Scenario selection
+# ---------------------------------------------------------------------------
+
+# Actual SDGE tariff rate codes (computed via corrected_bill_calc.py)
+ACTUAL_SDGE_RATES = {
+    'TOU-DR': 'tou_dr',       # Current TOU rate (no fixed charges)
+    'TOU-DR-F': 'tou_dr_f',   # Current TOU rate with income-graduated fixed charges
+}
+
+# Designed rate scenarios (computed via vectorized TOU weights)
+DESIGNED_SCENARIOS = [
+    'F0_WF0_ROE0',       # Designed baseline (all volumetric)
+    'F50_WF0_ROE0',      # 50% T&D costs to fixed charges
+    'F100_WF0_ROE0',     # 100% T&D costs to fixed charges
+    'F0_WF1_ROE0',       # Remove wildfire costs
+    'F0_WF0_ROE1.0',     # 1% ROE reduction
+    'F50_WF1_ROE1.0',    # Combined: 50% fixed + wildfire removal + 1% ROE cut
+]
+
 # SDGE TOU periods
 SUMMER_MONTHS = set(range(6, 11))  # June–October (1-indexed)
 
@@ -137,6 +157,110 @@ def calculate_bill_vectorized(hourly_load, rate_array, fixed_annual):
     return np.dot(hourly_load, rate_array) + fixed_annual
 
 
+def calculate_actual_sdge_bill_vectorized(hourly_load, rate_code, puma_numeric,
+                                          income, is_care):
+    """
+    Vectorized bill calculation for actual SDGE tariff rates (TOU-DR, TOU-DR-F).
+
+    Key insight: SDGE tier 1 and tier 2 volumetric rates are IDENTICAL.
+    Tiering is implemented via a baseline_credit applied to within-baseline kWh.
+    This allows full vectorization:
+        bill = sum(load × TOU_rate)
+               - baseline_credit × sum_over_months(min(monthly_kwh, monthly_baseline))
+               + fixed_charges
+               × (1 - care_discount if CARE)
+    """
+    # Load rate data (cached)
+    from corrected_bill_calc import load_excel_data
+    rates_df, baseline_df = load_excel_data(EXCEL_FILE)
+
+    # Get rate structure
+    rate_entries = rates_df[rates_df['rate_type'] == rate_code]
+    weekday_rate = rate_entries[rate_entries['weekday'] == 'weekday'].iloc[0].to_dict()
+
+    # Get baseline allowance for this PUMA
+    baseline_entry = baseline_df[baseline_df['puma'] == puma_numeric]
+    if baseline_entry.empty:
+        return np.nan
+    daily_summer_baseline = baseline_entry['summer_baseline_allowance'].values[0]
+    daily_winter_baseline = baseline_entry['winter_baseline_allowance'].values[0]
+
+    # TOU rates (tier 1 = tier 2 for SDGE)
+    tou_rates = {
+        'summer_peak': weekday_rate.get('peak_rate_summer1', 0) or 0,
+        'summer_midpeak': weekday_rate.get('midpeak_rate_summer1', 0) or 0,
+        'summer_offpeak': weekday_rate.get('offpeak_rate_summer1', 0) or 0,
+        'winter_peak': weekday_rate.get('peak_rate_winter1', 0) or 0,
+        'winter_midpeak': weekday_rate.get('midpeak_rate_winter1', 0) or 0,
+        'winter_offpeak': weekday_rate.get('offpeak_rate_winter1', 0) or 0,
+    }
+
+    baseline_credit = weekday_rate.get('baseline_credit', 0) or 0
+    care_discount = abs(weekday_rate.get('care_discount', 0) or 0)
+
+    # Build 8760 TOU rate array
+    hours = np.arange(8760)
+    days_per_month = np.array([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
+    hours_per_month = days_per_month * 24
+    month_boundaries = np.concatenate(([0], np.cumsum(hours_per_month)))
+    months = np.searchsorted(month_boundaries[1:], hours) + 1  # 1-indexed
+    hour_of_day = hours % 24
+
+    is_summer = (months >= 6) & (months <= 10)
+    is_peak = (hour_of_day >= 16) & (hour_of_day < 21)
+    is_midpeak = ((hour_of_day >= 6) & (hour_of_day < 16)) | \
+                 ((hour_of_day >= 21) & (hour_of_day < 22))
+
+    rate_array = np.where(
+        is_summer,
+        np.where(is_peak, tou_rates['summer_peak'],
+                 np.where(is_midpeak, tou_rates['summer_midpeak'],
+                          tou_rates['summer_offpeak'])),
+        np.where(is_peak, tou_rates['winter_peak'],
+                 np.where(is_midpeak, tou_rates['winter_midpeak'],
+                          tou_rates['winter_offpeak']))
+    )
+
+    # Energy charges
+    energy_charges = np.dot(hourly_load, rate_array)
+
+    # Baseline credit: for each month, credit = baseline_credit × min(monthly_kwh, baseline)
+    total_baseline_credit = 0.0
+    for m in range(12):
+        s, e = month_boundaries[m], month_boundaries[m + 1]
+        monthly_kwh = hourly_load[s:e].sum()
+        # Summer vs winter baseline
+        if 6 <= (m + 1) <= 10:
+            monthly_baseline = daily_summer_baseline * days_per_month[m]
+        else:
+            monthly_baseline = daily_winter_baseline * days_per_month[m]
+        total_baseline_credit += baseline_credit * min(monthly_kwh, monthly_baseline)
+
+    energy_after_credit = energy_charges - total_baseline_credit
+
+    # CARE discount (applied to volumetric charges)
+    if is_care and care_discount > 0:
+        energy_after_credit *= (1 - care_discount)
+
+    # Fixed charges
+    fixed_charges = weekday_rate.get('base_service_charge_per_day', 0) or 0
+    annual_base_fixed = fixed_charges * 365
+
+    monthly_fixed = 0.0
+    has_fixed = weekday_rate.get('Fixed', '') == 'Yes'
+    if has_fixed:
+        if income == 'low':
+            monthly_fixed = weekday_rate.get('fixedcharge_low', 0) or 0
+        elif income == 'medium':
+            monthly_fixed = weekday_rate.get('fixedcharge_med', 0) or 0
+        else:
+            monthly_fixed = weekday_rate.get('fixedcharge_high', 0) or 0
+    annual_fixed = annual_base_fixed + monthly_fixed * 12
+
+    total_bill = energy_after_credit + annual_fixed
+    return total_bill
+
+
 def load_sdge_metadata():
     """Load metadata and filter to SDGE buildings."""
     meta = pd.read_parquet(METADATA_FILE).reset_index(drop=True)
@@ -156,11 +280,16 @@ def normalize_income(income_str):
 
 def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
     """
-    Compute bills for all SDGE buildings under all rate scenarios.
+    Compute bills for all SDGE buildings under selected rate scenarios.
+
+    Two types of billing:
+    1. Actual SDGE tariff rates (TOU-DR, TOU-DR-F) via corrected_bill_calc.py
+       - Handles tiering, baseline allowances, CARE discounts, income-graduated fixed
+    2. Designed rate scenarios (F0_WF0_ROE0, etc.) via vectorized TOU calculation
+       - Uses rate_designer.py output with revenue-neutral TOU rates
 
     Reads each building's 15-min parquet from Baseline_SDGE/,
-    aggregates to hourly, scales by RASS scaling factor,
-    and calculates bills under each rate scenario.
+    aggregates to hourly, scales by RASS scaling factor.
     """
     print("\n" + "=" * 80)
     print("STAGE 2: COMPUTE BASELINE BILLS")
@@ -172,12 +301,16 @@ def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
     # Build metadata lookup
     metadata = {}
     for _, row in sdge_meta.iterrows():
+        # Extract numeric PUMA for corrected_bill_calc (needs int PUMA)
+        puma_clean = row.get('puma_clean', 0)
+        # puma_clean is like 6005928 → need just 5928 for the bill calc
+        puma_numeric = int(puma_clean) % 1000000 if puma_clean else 0
+
         metadata[str(row['building_id'])] = {
             'puma': row['puma20'],
-            'puma_numeric': int(str(row['puma_clean'])) if 'puma_clean' in row.index else None,
+            'puma_numeric': puma_numeric,
             'income_category': normalize_income(row.get('income_category', 'medium')),
             'scaling_factor': row.get('scaling_factor', 1.0),
-            'in_income': row.get('in.income', 'Not Available'),
         }
 
     # Get parquet files
@@ -194,11 +327,18 @@ def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
         parquet_files = parquet_files[:n_buildings]
         print(f"  TEST MODE: processing {n_buildings} buildings")
 
-    # Pre-build rate arrays for each scenario (avoids rebuilding per building)
-    print(f"  Rate scenarios: {len(rate_scenarios_df)}")
+    # Filter designed scenarios to our selection
+    selected_designed = rate_scenarios_df[
+        rate_scenarios_df['Scenario'].isin(DESIGNED_SCENARIOS)
+    ]
+    print(f"  Designed rate scenarios: {len(selected_designed)} "
+          f"({', '.join(selected_designed['Scenario'].tolist())})")
+    print(f"  Actual SDGE rates: {', '.join(ACTUAL_SDGE_RATES.keys())}")
+
+    # Pre-build rate arrays for designed scenarios
     scenario_rate_arrays = {}
     scenario_fixed = {}
-    for _, scenario in rate_scenarios_df.iterrows():
+    for _, scenario in selected_designed.iterrows():
         name = scenario['Scenario']
         scenario_rate_arrays[name] = build_tou_rate_array(scenario)
         scenario_fixed[name] = {
@@ -230,6 +370,7 @@ def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
 
             income = metadata[building_id]['income_category']
             is_care = (income == 'low')
+            puma_numeric = metadata[building_id]['puma_numeric']
 
             row = {
                 'building_id': int(building_id),
@@ -239,7 +380,20 @@ def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
                 'scaling_factor': sf,
             }
 
-            # Calculate bill under each rate scenario
+            # --- Actual SDGE tariff rates (vectorized) ---
+            for rate_code, col_prefix in ACTUAL_SDGE_RATES.items():
+                try:
+                    bill = calculate_actual_sdge_bill_vectorized(
+                        hourly_load_scaled, rate_code, puma_numeric,
+                        income, is_care
+                    )
+                    row[f'{col_prefix}_bill'] = bill
+                except Exception as e:
+                    row[f'{col_prefix}_bill'] = np.nan
+                    if errors <= 3:
+                        print(f"    Bill calc error ({rate_code}, bldg {building_id}): {e}")
+
+            # --- Designed rate scenarios (vectorized) ---
             for scenario_name, rate_arr in scenario_rate_arrays.items():
                 fixed = scenario_fixed[scenario_name]['care' if is_care else 'non_care']
                 bill = calculate_bill_vectorized(hourly_load_scaled, rate_arr, fixed)
@@ -269,11 +423,11 @@ def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
 
     # Quick revenue check
     if len(results) > 0:
-        print("\n  Revenue check (sample mean bill × total customers):")
-        for scenario_name in list(scenario_rate_arrays.keys())[:5]:
-            col = f'{scenario_name}_bill'
+        print("\n  Revenue check (sample mean annual bill):")
+        bill_cols = [c for c in df_bills.columns if c.endswith('_bill')]
+        for col in bill_cols:
             mean_bill = df_bills[col].mean()
-            print(f"    {scenario_name}: ${mean_bill:,.0f}/yr avg")
+            print(f"    {col}: ${mean_bill:,.0f}/yr avg")
 
     return df_bills
 
@@ -807,12 +961,10 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
     processed = 0
     lp_failures = 0
 
-    # Pick a representative rate scenario for battery optimization
-    # (use F0_WF0_ROE0 as baseline scenario)
-    base_scenario_name = 'F0_WF0_ROE0'
-    base_scenario = rate_scenarios_df[
-        rate_scenarios_df['Scenario'] == base_scenario_name].iloc[0]
-    base_rate_array = build_tou_rate_array(base_scenario)
+    # Filter to selected designed scenarios only
+    selected_designed = rate_scenarios_df[
+        rate_scenarios_df['Scenario'].isin(DESIGNED_SCENARIOS)
+    ]
 
     for idx, row in has_tech.iterrows():
         bid = int(row['building_id'])
@@ -844,7 +996,7 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
             # Calculate bills under each rate scenario
             update_row = {'building_id': bid}
 
-            for _, scenario in rate_scenarios_df.iterrows():
+            for _, scenario in selected_designed.iterrows():
                 sname = scenario['Scenario']
                 rate_arr = build_tou_rate_array(scenario)
                 fixed = scenario['Fixed_CARE'] * 12 if is_care else scenario['Fixed_NonCARE'] * 12
@@ -920,53 +1072,57 @@ def stage7_summary(final_df, rate_scenarios_df):
     print("STAGE 7: DISTRIBUTIONAL ANALYSIS")
     print("=" * 80)
 
-    # Revenue neutrality check
+    # All bill columns
+    all_bill_cols = [c for c in final_df.columns if c.endswith('_bill') and 'postadopt' not in c]
+
+    # Revenue neutrality check (designed scenarios should be revenue-neutral)
     print("\n--- Revenue Neutrality (sample-level) ---")
-    scenario_names = rate_scenarios_df['Scenario'].tolist()
-    baseline_scenario = 'F0_WF0_ROE0'
+    designed_cols = [f'{s}_bill' for s in DESIGNED_SCENARIOS if f'{s}_bill' in final_df.columns]
+    if designed_cols:
+        base_total = final_df[designed_cols[0]].sum()
+        print(f"  Baseline ({designed_cols[0]}): ${base_total:,.0f} (sample total)")
+        for col in designed_cols[1:]:
+            total = final_df[col].sum()
+            pct = (total - base_total) / base_total * 100
+            print(f"  {col}: ${total:,.0f} ({pct:+.2f}%)")
 
-    if f'{baseline_scenario}_bill' in final_df.columns:
-        base_total = final_df[f'{baseline_scenario}_bill'].sum()
-        print(f"  Baseline ({baseline_scenario}): ${base_total:,.0f} (sample total)")
-
-        for sname in scenario_names[:10]:
-            col = f'{sname}_bill'
-            if col in final_df.columns:
-                total = final_df[col].sum()
-                pct = (total - base_total) / base_total * 100
-                print(f"  {sname}: ${total:,.0f} ({pct:+.2f}%)")
+    # Actual SDGE rates comparison
+    actual_cols = [f'{v}_bill' for v in ACTUAL_SDGE_RATES.values()
+                   if f'{v}_bill' in final_df.columns]
+    if actual_cols:
+        print("\n--- Actual SDGE Tariff Bills ---")
+        for col in actual_cols:
+            valid = final_df[col].dropna()
+            print(f"  {col}: mean=${valid.mean():,.0f}  median=${valid.median():,.0f}  (n={len(valid)})")
 
     # Bill distribution by income
     print("\n--- Mean Annual Bill by Income ---")
-    for sname in [baseline_scenario, 'F50_WF0_ROE0', 'F100_WF0_ROE0',
-                  'F0_WF1_ROE0', 'F0_WF0_ROE1.0']:
-        col = f'{sname}_bill'
-        if col not in final_df.columns:
-            continue
-        print(f"\n  {sname}:")
+    for col in all_bill_cols:
+        print(f"\n  {col}:")
         for inc in ['low', 'medium', 'high']:
             subset = final_df[final_df['income'] == inc]
             if len(subset) > 0:
-                mean_bill = subset[col].mean()
-                median_bill = subset[col].median()
-                print(f"    {inc:>8s}: mean=${mean_bill:,.0f}  median=${median_bill:,.0f}  (n={len(subset)})")
+                valid = subset[col].dropna()
+                if len(valid) > 0:
+                    print(f"    {inc:>8s}: mean=${valid.mean():,.0f}  "
+                          f"median=${valid.median():,.0f}  (n={len(valid)})")
 
-    # Bill change from baseline by income
-    base_col = f'{baseline_scenario}_bill'
+    # Bill change from baseline (TOU-DR actual or F0_WF0_ROE0) by income
+    base_col = 'tou_dr_bill' if 'tou_dr_bill' in final_df.columns else 'F0_WF0_ROE0_bill'
     if base_col in final_df.columns:
-        print("\n--- Bill Change from Baseline by Income ---")
-        for sname in ['F50_WF0_ROE0', 'F100_WF0_ROE0', 'F0_WF1_ROE0']:
-            col = f'{sname}_bill'
-            if col not in final_df.columns:
-                continue
-            print(f"\n  {sname} vs {baseline_scenario}:")
+        print(f"\n--- Bill Change from {base_col} by Income ---")
+        compare_cols = [c for c in all_bill_cols if c != base_col]
+        for col in compare_cols:
+            print(f"\n  {col} vs {base_col}:")
             for inc in ['low', 'medium', 'high']:
                 subset = final_df[final_df['income'] == inc]
                 if len(subset) > 0:
-                    change = subset[col] - subset[base_col]
-                    print(f"    {inc:>8s}: mean=${change.mean():+,.0f}  "
-                          f"median=${change.median():+,.0f}  "
-                          f"winners={( change < 0).sum()}/{len(subset)}")
+                    valid_mask = subset[col].notna() & subset[base_col].notna()
+                    if valid_mask.sum() > 0:
+                        change = subset.loc[valid_mask, col] - subset.loc[valid_mask, base_col]
+                        print(f"    {inc:>8s}: mean=${change.mean():+,.0f}  "
+                              f"median=${change.median():+,.0f}  "
+                              f"winners={(change < 0).sum()}/{valid_mask.sum()}")
 
     # Tech adoption impact
     if 'assigned_pv' in final_df.columns:
@@ -984,10 +1140,8 @@ def stage7_summary(final_df, rate_scenarios_df):
 
     # Save summary
     summary_rows = []
-    for sname in scenario_names:
-        col = f'{sname}_bill'
-        if col not in final_df.columns:
-            continue
+    for col in all_bill_cols:
+        sname = col.replace('_bill', '')
         for inc in ['low', 'medium', 'high']:
             subset = final_df[final_df['income'] == inc]
             if len(subset) > 0:

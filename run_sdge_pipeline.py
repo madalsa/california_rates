@@ -1297,8 +1297,10 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
                 # Export credit (EEC rates, same regardless of scenario)
                 export_credit = np.dot(hourly_export, eec_rates)
 
+                # Battery dispatch (same optimal schedule for all TOU rates
+                # since peak/mid/off ordering is identical across tariffs)
+                batt_grid_import = None
                 if row['assigned_battery'] == 1:
-                    # Battery dispatch on net-of-solar load using actual TOU-DR rates
                     if use_lp:
                         batt_result = stage5_battery_dispatch(
                             modified_load, bldg_solar, tou_dr_rate_arr)
@@ -1307,7 +1309,8 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
                             modified_load, bldg_solar, tou_dr_rate_arr)
 
                     if batt_result is not None:
-                        # Battery optimized import cost (at base rates)
+                        batt_grid_import = batt_result['grid_import']
+                        # Battery optimized import cost (at TOU-DR base rates)
                         import_cost_base = batt_result['bill_energy']
                         # Apply CARE to battery-optimized cost
                         if is_care and tou_dr_care_discount > 0:
@@ -1315,7 +1318,7 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
                     else:
                         lp_failures += 1
 
-                # For each scenario: scale import cost by α_j, subtract export, add fixed
+                # For each designed scenario: scale import cost by α_j, subtract export, add fixed
                 for sname, alpha in scenario_alphas.items():
                     fc = scenario_fixed_charges[sname]
                     fixed = fc['care'] if is_care else fc['noncare']
@@ -1323,15 +1326,17 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
                     update_row[f'{sname}_bill_postadopt'] = bill
 
                 # Actual tariff post-adoption bills (TOU-DR, TOU-DR-F) with net billing
+                # Use battery-optimized import profile if available
+                billed_import = batt_grid_import if batt_grid_import is not None else hourly_import
                 for rc, rc_info in actual_rates.items():
-                    col_prefix = ACTUAL_SDGE_RATES[rc]  # e.g. 'tou_dr', 'tou_dr_f'
-                    rc_import_cost = np.dot(hourly_import, rc_info['rate_arr'])
+                    col_prefix = ACTUAL_SDGE_RATES[rc]
+                    rc_import_cost = np.dot(billed_import, rc_info['rate_arr'])
                     # Baseline credit on import
                     if not bl_entry.empty:
                         rc_bl_credit = 0.0
                         for m in range(12):
                             s, e = month_boundaries[m], month_boundaries[m + 1]
-                            monthly_import = hourly_import[s:e].sum()
+                            monthly_import = billed_import[s:e].sum()
                             if 6 <= (m + 1) <= 10:
                                 monthly_bl = d_sum_bl * days_per_month[m]
                             else:

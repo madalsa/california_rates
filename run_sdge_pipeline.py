@@ -1165,30 +1165,55 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
         scenario_alphas[sname] = alpha_j
         scenario_fixed_charges[sname] = {'care': fc_care, 'noncare': fc_noncare}
 
-    # Build actual TOU-DR rate array for import cost calculation
+    # Build actual TOU-DR and TOU-DR-F rate arrays for import cost calculation
     from corrected_bill_calc import load_excel_data
     rates_df_xl, baseline_df_xl = load_excel_data(EXCEL_FILE)
-    tou_dr_rates = rates_df_xl[rates_df_xl['rate_type'] == 'TOU-DR']
-    wd_rate = tou_dr_rates[tou_dr_rates['weekday'] == 'weekday'].iloc[0].to_dict()
 
     def _safe(val):
         if val is None or (isinstance(val, float) and np.isnan(val)):
             return 0.0
         return float(val)
 
-    tou_dr_rate_dict = {
-        'summer_peak': _safe(wd_rate.get('peak_rate_summer1', 0)),
-        'summer_midpeak': _safe(wd_rate.get('midpeak_rate_summer1', 0)),
-        'summer_offpeak': _safe(wd_rate.get('offpeak_rate_summer1', 0)),
-        'winter_peak': _safe(wd_rate.get('peak_rate_winter1', 0)),
-        'winter_midpeak': _safe(wd_rate.get('midpeak_rate_winter1', 0)),
-        'winter_offpeak': _safe(wd_rate.get('offpeak_rate_winter1', 0)),
-    }
-    tou_dr_baseline_credit = _safe(wd_rate.get('baseline_credit', 0))
-    tou_dr_care_discount = abs(_safe(wd_rate.get('care_discount', 0)))
+    def _load_actual_rate(rate_code):
+        """Extract rate dict, baseline credit, CARE discount, and fixed charge info."""
+        rate_entries = rates_df_xl[rates_df_xl['rate_type'] == rate_code]
+        wd = rate_entries[rate_entries['weekday'] == 'weekday'].iloc[0].to_dict()
+        rd = {
+            'summer_peak': _safe(wd.get('peak_rate_summer1', 0)),
+            'summer_midpeak': _safe(wd.get('midpeak_rate_summer1', 0)),
+            'summer_offpeak': _safe(wd.get('offpeak_rate_summer1', 0)),
+            'winter_peak': _safe(wd.get('peak_rate_winter1', 0)),
+            'winter_midpeak': _safe(wd.get('midpeak_rate_winter1', 0)),
+            'winter_offpeak': _safe(wd.get('offpeak_rate_winter1', 0)),
+        }
+        bl_credit = _safe(wd.get('baseline_credit', 0))
+        care_disc = abs(_safe(wd.get('care_discount', 0)))
+        base_svc = _safe(wd.get('base_service_charge_per_day', 0))
+        has_fixed = wd.get('Fixed', '') == 'Yes'
+        fc_low = _safe(wd.get('fixedcharge_low', 0)) if has_fixed else 0.0
+        fc_med = _safe(wd.get('fixedcharge_med', 0)) if has_fixed else 0.0
+        fc_high = _safe(wd.get('fixedcharge_high', 0)) if has_fixed else 0.0
+        return {
+            'rate_dict': rd,
+            'rate_arr': build_tou_rate_array_from_dict(rd),
+            'baseline_credit': bl_credit,
+            'care_discount': care_disc,
+            'base_svc_daily': base_svc,
+            'has_fixed': has_fixed,
+            'fc_monthly': {'low': fc_low, 'medium': fc_med, 'high': fc_high},
+        }
 
-    # Build 8760 TOU-DR rate array (actual tariff posted rates)
-    tou_dr_rate_arr = build_tou_rate_array_from_dict(tou_dr_rate_dict)
+    actual_rates = {}
+    for rc in ACTUAL_SDGE_RATES:
+        actual_rates[rc] = _load_actual_rate(rc)
+        print(f"  Loaded {rc} rates: baseline_credit={actual_rates[rc]['baseline_credit']:.4f}, "
+              f"has_fixed={actual_rates[rc]['has_fixed']}")
+
+    # Aliases for backward-compat within this function
+    tou_dr_rate_dict = actual_rates['TOU-DR']['rate_dict']
+    tou_dr_rate_arr = actual_rates['TOU-DR']['rate_arr']
+    tou_dr_baseline_credit = actual_rates['TOU-DR']['baseline_credit']
+    tou_dr_care_discount = actual_rates['TOU-DR']['care_discount']
 
     print(f"  Anchored post-adoption billing:")
     for sname, alpha in scenario_alphas.items():
@@ -1297,6 +1322,32 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
                     bill = max(alpha * import_cost_base - export_credit, 0) + fixed
                     update_row[f'{sname}_bill_postadopt'] = bill
 
+                # Actual tariff post-adoption bills (TOU-DR, TOU-DR-F) with net billing
+                for rc, rc_info in actual_rates.items():
+                    col_prefix = ACTUAL_SDGE_RATES[rc]  # e.g. 'tou_dr', 'tou_dr_f'
+                    rc_import_cost = np.dot(hourly_import, rc_info['rate_arr'])
+                    # Baseline credit on import
+                    if not bl_entry.empty:
+                        rc_bl_credit = 0.0
+                        for m in range(12):
+                            s, e = month_boundaries[m], month_boundaries[m + 1]
+                            monthly_import = hourly_import[s:e].sum()
+                            if 6 <= (m + 1) <= 10:
+                                monthly_bl = d_sum_bl * days_per_month[m]
+                            else:
+                                monthly_bl = d_win_bl * days_per_month[m]
+                            rc_bl_credit += rc_info['baseline_credit'] * min(monthly_import, monthly_bl)
+                        rc_import_cost -= rc_bl_credit
+                    # CARE discount
+                    if is_care and rc_info['care_discount'] > 0:
+                        rc_import_cost *= (1 - rc_info['care_discount'])
+                    # Fixed charges
+                    rc_fixed = rc_info['base_svc_daily'] * 365
+                    if rc_info['has_fixed']:
+                        rc_fixed += rc_info['fc_monthly'].get(income, 0.0) * 12
+                    rc_bill = max(rc_import_cost - export_credit, 0) + rc_fixed
+                    update_row[f'{col_prefix}_bill_postadopt'] = rc_bill
+
             else:
                 # No PV — EV-only building: compute V_postadopt under actual TOU-DR
                 # then scale by α_j
@@ -1309,6 +1360,15 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
                     fixed = fc['care'] if is_care else fc['noncare']
                     bill = alpha * v_postadopt + fixed
                     update_row[f'{sname}_bill_postadopt'] = bill
+
+                # Actual tariff post-adoption bills (TOU-DR, TOU-DR-F)
+                for rc in ACTUAL_SDGE_RATES:
+                    col_prefix = ACTUAL_SDGE_RATES[rc]
+                    rc_bill = calculate_actual_sdge_bill_vectorized(
+                        modified_load, rc, row.get('puma', ''),
+                        income, is_care
+                    )
+                    update_row[f'{col_prefix}_bill_postadopt'] = rc_bill
 
             results_update[bid] = update_row
             processed += 1
@@ -1455,6 +1515,7 @@ def stage7_summary(final_df, rate_scenarios_df):
     # Tech adoption impact
     if 'assigned_pv' in final_df.columns:
         print("\n--- Tech Adoption Bill Impact ---")
+        # Designed scenarios
         for sname in ['F0_WF0_ROE0', 'F50_WF0_ROE0']:
             base_col = f'{sname}_bill'
             post_col = f'{sname}_bill_postadopt'
@@ -1465,6 +1526,18 @@ def stage7_summary(final_df, rate_scenarios_df):
                     print(f"\n  {sname} — PV buildings ({len(pv_bldgs)}):")
                     print(f"    Mean savings: ${savings.mean():,.0f}/yr")
                     print(f"    Median savings: ${savings.median():,.0f}/yr")
+
+        # Actual tariff post-adoption (TOU-DR, TOU-DR-F)
+        for rc, col_prefix in ACTUAL_SDGE_RATES.items():
+            base_col = f'{col_prefix}_bill'
+            post_col = f'{col_prefix}_bill_postadopt'
+            if base_col in final_df.columns and post_col in final_df.columns:
+                tech_bldgs = final_df[final_df[post_col].notna()]
+                if len(tech_bldgs) > 0:
+                    savings = tech_bldgs[base_col] - tech_bldgs[post_col]
+                    print(f"\n  {rc} — tech-adopted buildings ({len(tech_bldgs)}):")
+                    print(f"    Mean bill change: ${-savings.mean():+,.0f}/yr")
+                    print(f"    Median bill change: ${-savings.median():+,.0f}/yr")
 
     # Save summary
     summary_rows = []

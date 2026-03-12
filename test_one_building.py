@@ -71,6 +71,10 @@ def main():
         u11_load = df_u11['out.electricity.total.energy_consumption'].values.reshape(-1, 4).sum(axis=1)
 
     # ── Metadata ──
+    # Use same column names as the main pipeline (stage 2):
+    #   puma20 → PUMA string like 'G06007312'
+    #   income_category → 'Low'/'Medium'/'High'
+    #   scaling_factor → RASS rescaling factor
     meta = pd.read_parquet(METADATA_FILE)
     bldg_meta = meta[meta['building_id'] == bid]
     if bldg_meta.empty:
@@ -78,9 +82,11 @@ def main():
         income, is_care, puma_str, sf = 'medium', False, '', 1.0
     else:
         row = bldg_meta.iloc[0]
-        income = row.get('income', 'medium')
+        # income_category is 'Low'/'Medium'/'High' — normalize to lowercase
+        raw_income = str(row.get('income_category', 'medium')).strip()
+        income = {'Low': 'low', 'Medium': 'medium', 'High': 'high'}.get(raw_income, 'medium')
         is_care = (income == 'low')
-        puma_str = str(row.get('puma', ''))
+        puma_str = str(row.get('puma20', ''))
         sf = row.get('scaling_factor', 1.0)
 
     hourly_load *= sf

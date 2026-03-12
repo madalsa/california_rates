@@ -38,6 +38,7 @@ from itertools import product
 # ---------------------------------------------------------------------------
 
 BASELINE_DIR = './Baseline_SDGE'
+UPGRADE11_DIR = './Upgrade11_SDGE'  # Full electrification profiles (upgrade=11)
 METADATA_FILE = 'CA_Baseline_metadata_rescaled_twoincomes_puma20.parquet'
 PUMA_UTILITY_FILE = 'puma_utility_data.csv'
 TOU_WEIGHTS_FILE = 'tou_weights_sdge.csv'
@@ -1067,7 +1068,7 @@ def make_ev_profile(daily_miles=None):
 def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_df,
                                use_lp=False, annual_kwh_per_kw=None):
     """
-    Compute post-adoption bills for buildings with technology assignments.
+    Compute post-adoption bills under 4 technology adoption scenarios.
 
     Parameters
     ----------
@@ -1076,11 +1077,14 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
     annual_kwh_per_kw : float or None
         Annual kWh per kW DC (for sizing). Falls back to SDGE_ANNUAL_KWH_PER_KW.
 
-    For each tech-adopted building:
-    - PV: sized to offset PV_OFFSET_TARGET of consumption, net billing
-    - Battery: LP or heuristic dispatch optimization (Tesla Powerwall 13.5 kWh)
-    - EV: add EV charging load
-    - HP: already reflected in ResStock load (no change needed)
+    For each tech-adopted building, we compute bills under 4 adoption scenarios:
+      S1 (ev_only):     baseline load + EV charging, no PV/battery
+      S2 (pv_storage):  baseline load + PV + battery (no EV, no electrification)
+      S3 (full_pre_pv): Upgrade11 load + EV + PV (sized on baseline+EV) + battery
+      S4 (full_post_pv): Upgrade11 load + EV + PV (sized on upgrade11+EV) + battery
+
+    Upgrade 11 = ENERGY STAR ASHP + Light Touch Envelope + Full Appliance
+    Electrification (HPWH, induction cooktop, electric dryer).
     """
     print("\n" + "=" * 80)
     print("STAGE 6: POST-ADOPTION BILLS")
@@ -1220,6 +1224,140 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
         fc = scenario_fixed_charges[sname]
         print(f"    {sname}: α={alpha:.4f}, FC=${fc['noncare']/12:.2f}/mo")
 
+    # Check for Upgrade 11 directory
+    upgrade11_dir = Path(UPGRADE11_DIR)
+    has_upgrade11 = upgrade11_dir.exists() and any(upgrade11_dir.glob('*.parquet'))
+    if has_upgrade11:
+        print(f"  Upgrade 11 data found in {UPGRADE11_DIR}")
+    else:
+        print(f"  WARNING: No Upgrade 11 data in {UPGRADE11_DIR} — S3/S4 scenarios will be skipped")
+
+    # Adoption scenario suffixes
+    # S1: EV only (baseline + EV, no PV/battery)
+    # S2: PV + storage (baseline + PV + battery, no EV)
+    # S3: Full electrification, PV sized pre-electrification
+    # S4: Full electrification, PV sized post-electrification
+    ADOPT_SCENARIOS = ['s1_ev', 's2_pv_stor', 's3_full_pre', 's4_full_post']
+
+    def _compute_net_billing(load_profile, solar_gen, is_care, puma_str,
+                             rate_arr, bl_credit_rate, care_disc,
+                             bl_entry_row, use_battery=False):
+        """Compute import cost base and export credit for a net-billing scenario.
+
+        Returns (import_cost_base, export_credit, batt_grid_import_or_None).
+        """
+        net = load_profile - solar_gen
+        hourly_import = np.maximum(net, 0)
+        hourly_export = np.maximum(-net, 0)
+
+        import_cost = np.dot(hourly_import, rate_arr)
+
+        # Baseline credit on import
+        days_per_month = np.array([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
+        hours_per_month = days_per_month * 24
+        month_boundaries = np.concatenate(([0], np.cumsum(hours_per_month)))
+        if bl_entry_row is not None:
+            d_sum_bl = bl_entry_row['summer_baseline_allowance']
+            d_win_bl = bl_entry_row['winter_baseline_allowance']
+            total_bl_credit = 0.0
+            for m in range(12):
+                s, e = month_boundaries[m], month_boundaries[m + 1]
+                monthly_import = hourly_import[s:e].sum()
+                if 6 <= (m + 1) <= 10:
+                    monthly_bl = d_sum_bl * days_per_month[m]
+                else:
+                    monthly_bl = d_win_bl * days_per_month[m]
+                total_bl_credit += bl_credit_rate * min(monthly_import, monthly_bl)
+            import_cost -= total_bl_credit
+
+        # CARE discount
+        if is_care and care_disc > 0:
+            import_cost *= (1 - care_disc)
+
+        export_credit = np.dot(hourly_export, eec_rates)
+
+        # Battery dispatch
+        batt_grid_import = None
+        if use_battery:
+            if use_lp:
+                batt_result = stage5_battery_dispatch(load_profile, solar_gen, rate_arr)
+            else:
+                batt_result = stage5_battery_dispatch_heuristic(load_profile, solar_gen, rate_arr)
+            if batt_result is not None:
+                batt_grid_import = batt_result['grid_import']
+                import_cost = batt_result['bill_energy']
+                if is_care and care_disc > 0:
+                    import_cost *= (1 - care_disc)
+
+        return import_cost, export_credit, batt_grid_import
+
+    def _bill_from_import(import_cost_base, export_credit, is_care,
+                          scenario_alphas, scenario_fixed_charges,
+                          actual_rates_dict, billed_import, bl_entry_row,
+                          income, prefix):
+        """Compute bills for all rate scenarios from import cost components.
+
+        Returns dict of {col_name: bill_value}.
+        """
+        result = {}
+        # Designed scenarios (anchored billing)
+        for sname, alpha in scenario_alphas.items():
+            fc = scenario_fixed_charges[sname]
+            fixed = fc['care'] if is_care else fc['noncare']
+            bill = max(alpha * import_cost_base - export_credit, 0) + fixed
+            result[f'{sname}_bill_{prefix}'] = bill
+
+        # Actual tariff bills (TOU-DR, TOU-DR-F)
+        days_per_month = np.array([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
+        hours_per_month = days_per_month * 24
+        month_boundaries = np.concatenate(([0], np.cumsum(hours_per_month)))
+        for rc, rc_info in actual_rates_dict.items():
+            col_prefix = ACTUAL_SDGE_RATES[rc]
+            if billed_import is not None:
+                rc_import_cost = np.dot(billed_import, rc_info['rate_arr'])
+                if bl_entry_row is not None:
+                    d_sum_bl = bl_entry_row['summer_baseline_allowance']
+                    d_win_bl = bl_entry_row['winter_baseline_allowance']
+                    rc_bl_credit = 0.0
+                    for m in range(12):
+                        s, e = month_boundaries[m], month_boundaries[m + 1]
+                        monthly_import = billed_import[s:e].sum()
+                        if 6 <= (m + 1) <= 10:
+                            monthly_bl = d_sum_bl * days_per_month[m]
+                        else:
+                            monthly_bl = d_win_bl * days_per_month[m]
+                        rc_bl_credit += rc_info['baseline_credit'] * min(monthly_import, monthly_bl)
+                    rc_import_cost -= rc_bl_credit
+                if is_care and rc_info['care_discount'] > 0:
+                    rc_import_cost *= (1 - rc_info['care_discount'])
+                rc_fixed = rc_info['base_svc_daily'] * 365
+                if rc_info['has_fixed']:
+                    rc_fixed += rc_info['fc_monthly'].get(income, 0.0) * 12
+                rc_bill = max(rc_import_cost - export_credit, 0) + rc_fixed
+            else:
+                # billed_import should always be provided; defensive fallback
+                raise ValueError(f"billed_import is None for {rc} in {prefix} — caller bug")
+            result[f'{col_prefix}_bill_{prefix}'] = rc_bill
+        return result
+
+    def _bill_volumetric_only(load_profile, is_care, income, puma_str, prefix):
+        """Compute bills for a load profile with no PV (EV-only scenario)."""
+        result = {}
+        # Designed scenarios via anchored billing
+        v_base = calculate_actual_sdge_bill_vectorized(
+            load_profile, 'TOU-DR', puma_str, income, is_care)
+        for sname, alpha in scenario_alphas.items():
+            fc = scenario_fixed_charges[sname]
+            fixed = fc['care'] if is_care else fc['noncare']
+            result[f'{sname}_bill_{prefix}'] = alpha * v_base + fixed
+        # Actual tariff bills
+        for rc in ACTUAL_SDGE_RATES:
+            col_prefix = ACTUAL_SDGE_RATES[rc]
+            rc_bill = calculate_actual_sdge_bill_vectorized(
+                load_profile, rc, puma_str, income, is_care)
+            result[f'{col_prefix}_bill_{prefix}'] = rc_bill
+        return result
+
     for idx, row in has_tech.iterrows():
         bid = int(row['building_id'])
         pq_file = baseline_dir / f"{bid}-0.parquet"
@@ -1236,144 +1374,103 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
 
             income = row.get('income', 'medium')
             is_care = (income == 'low')
+            puma_str = row.get('puma', '')
 
-            # Modify load profile based on tech
-            modified_load = hourly_load.copy()
+            # EV charging profile for this building
+            bldg_dvmt = ev_dvmt_map.get(bid, 30.0) if row['assigned_ev'] == 1 else 0.0
+            ev_profile = make_ev_profile(daily_miles=bldg_dvmt) if bldg_dvmt > 0 else np.zeros(8760)
 
-            # Add EV charging (per-building DVMT from empirical CDF)
+            # Baseline allowance lookup
+            bl_entry = baseline_df_xl[baseline_df_xl['puma'] == puma_str]
+            bl_row = bl_entry.iloc[0].to_dict() if not bl_entry.empty else None
+
+            # Load Upgrade 11 profile if available
+            u11_file = upgrade11_dir / f"{bid}-11.parquet"
+            u11_load = None
+            if has_upgrade11 and u11_file.exists():
+                u11_df = pd.read_parquet(u11_file)
+                u11_15min = u11_df['out.electricity.total.energy_consumption'].values
+                u11_load = u11_15min.reshape(-1, 4).sum(axis=1) * sf
+
+            update_row = {'building_id': bid,
+                          'ev_daily_miles': bldg_dvmt}
+
+            # ── S1: EV only (baseline + EV, no PV/battery) ──
             if row['assigned_ev'] == 1:
-                bldg_dvmt = ev_dvmt_map.get(bid, 30.0)  # fallback 30 mi
-                ev_profile = make_ev_profile(daily_miles=bldg_dvmt)
-                modified_load += ev_profile
+                s1_load = hourly_load + ev_profile
+                s1_bills = _bill_volumetric_only(
+                    s1_load, is_care, income, puma_str, 's1_ev')
+                update_row.update(s1_bills)
 
-            # Solar generation — sized per building based on consumption
+            # ── S2: PV + storage (baseline + PV + battery, no EV) ──
             if row['assigned_pv'] == 1:
                 bldg_annual_kwh = row.get('annual_kwh', hourly_load.sum())
-                pv_size_kw = size_pv_system(bldg_annual_kwh, annual_kwh_per_kw)
-                bldg_solar = solar_profile * pv_size_kw
-                pv_sizes.append(pv_size_kw)
-            else:
-                bldg_solar = np.zeros(8760)
-                pv_size_kw = 0.0
+                pv_size_s2 = size_pv_system(bldg_annual_kwh, annual_kwh_per_kw)
+                bldg_solar_s2 = solar_profile * pv_size_s2
+                update_row['pv_size_kw_s2'] = pv_size_s2
+                pv_sizes.append(pv_size_s2)
 
-            # Calculate bills under each scenario using anchored approach
-            ev_miles = ev_dvmt_map.get(bid, 0.0) if row['assigned_ev'] == 1 else 0.0
-            update_row = {'building_id': bid, 'pv_size_kw': pv_size_kw,
-                          'ev_daily_miles': ev_miles}
-
-            if row['assigned_pv'] == 1:
-                # Net billing: compute import cost at actual TOU-DR rates, then scale
-                net = modified_load - bldg_solar
-                hourly_import = np.maximum(net, 0)
-                hourly_export = np.maximum(-net, 0)
-
-                # Import cost at actual TOU-DR posted rates
-                import_cost_base = np.dot(hourly_import, tou_dr_rate_arr)
-
-                # Baseline credit on import (applied to within-baseline consumption)
-                puma_str = row.get('puma', '')
-                bl_entry = baseline_df_xl[baseline_df_xl['puma'] == puma_str]
-                if not bl_entry.empty:
-                    days_per_month = np.array([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
-                    hours_per_month = days_per_month * 24
-                    month_boundaries = np.concatenate(([0], np.cumsum(hours_per_month)))
-                    total_bl_credit = 0.0
-                    d_sum_bl = bl_entry['summer_baseline_allowance'].values[0]
-                    d_win_bl = bl_entry['winter_baseline_allowance'].values[0]
-                    for m in range(12):
-                        s, e = month_boundaries[m], month_boundaries[m + 1]
-                        monthly_import = hourly_import[s:e].sum()
-                        if 6 <= (m + 1) <= 10:
-                            monthly_bl = d_sum_bl * days_per_month[m]
-                        else:
-                            monthly_bl = d_win_bl * days_per_month[m]
-                        total_bl_credit += tou_dr_baseline_credit * min(monthly_import, monthly_bl)
-                    import_cost_base -= total_bl_credit
-
-                # CARE discount on import cost
-                if is_care and tou_dr_care_discount > 0:
-                    import_cost_base *= (1 - tou_dr_care_discount)
-
-                # Export credit (EEC rates, same regardless of scenario)
-                export_credit = np.dot(hourly_export, eec_rates)
-
-                # Battery dispatch (same optimal schedule for all TOU rates
-                # since peak/mid/off ordering is identical across tariffs)
-                batt_grid_import = None
-                if row['assigned_battery'] == 1:
-                    if use_lp:
-                        batt_result = stage5_battery_dispatch(
-                            modified_load, bldg_solar, tou_dr_rate_arr)
-                    else:
-                        batt_result = stage5_battery_dispatch_heuristic(
-                            modified_load, bldg_solar, tou_dr_rate_arr)
-
-                    if batt_result is not None:
-                        batt_grid_import = batt_result['grid_import']
-                        # Battery optimized import cost (at TOU-DR base rates)
-                        import_cost_base = batt_result['bill_energy']
-                        # Apply CARE to battery-optimized cost
-                        if is_care and tou_dr_care_discount > 0:
-                            import_cost_base *= (1 - tou_dr_care_discount)
-                    else:
+                s2_import_cost, s2_export_credit, s2_batt_import = _compute_net_billing(
+                    hourly_load, bldg_solar_s2, is_care, puma_str,
+                    tou_dr_rate_arr, tou_dr_baseline_credit, tou_dr_care_discount,
+                    bl_row, use_battery=(row['assigned_battery'] == 1))
+                if s2_batt_import is not None:
+                    s2_billed = s2_batt_import
+                else:
+                    # No battery or LP failed — use raw net import
+                    s2_billed = np.maximum(hourly_load - bldg_solar_s2, 0)
+                    if row['assigned_battery'] == 1:
                         lp_failures += 1
 
-                # For each designed scenario: scale import cost by α_j, subtract export, add fixed
-                for sname, alpha in scenario_alphas.items():
-                    fc = scenario_fixed_charges[sname]
-                    fixed = fc['care'] if is_care else fc['noncare']
-                    bill = max(alpha * import_cost_base - export_credit, 0) + fixed
-                    update_row[f'{sname}_bill_postadopt'] = bill
+                s2_bills = _bill_from_import(
+                    s2_import_cost, s2_export_credit, is_care,
+                    scenario_alphas, scenario_fixed_charges,
+                    actual_rates, s2_billed, bl_row, income, 's2_pv_stor')
+                update_row.update(s2_bills)
 
-                # Actual tariff post-adoption bills (TOU-DR, TOU-DR-F) with net billing
-                # Use battery-optimized import profile if available
-                billed_import = batt_grid_import if batt_grid_import is not None else hourly_import
-                for rc, rc_info in actual_rates.items():
-                    col_prefix = ACTUAL_SDGE_RATES[rc]
-                    rc_import_cost = np.dot(billed_import, rc_info['rate_arr'])
-                    # Baseline credit on import
-                    if not bl_entry.empty:
-                        rc_bl_credit = 0.0
-                        for m in range(12):
-                            s, e = month_boundaries[m], month_boundaries[m + 1]
-                            monthly_import = billed_import[s:e].sum()
-                            if 6 <= (m + 1) <= 10:
-                                monthly_bl = d_sum_bl * days_per_month[m]
-                            else:
-                                monthly_bl = d_win_bl * days_per_month[m]
-                            rc_bl_credit += rc_info['baseline_credit'] * min(monthly_import, monthly_bl)
-                        rc_import_cost -= rc_bl_credit
-                    # CARE discount
-                    if is_care and rc_info['care_discount'] > 0:
-                        rc_import_cost *= (1 - rc_info['care_discount'])
-                    # Fixed charges
-                    rc_fixed = rc_info['base_svc_daily'] * 365
-                    if rc_info['has_fixed']:
-                        rc_fixed += rc_info['fc_monthly'].get(income, 0.0) * 12
-                    rc_bill = max(rc_import_cost - export_credit, 0) + rc_fixed
-                    update_row[f'{col_prefix}_bill_postadopt'] = rc_bill
+            # ── S3: Full electrification + EV + PV (sized pre-electrification) + battery ──
+            if row['assigned_pv'] == 1 and u11_load is not None:
+                s3_load = u11_load + ev_profile
+                # PV sized on baseline + EV consumption (pre-electrification)
+                pre_elec_kwh = (hourly_load + ev_profile).sum()
+                pv_size_s3 = size_pv_system(pre_elec_kwh, annual_kwh_per_kw)
+                bldg_solar_s3 = solar_profile * pv_size_s3
+                update_row['pv_size_kw_s3'] = pv_size_s3
 
-            else:
-                # No PV — EV-only building: compute V_postadopt under actual TOU-DR
-                # then scale by α_j
-                v_postadopt = calculate_actual_sdge_bill_vectorized(
-                    modified_load, 'TOU-DR', row.get('puma', ''),
-                    income, is_care
-                )
-                for sname, alpha in scenario_alphas.items():
-                    fc = scenario_fixed_charges[sname]
-                    fixed = fc['care'] if is_care else fc['noncare']
-                    bill = alpha * v_postadopt + fixed
-                    update_row[f'{sname}_bill_postadopt'] = bill
+                s3_import_cost, s3_export_credit, s3_batt_import = _compute_net_billing(
+                    s3_load, bldg_solar_s3, is_care, puma_str,
+                    tou_dr_rate_arr, tou_dr_baseline_credit, tou_dr_care_discount,
+                    bl_row, use_battery=(row['assigned_battery'] == 1))
+                s3_billed = s3_batt_import if s3_batt_import is not None else np.maximum(s3_load - bldg_solar_s3, 0)
 
-                # Actual tariff post-adoption bills (TOU-DR, TOU-DR-F)
-                for rc in ACTUAL_SDGE_RATES:
-                    col_prefix = ACTUAL_SDGE_RATES[rc]
-                    rc_bill = calculate_actual_sdge_bill_vectorized(
-                        modified_load, rc, row.get('puma', ''),
-                        income, is_care
-                    )
-                    update_row[f'{col_prefix}_bill_postadopt'] = rc_bill
+                s3_bills = _bill_from_import(
+                    s3_import_cost, s3_export_credit, is_care,
+                    scenario_alphas, scenario_fixed_charges,
+                    actual_rates, s3_billed, bl_row, income, 's3_full_pre')
+                update_row.update(s3_bills)
+                update_row['annual_kwh_s3'] = s3_load.sum()
+
+            # ── S4: Full electrification + EV + PV (sized post-electrification) + battery ──
+            if row['assigned_pv'] == 1 and u11_load is not None:
+                s4_load = u11_load + ev_profile
+                # PV sized on Upgrade11 + EV consumption (post-electrification)
+                post_elec_kwh = s4_load.sum()
+                pv_size_s4 = size_pv_system(post_elec_kwh, annual_kwh_per_kw)
+                bldg_solar_s4 = solar_profile * pv_size_s4
+                update_row['pv_size_kw_s4'] = pv_size_s4
+
+                s4_import_cost, s4_export_credit, s4_batt_import = _compute_net_billing(
+                    s4_load, bldg_solar_s4, is_care, puma_str,
+                    tou_dr_rate_arr, tou_dr_baseline_credit, tou_dr_care_discount,
+                    bl_row, use_battery=(row['assigned_battery'] == 1))
+                s4_billed = s4_batt_import if s4_batt_import is not None else np.maximum(s4_load - bldg_solar_s4, 0)
+
+                s4_bills = _bill_from_import(
+                    s4_import_cost, s4_export_credit, is_care,
+                    scenario_alphas, scenario_fixed_charges,
+                    actual_rates, s4_billed, bl_row, income, 's4_full_post')
+                update_row.update(s4_bills)
+                update_row['annual_kwh_s4'] = s4_load.sum()
 
             results_update[bid] = update_row
             processed += 1
@@ -1517,32 +1614,68 @@ def stage7_summary(final_df, rate_scenarios_df):
                               f"median=${change.median():+,.0f}  "
                               f"winners={(change < 0).sum()}/{valid_mask.sum()}")
 
-    # Tech adoption impact
-    if 'assigned_pv' in final_df.columns:
-        print("\n--- Tech Adoption Bill Impact ---")
-        # Designed scenarios
-        for sname in ['F0_WF0_ROE0', 'F50_WF0_ROE0']:
-            base_col = f'{sname}_bill'
-            post_col = f'{sname}_bill_postadopt'
-            if base_col in final_df.columns and post_col in final_df.columns:
-                pv_bldgs = final_df[final_df['assigned_pv'] == 1]
-                if len(pv_bldgs) > 0:
-                    savings = pv_bldgs[base_col] - pv_bldgs[post_col]
-                    print(f"\n  {sname} — PV buildings ({len(pv_bldgs)}):")
-                    print(f"    Mean savings: ${savings.mean():,.0f}/yr")
-                    print(f"    Median savings: ${savings.median():,.0f}/yr")
+    # Tech adoption impact — 4 adoption scenarios
+    ADOPT_SUFFIXES = {
+        's1_ev': 'S1: EV only',
+        's2_pv_stor': 'S2: PV + storage',
+        's3_full_pre': 'S3: Full elec + pre-PV',
+        's4_full_post': 'S4: Full elec + post-PV',
+    }
+    if 'assigned_pv' in final_df.columns or 'assigned_ev' in final_df.columns:
+        print("\n--- Tech Adoption Bill Impact by Scenario ---")
+        for sfx, sfx_label in ADOPT_SUFFIXES.items():
+            # Find all bill columns for this adoption scenario
+            adopt_cols = [c for c in final_df.columns if c.endswith(f'_bill_{sfx}')]
+            if not adopt_cols:
+                continue
+            # Get buildings that have bills for this scenario
+            mask = final_df[adopt_cols[0]].notna()
+            n_bldgs = mask.sum()
+            if n_bldgs == 0:
+                continue
+            print(f"\n  {sfx_label} (n={n_bldgs}):")
+            # Compare each rate scenario's adoption bill vs baseline bill
+            for acol in adopt_cols:
+                # Extract rate scenario name: e.g. 'F50_WF0_ROE0_bill_s1_ev' -> 'F50_WF0_ROE0'
+                rate_name = acol.replace(f'_bill_{sfx}', '')
+                base_col = f'{rate_name}_bill'
+                if base_col not in final_df.columns:
+                    continue
+                valid = mask & final_df[base_col].notna()
+                if valid.sum() == 0:
+                    continue
+                change = final_df.loc[valid, base_col] - final_df.loc[valid, acol]
+                print(f"    {rate_name:<25s}: mean savings ${change.mean():+,.0f}/yr  "
+                      f"median ${change.median():+,.0f}/yr")
+            # By income
+            for inc in ['low', 'medium', 'high']:
+                inc_mask = mask & (final_df['income'] == inc)
+                if inc_mask.sum() == 0:
+                    continue
+                # Use TOU-DR baseline if available, else first designed scenario
+                ref_acol = adopt_cols[0]
+                ref_rate = ref_acol.replace(f'_bill_{sfx}', '')
+                ref_base = f'{ref_rate}_bill'
+                if 'tou_dr_bill' in final_df.columns and f'tou_dr_bill_{sfx}' in final_df.columns:
+                    ref_base = 'tou_dr_bill'
+                    ref_acol = f'tou_dr_bill_{sfx}'
+                valid_inc = inc_mask & final_df[ref_base].notna() & final_df[ref_acol].notna()
+                if valid_inc.sum() > 0:
+                    ch = final_df.loc[valid_inc, ref_base] - final_df.loc[valid_inc, ref_acol]
+                    print(f"      {inc:>8s} (n={valid_inc.sum()}): "
+                          f"mean savings ${ch.mean():+,.0f}/yr")
 
-        # Actual tariff post-adoption (TOU-DR, TOU-DR-F)
-        for rc, col_prefix in ACTUAL_SDGE_RATES.items():
-            base_col = f'{col_prefix}_bill'
-            post_col = f'{col_prefix}_bill_postadopt'
-            if base_col in final_df.columns and post_col in final_df.columns:
-                tech_bldgs = final_df[final_df[post_col].notna()]
-                if len(tech_bldgs) > 0:
-                    savings = tech_bldgs[base_col] - tech_bldgs[post_col]
-                    print(f"\n  {rc} — tech-adopted buildings ({len(tech_bldgs)}):")
-                    print(f"    Mean bill change: ${-savings.mean():+,.0f}/yr")
-                    print(f"    Median bill change: ${-savings.median():+,.0f}/yr")
+        # PV sizing summary across scenarios
+        pv_size_cols = [c for c in final_df.columns if c.startswith('pv_size_kw_s')]
+        if pv_size_cols:
+            print("\n  PV System Sizing by Scenario:")
+            for pc in pv_size_cols:
+                valid = final_df[pc].dropna()
+                if len(valid) > 0:
+                    sfx_key = pc.replace('pv_size_kw_', '')
+                    label = ADOPT_SUFFIXES.get(sfx_key, sfx_key)
+                    print(f"    {label}: mean={valid.mean():.1f} kW  "
+                          f"median={valid.median():.1f} kW  range=[{valid.min():.1f}, {valid.max():.1f}]")
 
     # Save summary
     summary_rows = []

@@ -347,6 +347,19 @@ UC Berkeley economist Merideth Fowlie noted that the adopted three-tier structur
 
 Our results thus provide independent, simulation-based confirmation of the distributional concerns raised by consumer advocates in the regulatory proceeding. The quantitative magnitudes we find (\$46/year CARE bill increase vs.\ \$6/year non-CARE increase) are within the range predicted by the various intervenor analyses, lending credibility to both our simulation approach and the advocates' empirical testimony.
 
+\subsection{The Role of the CARE Discount Ratio}
+\label{sec:care_discount_ratio}
+
+A striking pattern emerges when comparing the actual TOU-DR-F tariff against our designed fixed charge scenarios (F50, F100). Under TOU-DR-F, CARE customers bear the larger burden: they experience bill increases of \$46/year while non-CARE customers see only \$6/year increases. Under the designed scenarios F50 and F100, this pattern reverses: non-CARE customers face substantially larger bill increases (\$68/year and \$136/year, respectively) while CARE customers see only modest increases (\$4/year and \$8/year).
+
+The explanation lies in the CARE discount ratio $\beta$---the fraction of the non-CARE fixed charge that CARE customers pay. The actual TOU-DR-F tariff sets the CARE fixed charge at \$6.11/month against \$24.60/month for non-CARE, yielding an effective $\beta = 0.248$ (approximately 25\%). Our designed scenarios use $\beta = 0.40$ (40\%), following the CPUC's statutory requirement that the effective CARE discount remain between 30\% and 35\% of non-CARE revenues.\footnote{The CPUC's E3 rate design tool enforces the constraint from Public Utilities Code Section 739.1 that ``the average effective CARE discount shall not be less than 30 percent or more than 35 percent of the revenues that would have been produced for the same billed usage by non-CARE customers.'' Our $\beta = 0.40$ on fixed charges, combined with the 37\% CARE volumetric discount, produces an overall effective discount within this statutory range.}
+
+The divergent outcomes under TOU-DR-F ($\beta = 0.25$) versus the designed scenarios ($\beta = 0.40$) reveal that the CARE discount ratio is a critical---and underappreciated---parameter governing the distributional incidence of fixed charges. At $\beta = 0.25$, the fixed charge discount is insufficient to compensate CARE customers for the volumetric rate reduction they forgo due to their lower consumption. Even though TOU-DR-F's fixed charges are relatively modest (\$6.11/month for CARE), the 75\% discount does not match the consumption gap: CARE customers in our sample consume substantially less than 75\% of non-CARE consumption, so the arithmetic works against them.
+
+At $\beta = 0.40$, the more generous discount shifts the burden toward non-CARE customers, who absorb the full fixed charge while benefiting from volumetric reductions that are proportional to their (higher) consumption. At F50, the non-CARE fixed charge reaches approximately \$37/month, and at F100 approximately \$67/month---far exceeding TOU-DR-F's \$24.60---so the absolute dollar impact on non-CARE customers grows rapidly with the share of T\&D costs recovered through fixed charges.
+
+This finding implies that there exists a break-even discount ratio $\beta^*$ between 0.25 and 0.40 at which CARE and non-CARE customers are affected equally by the introduction of fixed charges. Below $\beta^*$, the fixed charge structure is regressive (CARE customers are disproportionately harmed); above $\beta^*$, the burden shifts to non-CARE customers. The value of $\beta^*$ depends on the consumption ratio between CARE and non-CARE customers and on the level of the fixed charge itself. Our results suggest that the CPUC's adopted discount ratio of approximately 25\% falls below this threshold, consistent with the regressivity concerns raised in R.22-07-005.
+
 \subsection{Limitations}
 \label{sec:limitations}
 

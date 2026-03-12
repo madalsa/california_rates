@@ -193,12 +193,12 @@ def main():
             base_import_cost = calc_import_cost(hourly_import, tou_dr_rate_arr,
                                                  tou_dr_bl_credit, tou_dr_care_disc)
             for sname in DESIGNED_SCENARIOS:
-                sc = rate_scenarios[rate_scenarios['scenario_name'] == sname]
+                sc = rate_scenarios[rate_scenarios['Scenario'] == sname]
                 if sc.empty:
                     continue
                 sc = sc.iloc[0]
                 alpha = sc.get('alpha', 1.0) if 'alpha' in sc.index else 1.0
-                fc = sc.get('fixed_charge_care', 0.0) if is_care else sc.get('fixed_charge_noncare', 0.0)
+                fc = sc.get('Fixed_CARE', 0.0) if is_care else sc.get('Fixed_NonCARE', 0.0)
                 bill = max(alpha * base_import_cost - export_credit, 0) + fc
                 print(f"  {sname+'_bill_'+suffix:<45s}: ${bill:>8,.0f}")
 
@@ -215,13 +215,13 @@ def main():
         else:
             # Volumetric only (no PV) — S1 EV case
             for sname in DESIGNED_SCENARIOS:
-                sc = rate_scenarios[rate_scenarios['scenario_name'] == sname]
+                sc = rate_scenarios[rate_scenarios['Scenario'] == sname]
                 if sc.empty:
                     continue
                 sc = sc.iloc[0]
                 rate_arr = build_tou_rate_array(sc)
                 vol = np.dot(load, rate_arr)
-                fc = sc.get('fixed_charge_care', 0.0) if is_care else sc.get('fixed_charge_noncare', 0.0)
+                fc = sc.get('Fixed_CARE', 0.0) if is_care else sc.get('Fixed_NonCARE', 0.0)
                 bill = vol + fc
                 print(f"  {sname+'_bill_'+suffix:<45s}: ${bill:>8,.0f}")
 

@@ -1,11 +1,16 @@
 """
 rate_designer.py - Revenue-neutral retail rate designer for SDGE
 
-Uses ResStock simulated building consumption profiles (TOU weights)
-to design revenue-neutral rate scenarios with:
+Sample-based revenue neutrality (R_sample approach):
+  R_sample = weighted sum of actual TOU-DR bills from ResStock building sample.
+  Policy cost adjustments (wildfire, ROE) are expressed as SHARES of filed
+  revenue and applied proportionally to R_sample.
+  Baseline scenario F0_WF0_ROE0 produces scaling=1.0 (rates = TOU-DR tariff).
+
+Design parameters:
   - Fixed cost allocation (% of T&D costs to fixed charges)
   - Wildfire cost removal
-  - ROE (Return on Equity) reduction — correctly applied to equity share only
+  - ROE (Return on Equity) reduction — applied to equity share only
 
 Capital structure note:
   ROE ≠ ROR (Rate of Return). ROE applies only to the equity portion of
@@ -18,6 +23,7 @@ Data sources:
   - Rate base & capital structure: SDGE 2024 GRC
 """
 
+import sys
 import pandas as pd
 import numpy as np
 from itertools import product
@@ -45,12 +51,17 @@ AUTHORIZED_ROE = 0.1022      # Current authorized ROE (10.22%)
 # Residential share of total revenue
 RES_SHARE = RESIDENTIAL_REVENUE / TOTAL_REVENUE
 
-# Revenue components (from SDGE revenue requirement filings)
+# Revenue components — absolute costs (from SDGE revenue requirement filings)
 REVENUE_COMPONENTS = {
     'wildfire': 413_873_000 * RES_SHARE,       # Wildfire fund recovery
     'transmission': 685_245_000 * RES_SHARE,   # Transmission costs
     'distribution': 1_722_187_000 * RES_SHARE, # Distribution costs
 }
+
+# Cost component SHARES of filed residential revenue (used in R_sample approach)
+WILDFIRE_SHARE = REVENUE_COMPONENTS['wildfire'] / RESIDENTIAL_REVENUE
+TD_SHARE = (REVENUE_COMPONENTS['transmission'] + REVENUE_COMPONENTS['distribution']) / RESIDENTIAL_REVENUE
+ROE_SHARE_PER_PP = (RATE_BASE * EQUITY_SHARE * 0.01 * RES_SHARE) / RESIDENTIAL_REVENUE
 
 # Current SDGE TOU-DR baseline rate structure ($/kWh)
 BASELINE_TOU_RATES = {
@@ -81,9 +92,16 @@ def load_tou_weights(csv_path='tou_weights_sdge.csv'):
 
 
 def design_rate(fixed_pct_td=0, remove_wildfire=False, roe_reduction=0,
-                care_fixed_ratio=0.4, tou_weights=None):
+                care_fixed_ratio=0.4, tou_weights=None,
+                r_sample=None, sample_n_care=None, sample_n_noncare=None):
     """
-    Design a revenue-neutral rate scenario.
+    Design a revenue-neutral rate scenario using R_sample approach.
+
+    R_sample is the weighted sum of actual TOU-DR bills from the building
+    sample. Policy cost adjustments (wildfire, ROE) are applied as SHARES
+    of filed revenue, proportionally to R_sample. This ensures that the
+    baseline scenario (F0_WF0_ROE0) produces scaling=1.0, meaning rates
+    equal the actual TOU-DR tariff rates.
 
     Parameters
     ----------
@@ -98,60 +116,56 @@ def design_rate(fixed_pct_td=0, remove_wildfire=False, roe_reduction=0,
         CARE fixed charge as fraction of non-CARE (default 0.4 = 40%).
     tou_weights : dict
         TOU consumption weights from ResStock profiles.
+    r_sample : float
+        Weighted sample TOU-DR revenue (R_sample). Required.
+    sample_n_care : int
+        Number of CARE buildings in sample (weighted by BUILDING_WEIGHT
+        to get population estimate for fixed charge allocation).
+    sample_n_noncare : int
+        Number of non-CARE buildings in sample.
 
     Returns
     -------
     dict
         Rate scenario with all components.
     """
+    if r_sample is None:
+        raise ValueError(
+            "r_sample is required. Compute it as: "
+            "sum(tou_dr_bills) * BUILDING_WEIGHT from baseline bill output."
+        )
     if tou_weights is None:
         tou_weights = load_tou_weights()
 
-    # --- Step 1: Calculate target revenue requirement ---
-    revenue = RESIDENTIAL_REVENUE
+    # Use sample customer counts if provided, else fall back to utility counts
+    n_care = sample_n_care if sample_n_care is not None else CUSTOMERS['care']
+    n_noncare = sample_n_noncare if sample_n_noncare is not None else CUSTOMERS['non_care']
 
+    # --- Step 1: Revenue target = R_sample minus policy adjustments (as shares) ---
+    r_target = r_sample
     if remove_wildfire:
-        revenue -= REVENUE_COMPONENTS['wildfire']
-
+        r_target -= r_sample * WILDFIRE_SHARE
     if roe_reduction > 0:
-        # ROE reduction applies only to EQUITY portion of rate base
-        # Revenue impact = Rate_Base × Equity_Share × ΔROE × Res_Share
-        roe_revenue_impact = RATE_BASE * EQUITY_SHARE * (roe_reduction / 100) * RES_SHARE
-        revenue -= roe_revenue_impact
+        r_target -= r_sample * ROE_SHARE_PER_PP * roe_reduction
 
-    # --- Step 2: Allocate T&D costs to fixed charges ---
-    td_costs = REVENUE_COMPONENTS['transmission'] + REVENUE_COMPONENTS['distribution']
-    fixed_revenue = td_costs * (fixed_pct_td / 100)
+    # --- Step 2: Fixed charge revenue = share of T&D costs ---
+    r_fixed = r_sample * TD_SHARE * (fixed_pct_td / 100)
 
-    # Income-graduated fixed charges (CARE pays care_fixed_ratio × non-CARE)
-    total_weighted_customers = (CUSTOMERS['care'] * care_fixed_ratio) + CUSTOMERS['non_care']
-    fixed_non_care = fixed_revenue / total_weighted_customers / 12  # monthly
+    # Per-customer fixed charges (using sample counts)
+    total_weighted_customers = n_noncare + care_fixed_ratio * n_care
+    fixed_non_care = r_fixed / total_weighted_customers / 12  # monthly
     fixed_care = fixed_non_care * care_fixed_ratio
 
-    # --- Step 3: Design volumetric rates (TOU) ---
-    volumetric_revenue = revenue - fixed_revenue
-    target_avg_rate = volumetric_revenue / RESIDENTIAL_SALES_KWH
+    # --- Step 3: Volumetric rates (TOU) ---
+    r_vol = r_target - r_fixed
 
-    # Scale baseline TOU rates to hit target average (consumption-weighted)
-    current_weighted_avg = sum(
-        BASELINE_TOU_RATES[period] * tou_weights[period]
-        for period in BASELINE_TOU_RATES
-    )
-    scaling_factor = target_avg_rate / current_weighted_avg
+    # Scale TOU-DR rates: scaling = R_vol / R_sample
+    # For baseline F0_WF0_ROE0: scaling = 1.0 (rates = TOU-DR tariff)
+    scaling = r_vol / r_sample
+    new_tou_rates = {k: v * scaling for k, v in BASELINE_TOU_RATES.items()}
 
-    new_tou_rates = {k: v * scaling_factor for k, v in BASELINE_TOU_RATES.items()}
-
-    # --- Step 4: Verify revenue neutrality ---
-    verification_avg = sum(
-        new_tou_rates[period] * tou_weights[period]
-        for period in new_tou_rates
-    )
-
-    # Revenue check
-    reconstructed_revenue = (
-        verification_avg * RESIDENTIAL_SALES_KWH +
-        (fixed_care * CUSTOMERS['care'] + fixed_non_care * CUSTOMERS['non_care']) * 12
-    )
+    # Weighted average volumetric rate (for verification)
+    vol_avg = sum(new_tou_rates[p] * tou_weights[p] for p in new_tou_rates)
 
     return {
         'Scenario': f'F{fixed_pct_td}_WF{int(remove_wildfire)}_ROE{roe_reduction}',
@@ -160,16 +174,17 @@ def design_rate(fixed_pct_td=0, remove_wildfire=False, roe_reduction=0,
         'ROE_Reduction': roe_reduction,
         'Fixed_CARE': fixed_care,
         'Fixed_NonCARE': fixed_non_care,
-        'Vol_Avg': target_avg_rate,
-        'Vol_Avg_Check': verification_avg,
-        'Total_Revenue': revenue,
-        'Reconstructed_Revenue': reconstructed_revenue,
+        'Scaling': scaling,
+        'Vol_Avg': vol_avg,
+        'Total_Revenue': r_target,
         **new_tou_rates
     }
 
 
 def generate_all_scenarios(fixed_percentages=None, wildfire_options=None,
-                           roe_reductions=None, output_csv=None):
+                           roe_reductions=None, output_csv=None,
+                           r_sample=None, sample_n_care=None,
+                           sample_n_noncare=None):
     """
     Generate all rate scenarios from parameter grid.
 
@@ -183,6 +198,12 @@ def generate_all_scenarios(fixed_percentages=None, wildfire_options=None,
         ROE reduction levels in pp (default: [0, 0.5, 1.0, 1.5]).
     output_csv : str
         Path to save output CSV (default: rate_scenarios_all_corrected.csv).
+    r_sample : float
+        Weighted sample TOU-DR revenue. Required.
+    sample_n_care : int
+        Number of CARE buildings in sample (weighted count).
+    sample_n_noncare : int
+        Number of non-CARE buildings in sample (weighted count).
 
     Returns
     -------
@@ -202,18 +223,21 @@ def generate_all_scenarios(fixed_percentages=None, wildfire_options=None,
     tou_weights = load_tou_weights()
 
     print("=" * 80)
-    print("SDGE RETAIL RATE DESIGNER")
-    print("Revenue-neutral scenarios using ResStock consumption profiles")
+    print("SDGE RETAIL RATE DESIGNER — Sample-Based Revenue Neutrality")
     print("=" * 80)
 
-    print("\nResStock TOU consumption weights:")
+    print(f"\nR_sample (weighted TOU-DR revenue): ${r_sample/1e9:.4f}B")
+    if sample_n_care is not None:
+        print(f"Sample customers: {sample_n_care:,} CARE, {sample_n_noncare:,} non-CARE")
+
+    print(f"\nCost shares from GRC filing:")
+    print(f"  Wildfire:  {WILDFIRE_SHARE*100:.2f}%")
+    print(f"  T&D:       {TD_SHARE*100:.2f}%")
+    print(f"  ROE/pp:    {ROE_SHARE_PER_PP*100:.2f}%")
+
+    print(f"\nResStock TOU consumption weights:")
     for period, weight in tou_weights.items():
         print(f"  {period:20s}: {weight * 100:5.2f}%")
-
-    print(f"\nCapital structure: {EQUITY_SHARE*100:.0f}% equity / "
-          f"{(1-EQUITY_SHARE)*100:.0f}% debt")
-    print(f"Rate base: ${RATE_BASE/1e9:.2f}B")
-    print(f"Baseline residential revenue: ${RESIDENTIAL_REVENUE/1e9:.4f}B")
 
     # Generate all scenarios
     scenarios = []
@@ -222,14 +246,14 @@ def generate_all_scenarios(fixed_percentages=None, wildfire_options=None,
             fixed_pct_td=fixed_pct,
             remove_wildfire=wf,
             roe_reduction=roe,
-            tou_weights=tou_weights
+            tou_weights=tou_weights,
+            r_sample=r_sample,
+            sample_n_care=sample_n_care,
+            sample_n_noncare=sample_n_noncare,
         ))
 
     df = pd.DataFrame(scenarios).round(4)
-
-    # Drop Reconstructed_Revenue from output (just for internal validation)
-    df_out = df.drop(columns=['Reconstructed_Revenue'])
-    df_out.to_csv(output_csv, index=False)
+    df.to_csv(output_csv, index=False)
 
     print(f"\nGenerated {len(df)} rate scenarios")
     print(f"  Fixed charge levels: {fixed_percentages}")
@@ -242,48 +266,46 @@ def generate_all_scenarios(fixed_percentages=None, wildfire_options=None,
     print("=" * 80)
 
     baseline = df[(df['Remove_Wildfire'] == False) & (df['ROE_Reduction'] == 0)]
-    print("\nBaseline scenarios (should have identical total revenue):")
+    print(f"\nBaseline scenarios (same R_target = R_sample = ${r_sample/1e9:.4f}B):")
     for _, row in baseline.iterrows():
-        rev_error = abs(row['Reconstructed_Revenue'] - row['Total_Revenue'])
-        print(f"  {row['Scenario']:15s}: ${row['Total_Revenue']/1e9:.4f}B  "
-              f"Vol avg: ${row['Vol_Avg']:.4f}  "
-              f"Fixed non-CARE: ${row['Fixed_NonCARE']:.2f}/mo  "
-              f"Rev error: ${rev_error:.2f}")
+        print(f"  {row['Scenario']:15s}: scaling={row['Scaling']:.4f}  "
+              f"FC_nonCARE=${row['Fixed_NonCARE']:.2f}/mo  "
+              f"Vol avg=${row['Vol_Avg']:.4f}")
 
-    cv = baseline['Total_Revenue'].std() / baseline['Total_Revenue'].mean() * 100
-    print(f"\nCoefficient of Variation: {cv:.6f}% (should be ~0%)")
+    print(f"\nF0_WF0_ROE0 scaling = {baseline.iloc[0]['Scaling']:.4f} (should be 1.0000)")
 
-    # Show ROE impact
-    print("\n" + "=" * 80)
-    print("ROE REDUCTION IMPACT (corrected: equity share only)")
-    print("=" * 80)
-
-    f0_scenarios = df[(df['Fixed_Pct_TD'] == 0) & (df['Remove_Wildfire'] == False)]
-    base_rev = f0_scenarios[f0_scenarios['ROE_Reduction'] == 0]['Total_Revenue'].values[0]
-
-    for _, row in f0_scenarios.iterrows():
-        rev_change = row['Total_Revenue'] - base_rev
-        pct_change = rev_change / base_rev * 100
-        print(f"  ROE -{row['ROE_Reduction']:.1f}pp: "
-              f"Revenue ${row['Total_Revenue']/1e9:.4f}B  "
-              f"({pct_change:+.2f}%, ${rev_change/1e6:+.1f}M)")
-
-    # Summary table
-    print("\n" + "=" * 80)
-    print("SCENARIO SUMMARY")
-    print("=" * 80)
-    print(f"\n{'Scenario':<20} {'Fixed NC':<12} {'Fixed CARE':<12} "
-          f"{'Vol Avg':<10} {'Revenue':<15}")
-    print("-" * 70)
-    for _, row in df_out.iterrows():
-        print(f"{row['Scenario']:<20} ${row['Fixed_NonCARE']:<10.2f} "
-              f"${row['Fixed_CARE']:<10.2f} ${row['Vol_Avg']:<8.4f} "
-              f"${row['Total_Revenue']/1e9:.4f}B")
+    # Show policy effects
+    print(f"\nPolicy effects on revenue target:")
+    for _, row in df[df['Fixed_Pct_TD'] == 0].iterrows():
+        pct_reduction = (1 - row['Total_Revenue'] / r_sample) * 100
+        print(f"  {row['Scenario']:20s}: ${row['Total_Revenue']/1e9:.4f}B  "
+              f"({pct_reduction:+.2f}% vs baseline)")
 
     print(f"\nSaved to: {output_csv}")
 
-    return df_out
+    return df
 
 
 if __name__ == "__main__":
-    df = generate_all_scenarios()
+    # Standalone usage: load R_sample from baseline bills if available
+    import os
+    bills_file = 'baseline_bills_sdge_fresh.csv'
+    if not os.path.exists(bills_file):
+        bills_file = 'post_adoption_bills_sdge.csv'
+    if os.path.exists(bills_file):
+        bills_df = pd.read_csv(bills_file)
+        building_weight = 252.3
+        r_sample = bills_df['tou_dr_bill'].dropna().sum() * building_weight
+        n_care = int((bills_df['is_care'] == True).sum() * building_weight)
+        n_noncare = int((bills_df['is_care'] == False).sum() * building_weight)
+        print(f"Loaded R_sample from {bills_file}: ${r_sample/1e9:.4f}B")
+        df = generate_all_scenarios(
+            r_sample=r_sample,
+            sample_n_care=n_care,
+            sample_n_noncare=n_noncare,
+        )
+    else:
+        print(f"ERROR: No bills file found ({bills_file}).")
+        print("Run the pipeline first to generate baseline TOU-DR bills,")
+        print("then re-run this script.")
+        sys.exit(1)

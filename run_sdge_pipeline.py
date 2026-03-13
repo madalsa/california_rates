@@ -115,8 +115,7 @@ BEV_DVMT_CDF = np.array([
     [70, 1.00],
 ])
 
-# Filed utility revenue and customer counts (for anchored billing)
-FILED_RESIDENTIAL_REVENUE = 1.5617e9  # $1.562B
+# Sample building weight and customer count
 TOTAL_RESIDENTIAL_CUSTOMERS = 1_323_612
 BUILDING_WEIGHT = 252.3  # uniform ResStock weight per sample building
 
@@ -125,14 +124,38 @@ BUILDING_WEIGHT = 252.3  # uniform ResStock weight per sample building
 # Stage 1: Generate fresh rate scenarios
 # ---------------------------------------------------------------------------
 
-def stage1_generate_rate_scenarios():
-    """Generate fresh revenue-neutral rate scenarios using rate_designer."""
+def stage1_generate_rate_scenarios(r_sample=None, sample_n_care=None,
+                                    sample_n_noncare=None):
+    """
+    Generate fresh revenue-neutral rate scenarios using rate_designer.
+
+    Requires R_sample (weighted TOU-DR revenue from building sample).
+    If not provided, will attempt to load from existing baseline bills.
+    """
     print("\n" + "=" * 80)
     print("STAGE 1: GENERATE FRESH RATE SCENARIOS")
     print("=" * 80)
 
+    if r_sample is None:
+        # Try loading from previous baseline bills
+        if os.path.exists(BASELINE_BILLS_OUT):
+            bills_df = pd.read_csv(BASELINE_BILLS_OUT)
+            r_sample = bills_df['tou_dr_bill'].dropna().sum() * BUILDING_WEIGHT
+            sample_n_care = int((bills_df['is_care'] == True).sum() * BUILDING_WEIGHT)
+            sample_n_noncare = int((bills_df['is_care'] == False).sum() * BUILDING_WEIGHT)
+            print(f"  Loaded R_sample from {BASELINE_BILLS_OUT}: ${r_sample/1e9:.4f}B")
+        else:
+            print("  ERROR: R_sample required but no baseline bills available.")
+            print("  Run stage 2 first (--stage 2) to compute TOU-DR bills.")
+            sys.exit(1)
+
     from rate_designer import generate_all_scenarios
-    df = generate_all_scenarios(output_csv=RATE_SCENARIOS_OUT)
+    df = generate_all_scenarios(
+        output_csv=RATE_SCENARIOS_OUT,
+        r_sample=r_sample,
+        sample_n_care=sample_n_care,
+        sample_n_noncare=sample_n_noncare,
+    )
     print(f"\nSaved {len(df)} scenarios to {RATE_SCENARIOS_OUT}")
     return df
 
@@ -339,15 +362,15 @@ def normalize_income(income_str):
     return mapping.get(str(income_str).strip(), 'medium')
 
 
-def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
+def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
     """
     Compute bills for all SDGE buildings under selected rate scenarios.
 
     Two types of billing:
     1. Actual SDGE tariff rates (TOU-DR, TOU-DR-F) via corrected_bill_calc.py
        - Handles tiering, baseline allowances, CARE discounts, income-graduated fixed
-    2. Designed rate scenarios (F0_WF0_ROE0, etc.) via vectorized TOU calculation
-       - Uses rate_designer.py output with revenue-neutral TOU rates
+    2. Designed rate scenarios (F0_WF0_ROE0, etc.) via direct TOU bill computation
+       - Computes R_0 from TOU-DR bills, generates rate scenarios, applies rates directly
 
     Reads each building's 15-min parquet from Baseline_SDGE/,
     aggregates to hourly, scales by RASS scaling factor.
@@ -383,28 +406,35 @@ def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
         parquet_files = parquet_files[:n_buildings]
         print(f"  TEST MODE: processing {n_buildings} buildings")
 
-    # Filter designed scenarios to our selection
-    selected_designed = rate_scenarios_df[
-        rate_scenarios_df['Scenario'].isin(DESIGNED_SCENARIOS)
-    ]
-    print(f"  Designed rate scenarios: {len(selected_designed)} "
-          f"({', '.join(selected_designed['Scenario'].tolist())})")
     print(f"  Actual SDGE rates: {', '.join(ACTUAL_SDGE_RATES.keys())}")
 
-    # Build scenario info for anchored billing (computed after building loop)
-    scenario_info = {}
-    for _, scenario in selected_designed.iterrows():
-        name = scenario['Scenario']
-        scenario_info[name] = {
-            'revenue_target': scenario['Total_Revenue'],
-            'fixed_care_monthly': scenario['Fixed_CARE'],
-            'fixed_noncare_monthly': scenario['Fixed_NonCARE'],
-        }
-
-    # Process buildings — compute actual tariff bills
+    # --- Pass 1: Compute actual tariff bills + TOU consumption per building ---
     results = []
+    tou_consumption = {}  # building_id → {period: kwh}
     start_time = time.time()
     errors = 0
+
+    # TOU period classification arrays (precompute once)
+    hours = np.arange(8760)
+    days_per_month = np.array([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
+    hours_per_month = days_per_month * 24
+    month_boundaries = np.concatenate(([0], np.cumsum(hours_per_month)))
+    months = np.searchsorted(month_boundaries[1:], hours) + 1  # 1-indexed
+    hour_of_day = hours % 24
+    is_summer = (months >= 6) & (months <= 10)
+    is_peak = (hour_of_day >= 16) & (hour_of_day < 21)
+    is_midpeak = ((hour_of_day >= 6) & (hour_of_day < 16)) | \
+                 ((hour_of_day >= 21) & (hour_of_day < 22))
+
+    # Build period masks
+    period_masks = {
+        'summer_peak': is_summer & is_peak,
+        'summer_midpeak': is_summer & is_midpeak,
+        'summer_offpeak': is_summer & ~is_peak & ~is_midpeak,
+        'winter_peak': ~is_summer & is_peak,
+        'winter_midpeak': ~is_summer & is_midpeak,
+        'winter_offpeak': ~is_summer & ~is_peak & ~is_midpeak,
+    }
 
     for i, pq_file in enumerate(parquet_files):
         building_id = pq_file.stem.split('-')[0]
@@ -435,6 +465,12 @@ def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
                 'annual_kwh': hourly_load_scaled.sum(),
                 'scaling_factor': sf,
             }
+
+            # Store TOU consumption by period for direct bill computation
+            bldg_tou = {}
+            for period, mask in period_masks.items():
+                bldg_tou[period] = hourly_load_scaled[mask].sum()
+            tou_consumption[int(building_id)] = bldg_tou
 
             # --- Actual SDGE tariff rates (vectorized) ---
             for rate_code, col_prefix in ACTUAL_SDGE_RATES.items():
@@ -469,44 +505,64 @@ def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
     print(f"\n  Completed: {len(results)} buildings in {elapsed:.1f}s")
     print(f"  Errors/skipped: {errors}")
 
-    # --- Anchored billing: compute designed scenario bills from actual TOU-DR ---
-    # V_i = actual TOU-DR bill (the volumetric component, since TOU-DR has no fixed charges)
-    # For scenario j: B_ij = α_j × V_i + F_ij
-    # where α_j = (R_0 × r_j - F_j_total) / R_0
-    #   R_0 = sample weighted TOU-DR revenue
-    #   r_j = scenario revenue target / filed baseline revenue
-    #   F_j_total = sample weighted fixed charge revenue
-
+    # --- Compute R_0 (sample-weighted TOU-DR revenue) ---
     V = df_bills['tou_dr_bill'].values
     valid = ~np.isnan(V)
     R_0 = np.nansum(V * BUILDING_WEIGHT)
+    sample_n_care = int((df_bills['is_care'] == True).sum() * BUILDING_WEIGHT)
+    sample_n_noncare = int((df_bills['is_care'] == False).sum() * BUILDING_WEIGHT)
 
-    print(f"\n  Anchored billing (TOU-DR as base):")
+    print(f"\n  R_sample (R_0) from TOU-DR bills:")
     print(f"    Valid TOU-DR bills: {valid.sum()}/{len(V)}")
     print(f"    Sample weighted baseline revenue (R_0): ${R_0/1e9:.4f}B")
     print(f"    Mean TOU-DR bill: ${np.nanmean(V):,.0f}/yr")
+    print(f"    Sample customers: {sample_n_care:,} CARE, {sample_n_noncare:,} non-CARE")
 
-    for scenario_name, info in scenario_info.items():
-        r_j = info['revenue_target'] / FILED_RESIDENTIAL_REVENUE
-
-        # Fixed charges per building (annual)
-        F_annual = np.where(
-            df_bills['is_care'].values,
-            info['fixed_care_monthly'] * 12,
-            info['fixed_noncare_monthly'] * 12,
+    # --- Generate rate scenarios using R_sample approach ---
+    if rate_scenarios_df is None:
+        from rate_designer import generate_all_scenarios
+        rate_scenarios_df = generate_all_scenarios(
+            output_csv=RATE_SCENARIOS_OUT,
+            r_sample=R_0,
+            sample_n_care=sample_n_care,
+            sample_n_noncare=sample_n_noncare,
         )
-        F_j_total = np.sum(F_annual * BUILDING_WEIGHT)
 
-        # Solve for volumetric scaling factor
-        alpha_j = (R_0 * r_j - F_j_total) / R_0
+    # Filter designed scenarios to our selection
+    selected_designed = rate_scenarios_df[
+        rate_scenarios_df['Scenario'].isin(DESIGNED_SCENARIOS)
+    ]
+    print(f"\n  Designed rate scenarios: {len(selected_designed)} "
+          f"({', '.join(selected_designed['Scenario'].tolist())})")
 
-        # Compute anchored bills
-        bills = alpha_j * V + F_annual
+    # --- Direct bill computation for designed scenarios ---
+    # bill = sum(consumption[period] × rate[period]) + annual_fixed_charge
+    tou_periods = ['summer_peak', 'summer_midpeak', 'summer_offpeak',
+                   'winter_peak', 'winter_midpeak', 'winter_offpeak']
+
+    print(f"\n  Computing bills directly from designed rates:")
+
+    for _, scenario in selected_designed.iterrows():
+        scenario_name = scenario['Scenario']
+        fixed_care_annual = scenario['Fixed_CARE'] * 12
+        fixed_noncare_annual = scenario['Fixed_NonCARE'] * 12
+
+        bills = []
+        for _, bldg_row in df_bills.iterrows():
+            bid = bldg_row['building_id']
+            if bid not in tou_consumption:
+                bills.append(np.nan)
+                continue
+            bldg_tou = tou_consumption[bid]
+            vol_bill = sum(bldg_tou[p] * scenario[p] for p in tou_periods)
+            fixed = fixed_care_annual if bldg_row['is_care'] else fixed_noncare_annual
+            bills.append(vol_bill + fixed)
+
         df_bills[f'{scenario_name}_bill'] = bills
-
-        print(f"    {scenario_name}: α={alpha_j:.4f}, r={r_j:.4f}, "
-              f"Fixed NC=${info['fixed_noncare_monthly']:.2f}/mo, "
-              f"mean bill=${np.nanmean(bills):,.0f}/yr")
+        mean_bill = np.nanmean(bills)
+        print(f"    {scenario_name}: scaling={scenario['Scaling']:.4f}, "
+              f"FC_nonCARE=${scenario['Fixed_NonCARE']:.2f}/mo, "
+              f"mean bill=${mean_bill:,.0f}/yr")
 
     df_bills.to_csv(BASELINE_BILLS_OUT, index=False)
     print(f"\n  Saved to: {BASELINE_BILLS_OUT}")
@@ -519,7 +575,7 @@ def stage2_compute_baseline_bills(rate_scenarios_df, n_buildings=None):
             mean_bill = df_bills[col].mean()
             print(f"    {col}: ${mean_bill:,.0f}/yr avg")
 
-    return df_bills
+    return df_bills, rate_scenarios_df
 
 
 # ---------------------------------------------------------------------------
@@ -1741,19 +1797,22 @@ def main():
 
     pipeline_start = time.time()
 
-    # Stage 1: Rate scenarios
-    if args.stage <= 1:
-        rate_scenarios = stage1_generate_rate_scenarios()
-    else:
-        rate_scenarios = pd.read_csv(RATE_SCENARIOS_OUT)
-        print(f"\nLoaded existing rate scenarios from {RATE_SCENARIOS_OUT}")
-
-    # Stage 2: Baseline bills
+    # Stage 2: Baseline bills + rate scenario generation
+    # Rate scenarios are generated inside stage 2 after R_0 (sample TOU-DR
+    # revenue) is computed, so the R_sample approach works correctly.
     if args.stage <= 2:
-        bills_df = stage2_compute_baseline_bills(rate_scenarios, n_buildings)
+        # Pass existing rate scenarios if loading from file (--stage > 1)
+        existing_scenarios = None
+        if args.stage > 1 and os.path.exists(RATE_SCENARIOS_OUT):
+            existing_scenarios = pd.read_csv(RATE_SCENARIOS_OUT)
+            print(f"\nLoaded existing rate scenarios from {RATE_SCENARIOS_OUT}")
+        bills_df, rate_scenarios = stage2_compute_baseline_bills(
+            existing_scenarios, n_buildings)
     else:
         bills_df = pd.read_csv(BASELINE_BILLS_OUT)
+        rate_scenarios = pd.read_csv(RATE_SCENARIOS_OUT)
         print(f"\nLoaded existing bills from {BASELINE_BILLS_OUT}")
+        print(f"Loaded existing rate scenarios from {RATE_SCENARIOS_OUT}")
 
     if args.skip_tech:
         print("\n  Skipping technology adoption stages (--skip-tech)")

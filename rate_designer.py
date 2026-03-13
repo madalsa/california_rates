@@ -93,15 +93,21 @@ def load_tou_weights(csv_path='tou_weights_sdge.csv'):
 
 def design_rate(fixed_pct_td=0, remove_wildfire=False, roe_reduction=0,
                 care_fixed_ratio=0.4, tou_weights=None,
-                r_sample=None, sample_n_care=None, sample_n_noncare=None):
+                r_sample=None, r_gross_vol=None,
+                sample_n_care=None, sample_n_noncare=None):
     """
     Design a revenue-neutral rate scenario using R_sample approach.
 
     R_sample is the weighted sum of actual TOU-DR bills from the building
     sample. Policy cost adjustments (wildfire, ROE) are applied as SHARES
-    of filed revenue, proportionally to R_sample. This ensures that the
-    baseline scenario (F0_WF0_ROE0) produces scaling=1.0, meaning rates
-    equal the actual TOU-DR tariff rates.
+    of filed revenue, proportionally to R_sample.
+
+    R_gross_vol is the gross volumetric revenue from the sample (with CARE
+    discounts applied, but WITHOUT baseline credits or fixed charges). This
+    is used as the scaling denominator because designed scenario bills are
+    computed as pure volumetric × rate (no baseline credits). Using R_sample
+    as the denominator would produce rates that are too high since R_sample
+    is lower than R_gross_vol (baseline credits reduce TOU-DR bills).
 
     Parameters
     ----------
@@ -118,6 +124,9 @@ def design_rate(fixed_pct_td=0, remove_wildfire=False, roe_reduction=0,
         TOU consumption weights from ResStock profiles.
     r_sample : float
         Weighted sample TOU-DR revenue (R_sample). Required.
+    r_gross_vol : float, optional
+        Gross volumetric revenue (with CARE, without baseline credits).
+        Used as scaling denominator. If None, falls back to r_sample.
     sample_n_care : int
         Number of CARE buildings in sample (weighted by BUILDING_WEIGHT
         to get population estimate for fixed charge allocation).
@@ -159,9 +168,13 @@ def design_rate(fixed_pct_td=0, remove_wildfire=False, roe_reduction=0,
     # --- Step 3: Volumetric rates (TOU) ---
     r_vol = r_target - r_fixed
 
-    # Scale TOU-DR rates: scaling = R_vol / R_sample
-    # For baseline F0_WF0_ROE0: scaling = 1.0 (rates = TOU-DR tariff)
-    scaling = r_vol / r_sample
+    # Scale TOU-DR rates so that designed scenario bills match R_vol.
+    # Designed bills = sum(load × rate × scaling) × care_factor (no baseline credits).
+    # The denominator must be the gross volumetric revenue (with CARE, without
+    # baseline credits) so that: scaling × R_gross_vol + R_fixed = R_target.
+    # If r_gross_vol is not provided, fall back to r_sample (legacy behavior).
+    scale_denom = r_gross_vol if r_gross_vol is not None else r_sample
+    scaling = r_vol / scale_denom
     new_tou_rates = {k: v * scaling for k, v in BASELINE_TOU_RATES.items()}
 
     # Weighted average volumetric rate (for verification)
@@ -183,8 +196,8 @@ def design_rate(fixed_pct_td=0, remove_wildfire=False, roe_reduction=0,
 
 def generate_all_scenarios(fixed_percentages=None, wildfire_options=None,
                            roe_reductions=None, output_csv=None,
-                           r_sample=None, sample_n_care=None,
-                           sample_n_noncare=None):
+                           r_sample=None, r_gross_vol=None,
+                           sample_n_care=None, sample_n_noncare=None):
     """
     Generate all rate scenarios from parameter grid.
 
@@ -227,6 +240,9 @@ def generate_all_scenarios(fixed_percentages=None, wildfire_options=None,
     print("=" * 80)
 
     print(f"\nR_sample (weighted TOU-DR revenue): ${r_sample/1e9:.4f}B")
+    if r_gross_vol is not None:
+        print(f"R_gross_vol (gross volumetric w/ CARE, no BL credits): ${r_gross_vol/1e9:.4f}B")
+        print(f"  Baseline credit + fixed gap: ${(r_gross_vol - r_sample)/1e9:.4f}B")
     if sample_n_care is not None:
         print(f"Sample customers: {sample_n_care:,} CARE, {sample_n_noncare:,} non-CARE")
 
@@ -248,6 +264,7 @@ def generate_all_scenarios(fixed_percentages=None, wildfire_options=None,
             roe_reduction=roe,
             tou_weights=tou_weights,
             r_sample=r_sample,
+            r_gross_vol=r_gross_vol,
             sample_n_care=sample_n_care,
             sample_n_noncare=sample_n_noncare,
         ))
@@ -272,7 +289,9 @@ def generate_all_scenarios(fixed_percentages=None, wildfire_options=None,
               f"FC_nonCARE=${row['Fixed_NonCARE']:.2f}/mo  "
               f"Vol avg=${row['Vol_Avg']:.4f}")
 
-    print(f"\nF0_WF0_ROE0 scaling = {baseline.iloc[0]['Scaling']:.4f} (should be 1.0000)")
+    expected_scaling = r_sample / r_gross_vol if r_gross_vol else 1.0
+    print(f"\nF0_WF0_ROE0 scaling = {baseline.iloc[0]['Scaling']:.4f} "
+          f"(expected {expected_scaling:.4f}; <1.0 accounts for TOU-DR baseline credits)")
 
     # Show policy effects
     print(f"\nPolicy effects on revenue target:")

@@ -518,12 +518,39 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
     print(f"    Mean TOU-DR bill: ${np.nanmean(V):,.0f}/yr")
     print(f"    Sample customers: {sample_n_care:,} CARE, {sample_n_noncare:,} non-CARE")
 
+    # --- Compute R_gross_vol: gross volumetric revenue with CARE discount ---
+    # This is sum(load × TOU-DR_rate) × care_factor for all buildings,
+    # WITHOUT baseline credits subtracted. Needed for correct rate scaling:
+    # designed scenario bills don't have baseline credits, so the scaling
+    # denominator must be the gross volumetric revenue, not R_sample.
+    from rate_designer import BASELINE_TOU_RATES
+    from corrected_bill_calc import load_excel_data as _load_xl
+    _rates_df, _ = _load_xl(EXCEL_FILE)
+    _tou_dr_entries = _rates_df[_rates_df['rate_type'] == 'TOU-DR']
+    _tou_dr_wd = _tou_dr_entries[_tou_dr_entries['weekday'] == 'weekday'].iloc[0]
+    baseline_care_discount = abs(float(_tou_dr_wd.get('care_discount', 0) or 0))
+    tou_periods = ['summer_peak', 'summer_midpeak', 'summer_offpeak',
+                   'winter_peak', 'winter_midpeak', 'winter_offpeak']
+    r_gross_vol = 0.0
+    for _, bldg_row in df_bills.iterrows():
+        bid = bldg_row['building_id']
+        if bid not in tou_consumption:
+            continue
+        bldg_tou = tou_consumption[bid]
+        gross = sum(bldg_tou[p] * BASELINE_TOU_RATES[p] for p in tou_periods)
+        care_factor = (1 - baseline_care_discount) if bldg_row['is_care'] else 1.0
+        r_gross_vol += gross * care_factor
+    r_gross_vol *= BUILDING_WEIGHT
+    print(f"    Gross volumetric revenue (with CARE, no BL credits): ${r_gross_vol/1e9:.4f}B")
+    print(f"    Baseline credit + fixed charge gap: ${(r_gross_vol - R_0)/1e9:.4f}B")
+
     # --- Generate rate scenarios using R_sample approach ---
     if rate_scenarios_df is None:
         from rate_designer import generate_all_scenarios
         rate_scenarios_df = generate_all_scenarios(
             output_csv=RATE_SCENARIOS_OUT,
             r_sample=R_0,
+            r_gross_vol=r_gross_vol,
             sample_n_care=sample_n_care,
             sample_n_noncare=sample_n_noncare,
         )
@@ -536,11 +563,10 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
           f"({', '.join(selected_designed['Scenario'].tolist())})")
 
     # --- Direct bill computation for designed scenarios ---
-    # bill = sum(consumption[period] × rate[period]) + annual_fixed_charge
-    tou_periods = ['summer_peak', 'summer_midpeak', 'summer_offpeak',
-                   'winter_peak', 'winter_midpeak', 'winter_offpeak']
+    # bill = sum(consumption[period] × rate[period]) × care_factor + annual_fixed_charge
 
     print(f"\n  Computing bills directly from designed rates:")
+    print(f"  CARE volumetric discount for designed scenarios: {baseline_care_discount:.2%}")
 
     for _, scenario in selected_designed.iterrows():
         scenario_name = scenario['Scenario']
@@ -555,6 +581,8 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
                 continue
             bldg_tou = tou_consumption[bid]
             vol_bill = sum(bldg_tou[p] * scenario[p] for p in tou_periods)
+            if bldg_row['is_care'] and baseline_care_discount > 0:
+                vol_bill *= (1 - baseline_care_discount)
             fixed = fixed_care_annual if bldg_row['is_care'] else fixed_noncare_annual
             bills.append(vol_bill + fixed)
 
@@ -1327,7 +1355,12 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
         print(f"  Loaded {rc} rates: baseline_credit={actual_rates[rc]['baseline_credit']:.4f}, "
               f"has_fixed={actual_rates[rc]['has_fixed']}")
 
+    # CARE discount for designed scenarios: use TOU-DR's CARE discount
+    # (designed scenarios are alternative rate structures for the same utility)
+    designed_care_discount = actual_rates['TOU-DR']['care_discount']
+
     print(f"  Per-scenario LP dispatch (designed + actual tariffs):")
+    print(f"  CARE discount for designed scenarios: {designed_care_discount:.2%}")
     for sname in designed_rate_arrays:
         fc = scenario_fixed_charges[sname]
         print(f"    {sname}: FC=${fc['noncare']/12:.2f}/mo")
@@ -1456,9 +1489,8 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
                 fixed = fc['care'] if is_care else fc['noncare']
                 import_cost = np.dot(grid_import_arr, rate_arr)
                 export_credit = np.dot(grid_export_arr, eec_rates)
-                # No baseline credit for designed scenarios
-                if is_care:
-                    import_cost *= (1 - 0.0)  # no CARE discount on designed
+                if is_care and designed_care_discount > 0:
+                    import_cost *= (1 - designed_care_discount)
                 bill = max(import_cost - export_credit, 0) + fixed
                 result[f'{sname}_bill_{prefix}'] = bill
         else:
@@ -1472,6 +1504,8 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
                 fixed = fc['care'] if is_care else fc['noncare']
                 import_cost = np.dot(hourly_import, rate_arr)
                 export_credit = np.dot(hourly_export, eec_rates)
+                if is_care and designed_care_discount > 0:
+                    import_cost *= (1 - designed_care_discount)
                 bill = max(import_cost - export_credit, 0) + fixed
                 result[f'{sname}_bill_{prefix}'] = bill
 
@@ -1505,7 +1539,8 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
             fc = scenario_fixed_charges[sname]
             fixed = fc['care'] if is_care else fc['noncare']
             vol_cost = np.dot(load_profile, rate_arr)
-            # No baseline credit for designed scenarios (pure volumetric + fixed)
+            if is_care and designed_care_discount > 0:
+                vol_cost *= (1 - designed_care_discount)
             result[f'{sname}_bill_{prefix}'] = vol_cost + fixed
 
         # Actual tariff bills

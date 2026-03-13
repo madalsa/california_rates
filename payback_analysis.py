@@ -4,9 +4,8 @@ Simple payback period analysis for technology adoption scenarios.
 Scenarios:
   S1: EV only (add EV charging to baseline load)
   S2: PV + Storage (add solar + battery to baseline load)
-  S3: Full electrification bundle (HP HVAC + HP WH + induction + dryer + envelope)
-      + PV (sized on pre-electrification load) + Storage + EV
-  S4: Same as S3 but PV sized on post-electrification load
+  S3: PV + Storage + EV (baseline demand, PV sized on baseline)
+  S4: Full electrification + PV + Storage + EV (Upgrade11 demand, PV sized on Upgrade11)
 
 Baseline bill is always TOU-DR (the actual SDGE tariff).
 Post-adoption bills are computed under each rate scenario.
@@ -49,11 +48,15 @@ DEFAULT_GAS_BILL = GAS_FIXED_CHARGE_MONTHLY * 12 + AVG_GAS_THERMS_YEAR * GAS_MAR
 # SCENARIO COST FUNCTIONS
 # =============================================================================
 
-def s1_costs():
-    """S1: EV only. Returns (upfront_cost, annual_fuel_savings)."""
+def s1_costs(daily_miles=None):
+    """S1: EV only. Returns (upfront_cost, annual_fuel_savings).
+
+    If daily_miles is provided, uses per-building VMT. Otherwise falls back
+    to ANNUAL_MILES constant.
+    """
     upfront = EV_PREMIUM
-    # Gasoline savings (fixed 12k miles/year assumption)
-    gallons_saved = ANNUAL_MILES / ICE_MPG
+    annual_miles = daily_miles * 365 if daily_miles else ANNUAL_MILES
+    gallons_saved = annual_miles / ICE_MPG
     gas_savings = gallons_saved * GASOLINE_PRICE
     return upfront, gas_savings
 
@@ -66,8 +69,26 @@ def s2_costs(pv_kw):
     return total_after_itc
 
 
-def s3s4_costs(pv_kw):
-    """S3/S4: Full electrification + PV + Storage + EV. Returns (upfront, gas_savings, fuel_savings)."""
+def s3_costs(pv_kw, daily_miles=None):
+    """S3: PV + Storage + EV (no electrification). Returns (upfront, fuel_savings)."""
+    # Solar + storage (ITC eligible)
+    solar_storage_before = pv_kw * SOLAR_COST_PER_W * 1000 + BATTERY_COST
+    solar_storage_after = solar_storage_before * (1 - ITC_RATE)
+
+    # EV
+    ev_cost = EV_PREMIUM
+
+    upfront = solar_storage_after + ev_cost
+
+    # Gasoline savings (per-building VMT or fallback)
+    annual_miles = daily_miles * 365 if daily_miles else ANNUAL_MILES
+    fuel_savings = (annual_miles / ICE_MPG) * GASOLINE_PRICE
+
+    return upfront, fuel_savings
+
+
+def s4_costs(pv_kw, daily_miles=None, gas_therms=None):
+    """S4: Full electrification + PV + Storage + EV. Returns (upfront, gas_savings, fuel_savings)."""
     # Solar + storage (ITC eligible)
     solar_storage_before = pv_kw * SOLAR_COST_PER_W * 1000 + BATTERY_COST
     solar_storage_after = solar_storage_before * (1 - ITC_RATE)
@@ -80,11 +101,15 @@ def s3s4_costs(pv_kw):
 
     upfront = solar_storage_after + ev_cost + electrification
 
-    # Annual savings from dropping gas entirely
-    gas_bill_savings = DEFAULT_GAS_BILL
+    # Annual gas bill savings (per-building therms or fallback)
+    if gas_therms is not None and gas_therms > 0:
+        gas_bill_savings = GAS_FIXED_CHARGE_MONTHLY * 12 + gas_therms * GAS_MARGINAL_RATE
+    else:
+        gas_bill_savings = DEFAULT_GAS_BILL
 
-    # Gasoline savings (fixed 12k miles/year)
-    fuel_savings = (ANNUAL_MILES / ICE_MPG) * GASOLINE_PRICE
+    # Gasoline savings (per-building VMT or fallback)
+    annual_miles = daily_miles * 365 if daily_miles else ANNUAL_MILES
+    fuel_savings = (annual_miles / ICE_MPG) * GASOLINE_PRICE
 
     return upfront, gas_bill_savings, fuel_savings
 
@@ -134,8 +159,8 @@ def compute_payback(post_df, rate_scenario='tou_dr'):
     # Post-adoption columns for this rate scenario
     s1_col = f'{rate_scenario}_bill_s1_ev'
     s2_col = f'{rate_scenario}_bill_s2_pv_stor'
-    s3_col = f'{rate_scenario}_bill_s3_full_pre'
-    s4_col = f'{rate_scenario}_bill_s4_full_post'
+    s3_col = f'{rate_scenario}_bill_s3_pv_stor_ev'
+    s4_col = f'{rate_scenario}_bill_s4_full_elec'
 
     results = []
 
@@ -149,7 +174,8 @@ def compute_payback(post_df, rate_scenario='tou_dr'):
         # --- S1: EV only ---
         if pd.notna(row.get(s1_col)):
             s1_bill = row[s1_col]
-            upfront, fuel_savings = s1_costs()
+            daily_miles = row.get('ev_daily_miles', None)
+            upfront, fuel_savings = s1_costs(daily_miles=daily_miles)
             bill_delta = s1_bill - baseline_bill  # positive = bill increase
             annual_savings = fuel_savings - bill_delta
             r['s1_upfront'] = upfront
@@ -170,24 +196,27 @@ def compute_payback(post_df, rate_scenario='tou_dr'):
             r['s2_net_annual_savings'] = bill_savings
             r['s2_payback'] = upfront / bill_savings if bill_savings > 0 else np.nan
 
-        # --- S3: Full electrification (pre-PV sizing) ---
+        # --- S3: PV + Storage + EV (no electrification) ---
         if pd.notna(row.get(s3_col)) and pd.notna(row.get('pv_size_kw_s3')):
             s3_bill = row[s3_col]
-            upfront, gas_savings, fuel_savings = s3s4_costs(row['pv_size_kw_s3'])
+            daily_miles = row.get('ev_daily_miles', None)
+            upfront, fuel_savings = s3_costs(row['pv_size_kw_s3'], daily_miles=daily_miles)
             bill_delta = s3_bill - baseline_bill
-            annual_savings = gas_savings + fuel_savings - bill_delta
+            annual_savings = fuel_savings - bill_delta
             r['s3_upfront'] = upfront
             r['s3_bill'] = s3_bill
             r['s3_bill_delta'] = bill_delta
-            r['s3_gas_savings'] = gas_savings
             r['s3_fuel_savings'] = fuel_savings
             r['s3_net_annual_savings'] = annual_savings
             r['s3_payback'] = upfront / annual_savings if annual_savings > 0 else np.nan
 
-        # --- S4: Full electrification (post-PV sizing) ---
+        # --- S4: Full electrification + PV + Storage + EV ---
         if pd.notna(row.get(s4_col)) and pd.notna(row.get('pv_size_kw_s4')):
             s4_bill = row[s4_col]
-            upfront, gas_savings, fuel_savings = s3s4_costs(row['pv_size_kw_s4'])
+            daily_miles = row.get('ev_daily_miles', None)
+            gas_therms = row.get('baseline_gas_therms', None)
+            upfront, gas_savings, fuel_savings = s4_costs(
+                row['pv_size_kw_s4'], daily_miles=daily_miles, gas_therms=gas_therms)
             bill_delta = s4_bill - baseline_bill
             annual_savings = gas_savings + fuel_savings - bill_delta
             r['s4_upfront'] = upfront
@@ -209,8 +238,8 @@ def summarize_payback(payback_df, rate_label=''):
     scenarios = [
         ('s1', 'S1: EV Only'),
         ('s2', 'S2: PV + Storage'),
-        ('s3', 'S3: Full Electrification (pre-PV sizing)'),
-        ('s4', 'S4: Full Electrification (post-PV sizing)'),
+        ('s3', 'S3: PV + Storage + EV'),
+        ('s4', 'S4: Full Electrification + PV + Storage + EV'),
     ]
 
     print("=" * 90)
@@ -275,7 +304,7 @@ def compare_all_rate_scenarios(post_df):
     available = {}
     for label, prefix in RATE_SCENARIOS.items():
         # Check if at least one adoption scenario column exists
-        for suffix in ['_bill_s1_ev', '_bill_s2_pv_stor', '_bill_s3_full_pre', '_bill_s4_full_post']:
+        for suffix in ['_bill_s1_ev', '_bill_s2_pv_stor', '_bill_s3_pv_stor_ev', '_bill_s4_full_elec']:
             if f'{prefix}{suffix}' in post_df.columns:
                 available[label] = prefix
                 break
@@ -284,7 +313,7 @@ def compare_all_rate_scenarios(post_df):
     for label, prefix in available.items():
         pb = compute_payback(post_df, prefix)
         for sc_prefix, sc_label in [('s1', 'S1:EV'), ('s2', 'S2:PV+Stor'),
-                                     ('s3', 'S3:Full(pre)'), ('s4', 'S4:Full(post)')]:
+                                     ('s3', 'S3:PV+Stor+EV'), ('s4', 'S4:FullElec')]:
             col = f'{sc_prefix}_payback'
             sav = f'{sc_prefix}_net_annual_savings'
             if col not in pb.columns:
@@ -342,7 +371,7 @@ if __name__ == '__main__':
     print(f"  Solar PV:              ${SOLAR_COST_PER_W}/W installed (${SOLAR_COST_PER_W*(1-ITC_RATE):.2f}/W after {ITC_RATE:.0%} ITC)")
     print(f"  Battery (13.5 kWh):    ${BATTERY_COST:,} (${BATTERY_COST*(1-ITC_RATE):,.0f} after ITC)")
     print(f"  EV premium over ICE:   ${EV_PREMIUM:,}")
-    print(f"  Annual driving:        {ANNUAL_MILES:,} miles/year")
+    print(f"  Annual driving:        per-building VMT from BEV CDF (fallback: {ANNUAL_MILES:,} mi/yr)")
     print(f"  Electrification bundle: ${ELECTRIFICATION_BUNDLE:,} (HP HVAC + HP WH + induction + dryer + envelope)")
     print(f"  Gasoline:              ${GASOLINE_PRICE}/gal, {ICE_MPG} mpg average ICE")
     print(f"  Annual gasoline cost:  ${ANNUAL_MILES/ICE_MPG*GASOLINE_PRICE:,.0f}/yr")

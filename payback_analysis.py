@@ -8,6 +8,8 @@ Scenarios:
       + PV (sized on pre-electrification load) + Storage + EV
   S4: Same as S3 but PV sized on post-electrification load
 
+Baseline bill is always TOU-DR (the actual SDGE tariff).
+Post-adoption bills are computed under each rate scenario.
 Payback = Net upfront cost / Annual net savings
 """
 
@@ -88,25 +90,48 @@ def s3s4_costs(pv_kw):
 
 
 # =============================================================================
+# RATE SCENARIO COLUMN MAPPING
+# =============================================================================
+
+# All 6 rate scenarios in the post-adoption bills data
+# Maps scenario name -> column prefix for post-adoption bills
+RATE_SCENARIOS = {
+    'TOU-DR':          'tou_dr',
+    'TOU-DR-F':        'tou_dr_f',
+    'F0_WF0_ROE0':     'F0_WF0_ROE0',
+    'F0_WF0_ROE1.0':   'F0_WF0_ROE1.0',
+    'F0_WF1_ROE0':     'F0_WF1_ROE0',
+    'F50_WF0_ROE0':    'F50_WF0_ROE0',
+    'F50_WF1_ROE1.0':  'F50_WF1_ROE1.0',
+    'F100_WF0_ROE0':   'F100_WF0_ROE0',
+}
+
+# =============================================================================
 # MAIN ANALYSIS
 # =============================================================================
 
-def compute_payback(post_df, rate_scenario='F0_WF0_ROE0'):
+def compute_payback(post_df, rate_scenario='tou_dr'):
     """
     Compute simple payback periods for each building and scenario.
+
+    Baseline bill is ALWAYS TOU-DR (actual SDGE tariff).
+    Post-adoption bills use the specified rate scenario.
 
     Parameters
     ----------
     post_df : DataFrame
         post_adoption_bills_sdge.csv
     rate_scenario : str
-        Which rate scenario to use for bill comparison (default: status quo)
+        Column prefix for post-adoption bills (e.g. 'tou_dr', 'F50_WF0_ROE0')
 
     Returns
     -------
     DataFrame with payback results
     """
-    baseline_col = f'{rate_scenario}_bill'
+    # Baseline is always TOU-DR
+    baseline_col = 'tou_dr_bill'
+
+    # Post-adoption columns for this rate scenario
     s1_col = f'{rate_scenario}_bill_s1_ev'
     s2_col = f'{rate_scenario}_bill_s2_pv_stor'
     s3_col = f'{rate_scenario}_bill_s3_full_pre'
@@ -119,7 +144,7 @@ def compute_payback(post_df, rate_scenario='F0_WF0_ROE0'):
         income = row['income']
         baseline_bill = row[baseline_col]
         r = {'building_id': bid, 'income': income, 'annual_kwh': row['annual_kwh'],
-             'baseline_bill': baseline_bill, 'rate_scenario': rate_scenario}
+             'baseline_bill_tou_dr': baseline_bill, 'rate_scenario': rate_scenario}
 
         # --- S1: EV only ---
         if pd.notna(row.get(s1_col)):
@@ -178,7 +203,7 @@ def compute_payback(post_df, rate_scenario='F0_WF0_ROE0'):
     return pd.DataFrame(results)
 
 
-def summarize_payback(payback_df):
+def summarize_payback(payback_df, rate_label=''):
     """Print summary statistics of payback periods by scenario and income."""
 
     scenarios = [
@@ -189,9 +214,10 @@ def summarize_payback(payback_df):
     ]
 
     print("=" * 90)
-    print("SIMPLE PAYBACK PERIOD ANALYSIS")
+    print(f"SIMPLE PAYBACK PERIOD ANALYSIS — {rate_label}")
     print("=" * 90)
-    print(f"\nRate scenario: {payback_df['rate_scenario'].iloc[0]}")
+    print(f"  Baseline: TOU-DR (actual SDGE tariff)")
+    print(f"  Post-adoption rate: {payback_df['rate_scenario'].iloc[0]}")
 
     for prefix, label in scenarios:
         pb_col = f'{prefix}_payback'
@@ -237,27 +263,30 @@ def summarize_payback(payback_df):
             print(f"    Never pays back (net savings <= 0): {neg_savings} buildings ({neg_savings/len(valid)*100:.1f}%)")
 
 
-def compare_rate_scenarios(post_df, scenarios=None):
-    """Compare payback across multiple rate scenarios."""
-    if scenarios is None:
-        scenarios = ['F0_WF0_ROE0', 'F50_WF0_ROE0', 'F100_WF0_ROE0',
-                     'F0_WF1_ROE0', 'F50_WF1_ROE1.0']
-
-    # Filter to scenarios that exist in the data
-    bill_cols = [c for c in post_df.columns if c.endswith('_bill') and '_s' not in c]
-    available = [s for s in scenarios if f'{s}_bill' in post_df.columns]
+def compare_all_rate_scenarios(post_df):
+    """Compare payback across all rate scenarios, always using TOU-DR as baseline."""
 
     print("\n" + "=" * 90)
-    print("PAYBACK COMPARISON ACROSS RATE SCENARIOS")
+    print("PAYBACK COMPARISON ACROSS ALL RATE SCENARIOS")
+    print("  Baseline bill: TOU-DR (actual SDGE tariff)")
     print("=" * 90)
 
+    # Find which rate scenarios have post-adoption columns
+    available = {}
+    for label, prefix in RATE_SCENARIOS.items():
+        # Check if at least one adoption scenario column exists
+        for suffix in ['_bill_s1_ev', '_bill_s2_pv_stor', '_bill_s3_full_pre', '_bill_s4_full_post']:
+            if f'{prefix}{suffix}' in post_df.columns:
+                available[label] = prefix
+                break
+
     summary_rows = []
-    for scen in available:
-        pb = compute_payback(post_df, scen)
-        for prefix, label in [('s1', 'S1:EV'), ('s2', 'S2:PV+Stor'),
-                              ('s3', 'S3:Full(pre)'), ('s4', 'S4:Full(post)')]:
-            col = f'{prefix}_payback'
-            sav = f'{prefix}_net_annual_savings'
+    for label, prefix in available.items():
+        pb = compute_payback(post_df, prefix)
+        for sc_prefix, sc_label in [('s1', 'S1:EV'), ('s2', 'S2:PV+Stor'),
+                                     ('s3', 'S3:Full(pre)'), ('s4', 'S4:Full(post)')]:
+            col = f'{sc_prefix}_payback'
+            sav = f'{sc_prefix}_net_annual_savings'
             if col not in pb.columns:
                 continue
             valid = pb[col].dropna().clip(upper=50)
@@ -265,8 +294,8 @@ def compare_rate_scenarios(post_df, scenarios=None):
             if len(valid) == 0:
                 continue
             summary_rows.append({
-                'rate_scenario': scen,
-                'adoption_scenario': label,
+                'rate_scenario': label,
+                'adoption_scenario': sc_label,
                 'n': len(valid),
                 'median_payback_yrs': valid.median(),
                 'mean_payback_yrs': valid.mean(),
@@ -294,12 +323,12 @@ if __name__ == '__main__':
     post_df = pd.read_csv('post_adoption_bills_sdge.csv')
     print(f"  {len(post_df)} buildings loaded\n")
 
-    # Default analysis under status quo rates
-    payback_df = compute_payback(post_df, rate_scenario='F0_WF0_ROE0')
-    summarize_payback(payback_df)
+    # Primary analysis: TOU-DR baseline, TOU-DR post-adoption
+    payback_df = compute_payback(post_df, rate_scenario='tou_dr')
+    summarize_payback(payback_df, rate_label='TOU-DR (status quo)')
 
-    # Compare across rate scenarios
-    summary = compare_rate_scenarios(post_df)
+    # Compare across all rate scenarios
+    summary = compare_all_rate_scenarios(post_df)
 
     # Save results
     payback_df.to_csv('payback_results_sdge.csv', index=False)

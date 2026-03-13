@@ -104,6 +104,7 @@ def compute_simulated_stats(sdge_df):
     for cz in [7, 10, 14]:
         sub = sdge_df[sdge_df['in.cec_climate_zone'] == cz]
         stats[f'cz{cz}_avg_kwh'] = sub['scaled_out.electricity.total.energy_consumption.kwh'].mean()
+        stats[f'cz{cz}_raw_avg_kwh'] = sub['out.electricity.total.energy_consumption.kwh'].mean()
         stats[f'cz{cz}_scale'] = sub['scaling_factor'].mean()
         stats[f'cz{cz}_n'] = len(sub)
 
@@ -125,9 +126,11 @@ def print_comparison_table(stats):
         ("Weighted households represented", f"{A['total_customers']:,}", f"{S['total_represented']:,.0f}", f"{S['total_represented']/A['total_customers']*100:.1f}%"),
         ("", "", "", ""),
         ("Panel B: Consumption", "", "", ""),
-        ("Total residential sales (GWh/yr)", f"{A['total_sales_gwh']:,}", f"{S['scaled_total_gwh']:,.0f}", f"{S['scaled_total_gwh']/A['total_sales_gwh']*100:.1f}%"),
-        ("Mean consumption (kWh/yr)", f"{A['avg_consumption_kwh']:,.0f}", f"{S['scaled_avg_kwh']:,.0f}", f"{S['scaled_avg_kwh']/A['avg_consumption_kwh']*100:.1f}%"),
-        ("Median consumption (kWh/yr)", "N/A", f"{S['scaled_median_kwh']:,.0f}", ""),
+        ("Total sales, raw ResStock (GWh/yr)", f"{A['total_sales_gwh']:,}", f"{S['raw_total_gwh']:,.0f}", f"{S['raw_total_gwh']/A['total_sales_gwh']*100:.1f}%"),
+        ("Total sales, RASS-scaled (GWh/yr)", f"{A['total_sales_gwh']:,}", f"{S['scaled_total_gwh']:,.0f}", f"{S['scaled_total_gwh']/A['total_sales_gwh']*100:.1f}%"),
+        ("Mean consumption, raw (kWh/yr)", f"{A['avg_consumption_kwh']:,.0f}", f"{S['raw_avg_kwh']:,.0f}", f"{S['raw_avg_kwh']/A['avg_consumption_kwh']*100:.1f}%"),
+        ("Mean consumption, RASS-scaled (kWh/yr)", f"{A['avg_consumption_kwh']:,.0f}", f"{S['scaled_avg_kwh']:,.0f}", f"{S['scaled_avg_kwh']/A['avg_consumption_kwh']*100:.1f}%"),
+        ("Median consumption, RASS-scaled (kWh/yr)", "N/A", f"{S['scaled_median_kwh']:,.0f}", ""),
         ("", "", "", ""),
         ("Panel C: Customer Composition", "", "", ""),
         ("CARE-eligible (%)", f"{A['care_pct']:.1f}%", f"{S['low_income_pct']:.1f}% (low-income)", ""),
@@ -147,9 +150,9 @@ def print_comparison_table(stats):
         ("CZ 14 - Mountain (%)", "~2%*", f"{S['cz14_pct']:.1f}%", ""),
         ("", "", "", ""),
         ("Panel F: Climate Zone Consumption (kWh/yr)", "", "", ""),
-        ("CZ 7 mean (scaled)", "~4,800*", f"{S['cz7_avg_kwh']:,.0f}", ""),
-        ("CZ 10 mean (scaled)", "~6,900*", f"{S['cz10_avg_kwh']:,.0f}", ""),
-        ("CZ 14 mean (scaled)", "~7,800*", f"{S['cz14_avg_kwh']:,.0f}", ""),
+        ("CZ 7 mean (raw / scaled)", "~4,800*", f"{S['cz7_raw_avg_kwh']:,.0f} / {S['cz7_avg_kwh']:,.0f}", ""),
+        ("CZ 10 mean (raw / scaled)", "~6,900*", f"{S['cz10_raw_avg_kwh']:,.0f} / {S['cz10_avg_kwh']:,.0f}", ""),
+        ("CZ 14 mean (raw / scaled)", "~7,800*", f"{S['cz14_raw_avg_kwh']:,.0f} / {S['cz14_avg_kwh']:,.0f}", ""),
     ]
 
     print(f"{'Characteristic':<45s} {'Actual SDGE':>15s} {'Simulated':>15s} {'Ratio':>8s}")
@@ -185,9 +188,11 @@ Total residential customers & """ + f"{A['total_customers']:,}" + r""" & """ + f
 Weighted households represented & """ + f"{A['total_customers']:,}" + r""" & """ + f"{S['total_represented']:,.0f}" + r""" \\
 \midrule
 \multicolumn{3}{l}{\textit{Panel B: Electricity Consumption}} \\
-Total residential sales (GWh/yr) & """ + f"{A['total_sales_gwh']:,}" + r""" & """ + f"{S['scaled_total_gwh']:,.0f}" + r"""$^a$ \\
-Mean consumption (kWh/cust/yr) & """ + f"{A['avg_consumption_kwh']:,.0f}" + r""" & """ + f"{S['scaled_avg_kwh']:,.0f}" + r""" \\
-Median consumption (kWh/cust/yr) & --- & """ + f"{S['scaled_median_kwh']:,.0f}" + r""" \\
+Total sales, raw ResStock (GWh/yr) & """ + f"{A['total_sales_gwh']:,}" + r""" & """ + f"{S['raw_total_gwh']:,.0f}" + r""" \\
+Total sales, RASS-scaled (GWh/yr) & """ + f"{A['total_sales_gwh']:,}" + r""" & """ + f"{S['scaled_total_gwh']:,.0f}" + r"""$^a$ \\
+Mean consumption, raw (kWh/cust/yr) & """ + f"{A['avg_consumption_kwh']:,.0f}" + r""" & """ + f"{S['raw_avg_kwh']:,.0f}" + r""" \\
+Mean consumption, RASS-scaled (kWh/cust/yr) & """ + f"{A['avg_consumption_kwh']:,.0f}" + r""" & """ + f"{S['scaled_avg_kwh']:,.0f}" + r""" \\
+Median consumption, RASS-scaled (kWh/cust/yr) & --- & """ + f"{S['scaled_median_kwh']:,.0f}" + r""" \\
 10th percentile (kWh/yr) & --- & """ + f"{S['scaled_p10']:,.0f}" + r""" \\
 90th percentile (kWh/yr) & --- & """ + f"{S['scaled_p90']:,.0f}" + r""" \\
 \midrule
@@ -208,9 +213,9 @@ CZ 10 --- Inland (\%) & --- & """ + f"{S['cz10_pct']:.1f}" + r""" \\
 CZ 14 --- Mountain (\%) & --- & """ + f"{S['cz14_pct']:.1f}" + r""" \\
 \midrule
 \multicolumn{3}{l}{\textit{Panel F: Mean Consumption by Climate Zone (kWh/yr)}} \\
-CZ 7 (Coastal San Diego) & --- & """ + f"{S['cz7_avg_kwh']:,.0f}" + r""" \\
-CZ 10 (Inland valleys) & --- & """ + f"{S['cz10_avg_kwh']:,.0f}" + r""" \\
-CZ 14 (Mountain/desert) & --- & """ + f"{S['cz14_avg_kwh']:,.0f}" + r""" \\
+CZ 7 --- raw / RASS-scaled & --- & """ + f"{S['cz7_raw_avg_kwh']:,.0f}" + r""" / """ + f"{S['cz7_avg_kwh']:,.0f}" + r""" \\
+CZ 10 --- raw / RASS-scaled & --- & """ + f"{S['cz10_raw_avg_kwh']:,.0f}" + r""" / """ + f"{S['cz10_avg_kwh']:,.0f}" + r""" \\
+CZ 14 --- raw / RASS-scaled & --- & """ + f"{S['cz14_raw_avg_kwh']:,.0f}" + r""" / """ + f"{S['cz14_avg_kwh']:,.0f}" + r""" \\
 \midrule
 \multicolumn{3}{l}{\textit{Panel G: Building Systems}} \\
 Natural gas heating (\%) & --- & """ + f"{S['heating_natgas_pct']:.1f}" + r""" \\
@@ -222,8 +227,8 @@ No cooling (\%) & --- & """ + f"{S['cooling_none_pct']:.1f}" + r""" \\
 \begin{minipage}{\textwidth}
 \vspace{0.3em}
 \footnotesize
-\textit{Notes:} Actual SDGE data from utility General Rate Case filings and EIA Form 861. Simulated sample from NREL ResStock with RASS-calibrated scaling factors applied to consumption. \\
-$^a$ Weighted total using ResStock sampling weights; exceeds actual SDGE sales due to higher per-building consumption in the simulation. \\
+\textit{Notes:} Actual SDGE data from utility General Rate Case filings and EIA Form 861. ``Raw'' values are direct ResStock simulation output; ``RASS-scaled'' values apply RASS-calibrated per-building scaling factors to better match observed consumption patterns by building type. \\
+$^a$ Weighted total using ResStock sampling weights; RASS-scaled total exceeds actual SDGE sales due to overcounting in some building types. \\
 $^b$ Based on ResStock income classification (low income category); actual CARE eligibility is 28.1\%. \\
 $^c$ ACS 2020--2024 estimates for San Diego County; not SDGE service-territory-specific.
 \end{minipage}

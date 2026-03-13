@@ -1585,32 +1585,32 @@ def stage7_summary(final_df, rate_scenarios_df):
                 print(f"  {label:<25s} ${mean_bill:>10,.0f} "
                       f"${pop_rev/1e9:>12.4f}B {pct_vs_filed:>+9.2f}% vs filed")
 
-    # Bill distribution by income
-    print("\n--- Mean Annual Bill by Income ---")
+    # Bill distribution by CARE status
+    print("\n--- Mean Annual Bill by CARE Status ---")
     for col in all_bill_cols:
         print(f"\n  {col}:")
-        for inc in ['low', 'medium', 'high']:
-            subset = final_df[final_df['income'] == inc]
+        for care_label, care_val in [('CARE', True), ('non-CARE', False)]:
+            subset = final_df[final_df['is_care'] == care_val]
             if len(subset) > 0:
                 valid = subset[col].dropna()
                 if len(valid) > 0:
-                    print(f"    {inc:>8s}: mean=${valid.mean():,.0f}  "
+                    print(f"    {care_label:>8s}: mean=${valid.mean():,.0f}  "
                           f"median=${valid.median():,.0f}  (n={len(valid)})")
 
-    # Bill change from baseline (TOU-DR actual or F0_WF0_ROE0) by income
+    # Bill change from baseline (TOU-DR actual or F0_WF0_ROE0) by CARE status
     base_col = 'tou_dr_bill' if 'tou_dr_bill' in final_df.columns else 'F0_WF0_ROE0_bill'
     if base_col in final_df.columns:
-        print(f"\n--- Bill Change from {base_col} by Income ---")
+        print(f"\n--- Bill Change from {base_col} by CARE Status ---")
         compare_cols = [c for c in all_bill_cols if c != base_col]
         for col in compare_cols:
             print(f"\n  {col} vs {base_col}:")
-            for inc in ['low', 'medium', 'high']:
-                subset = final_df[final_df['income'] == inc]
+            for care_label, care_val in [('CARE', True), ('non-CARE', False)]:
+                subset = final_df[final_df['is_care'] == care_val]
                 if len(subset) > 0:
                     valid_mask = subset[col].notna() & subset[base_col].notna()
                     if valid_mask.sum() > 0:
                         change = subset.loc[valid_mask, col] - subset.loc[valid_mask, base_col]
-                        print(f"    {inc:>8s}: mean=${change.mean():+,.0f}  "
+                        print(f"    {care_label:>8s}: mean=${change.mean():+,.0f}  "
                               f"median=${change.median():+,.0f}  "
                               f"winners={(change < 0).sum()}/{valid_mask.sum()}")
 
@@ -1681,12 +1681,12 @@ def stage7_summary(final_df, rate_scenarios_df):
     summary_rows = []
     for col in all_bill_cols:
         sname = col.replace('_bill', '')
-        for inc in ['low', 'medium', 'high']:
-            subset = final_df[final_df['income'] == inc]
+        for care_label, care_val in [('CARE', True), ('non-CARE', False)]:
+            subset = final_df[final_df['is_care'] == care_val]
             if len(subset) > 0:
                 summary_rows.append({
                     'scenario': sname,
-                    'income': inc,
+                    'care_status': care_label,
                     'n_buildings': len(subset),
                     'mean_bill': subset[col].mean(),
                     'median_bill': subset[col].median(),

@@ -27,10 +27,9 @@ BATTERY_COST = 12_000             # $ installed (before ITC)
 
 # EV
 EV_PREMIUM = 10_000              # $ price premium over comparable ICE vehicle
-CHARGER_COST = 1_500             # $ Level 2 EVSE installed
+ANNUAL_MILES = 12_000            # miles/year (average US driver)
 GASOLINE_PRICE = 5.50            # $/gallon (California average)
 ICE_MPG = 25                     # miles per gallon (average ICE)
-EV_EFFICIENCY = 3.0              # miles per kWh
 
 # Full electrification bundle (Upgrade 11)
 # HP HVAC ($8-12k) + HP Water Heater ($3-5k) + Induction ($2-3k)
@@ -48,12 +47,11 @@ DEFAULT_GAS_BILL = GAS_FIXED_CHARGE_MONTHLY * 12 + AVG_GAS_THERMS_YEAR * GAS_MAR
 # SCENARIO COST FUNCTIONS
 # =============================================================================
 
-def s1_costs(ev_daily_miles):
+def s1_costs():
     """S1: EV only. Returns (upfront_cost, annual_fuel_savings)."""
-    upfront = EV_PREMIUM + CHARGER_COST
-    # Gasoline savings
-    annual_miles = ev_daily_miles * 365
-    gallons_saved = annual_miles / ICE_MPG
+    upfront = EV_PREMIUM
+    # Gasoline savings (fixed 12k miles/year assumption)
+    gallons_saved = ANNUAL_MILES / ICE_MPG
     gas_savings = gallons_saved * GASOLINE_PRICE
     return upfront, gas_savings
 
@@ -66,14 +64,14 @@ def s2_costs(pv_kw):
     return total_after_itc
 
 
-def s3s4_costs(pv_kw, ev_daily_miles):
+def s3s4_costs(pv_kw):
     """S3/S4: Full electrification + PV + Storage + EV. Returns (upfront, gas_savings, fuel_savings)."""
     # Solar + storage (ITC eligible)
     solar_storage_before = pv_kw * SOLAR_COST_PER_W * 1000 + BATTERY_COST
     solar_storage_after = solar_storage_before * (1 - ITC_RATE)
 
     # EV
-    ev_cost = EV_PREMIUM + CHARGER_COST
+    ev_cost = EV_PREMIUM
 
     # Electrification bundle (not ITC eligible, though some rebates may apply)
     electrification = ELECTRIFICATION_BUNDLE
@@ -83,9 +81,8 @@ def s3s4_costs(pv_kw, ev_daily_miles):
     # Annual savings from dropping gas entirely
     gas_bill_savings = DEFAULT_GAS_BILL
 
-    # Gasoline savings
-    annual_miles = ev_daily_miles * 365 if ev_daily_miles > 0 else 0
-    fuel_savings = (annual_miles / ICE_MPG) * GASOLINE_PRICE
+    # Gasoline savings (fixed 12k miles/year)
+    fuel_savings = (ANNUAL_MILES / ICE_MPG) * GASOLINE_PRICE
 
     return upfront, gas_bill_savings, fuel_savings
 
@@ -125,9 +122,9 @@ def compute_payback(post_df, rate_scenario='F0_WF0_ROE0'):
              'baseline_bill': baseline_bill, 'rate_scenario': rate_scenario}
 
         # --- S1: EV only ---
-        if pd.notna(row.get(s1_col)) and row.get('ev_daily_miles', 0) > 0:
+        if pd.notna(row.get(s1_col)):
             s1_bill = row[s1_col]
-            upfront, fuel_savings = s1_costs(row['ev_daily_miles'])
+            upfront, fuel_savings = s1_costs()
             bill_delta = s1_bill - baseline_bill  # positive = bill increase
             annual_savings = fuel_savings - bill_delta
             r['s1_upfront'] = upfront
@@ -151,8 +148,7 @@ def compute_payback(post_df, rate_scenario='F0_WF0_ROE0'):
         # --- S3: Full electrification (pre-PV sizing) ---
         if pd.notna(row.get(s3_col)) and pd.notna(row.get('pv_size_kw_s3')):
             s3_bill = row[s3_col]
-            ev_miles = row.get('ev_daily_miles', 0) or 0
-            upfront, gas_savings, fuel_savings = s3s4_costs(row['pv_size_kw_s3'], ev_miles)
+            upfront, gas_savings, fuel_savings = s3s4_costs(row['pv_size_kw_s3'])
             bill_delta = s3_bill - baseline_bill
             annual_savings = gas_savings + fuel_savings - bill_delta
             r['s3_upfront'] = upfront
@@ -166,8 +162,7 @@ def compute_payback(post_df, rate_scenario='F0_WF0_ROE0'):
         # --- S4: Full electrification (post-PV sizing) ---
         if pd.notna(row.get(s4_col)) and pd.notna(row.get('pv_size_kw_s4')):
             s4_bill = row[s4_col]
-            ev_miles = row.get('ev_daily_miles', 0) or 0
-            upfront, gas_savings, fuel_savings = s3s4_costs(row['pv_size_kw_s4'], ev_miles)
+            upfront, gas_savings, fuel_savings = s3s4_costs(row['pv_size_kw_s4'])
             bill_delta = s4_bill - baseline_bill
             annual_savings = gas_savings + fuel_savings - bill_delta
             r['s4_upfront'] = upfront
@@ -318,7 +313,8 @@ if __name__ == '__main__':
     print(f"  Solar PV:              ${SOLAR_COST_PER_W}/W installed (${SOLAR_COST_PER_W*(1-ITC_RATE):.2f}/W after {ITC_RATE:.0%} ITC)")
     print(f"  Battery (13.5 kWh):    ${BATTERY_COST:,} (${BATTERY_COST*(1-ITC_RATE):,.0f} after ITC)")
     print(f"  EV premium over ICE:   ${EV_PREMIUM:,}")
-    print(f"  Level 2 charger:       ${CHARGER_COST:,}")
+    print(f"  Annual driving:        {ANNUAL_MILES:,} miles/year")
     print(f"  Electrification bundle: ${ELECTRIFICATION_BUNDLE:,} (HP HVAC + HP WH + induction + dryer + envelope)")
     print(f"  Gasoline:              ${GASOLINE_PRICE}/gal, {ICE_MPG} mpg average ICE")
+    print(f"  Annual gasoline cost:  ${ANNUAL_MILES/ICE_MPG*GASOLINE_PRICE:,.0f}/yr")
     print(f"  Natural gas bill:      ${DEFAULT_GAS_BILL:,.0f}/yr (${GAS_FIXED_CHARGE_MONTHLY}/mo fixed + {AVG_GAS_THERMS_YEAR} therms @ ${GAS_MARGINAL_RATE}/therm)")

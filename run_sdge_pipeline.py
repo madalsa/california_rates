@@ -925,6 +925,8 @@ def stage5_battery_dispatch(hourly_load, solar_gen, rate_array, eec_rates=None):
     """
     Optimize battery dispatch to minimize net electricity cost via LP.
 
+    Uses scipy.optimize.linprog with sparse matrices for fast setup and solve.
+
     Objective: minimize (import cost - export credit).
     The battery charges when rates are low (or from excess solar)
     and discharges when rates are high.
@@ -944,11 +946,8 @@ def stage5_battery_dispatch(hourly_load, solar_gen, rate_array, eec_rates=None):
     -------
     dict with optimized load profile, battery actions, and bill
     """
-    try:
-        import pulp as plp
-    except ImportError:
-        print("    pulp not installed — skipping battery optimization")
-        return None
+    from scipy.optimize import linprog
+    from scipy.sparse import csc_matrix
 
     if eec_rates is None:
         eec_rates = np.zeros(8760)
@@ -961,44 +960,85 @@ def stage5_battery_dispatch(hourly_load, solar_gen, rate_array, eec_rates=None):
     # Net load after solar
     net_load = hourly_load - solar_gen
 
-    # LP formulation
-    prob = plp.LpProblem("battery_dispatch", plp.LpMinimize)
+    # Decision variables layout (5T total):
+    #   g[0:T]       grid_import  >= 0
+    #   e[T:2T]      grid_export  >= 0
+    #   c[2T:3T]     charge       [0, pmax]
+    #   d[3T:4T]     discharge    [0, pmax]
+    #   s[4T:5T]     SOC          [0, cap]
+    n = 5 * T
 
-    # Decision variables
-    grid_import = [plp.LpVariable(f"g_{t}", lowBound=0) for t in range(T)]
-    grid_export = [plp.LpVariable(f"e_{t}", lowBound=0) for t in range(T)]
-    charge = [plp.LpVariable(f"c_{t}", lowBound=0, upBound=pmax) for t in range(T)]
-    discharge = [plp.LpVariable(f"d_{t}", lowBound=0, upBound=pmax) for t in range(T)]
-    soc = [plp.LpVariable(f"s_{t}", lowBound=0, upBound=cap) for t in range(T)]
+    # Objective: min sum(rate*g - eec*e)
+    c_obj = np.zeros(n)
+    c_obj[0:T] = rate_array        # import cost
+    c_obj[T:2*T] = -eec_rates      # export credit (negative = benefit)
 
-    # Objective: minimize import cost - export credit
-    prob += plp.lpSum([rate_array[t] * grid_import[t] - eec_rates[t] * grid_export[t]
-                       for t in range(T)])
+    # Bounds
+    bounds = np.zeros((n, 2))
+    bounds[0:T, 1] = np.inf        # g >= 0, no upper bound
+    bounds[T:2*T, 1] = np.inf      # e >= 0, no upper bound
+    bounds[2*T:3*T, 1] = pmax      # 0 <= c <= pmax
+    bounds[3*T:4*T, 1] = pmax      # 0 <= d <= pmax
+    bounds[4*T:5*T, 1] = cap       # 0 <= s <= cap
 
-    # Constraints
-    for t in range(T):
-        # Energy balance: grid_import + solar + discharge = load + charge + grid_export
-        # Rearranged: grid_import - grid_export + discharge*eta - charge = net_load
-        prob += grid_import[t] - grid_export[t] + discharge[t] * eta - charge[t] == net_load[t]
+    # Equality constraints (2T equations):
+    # Row 0..T-1: energy balance
+    #   g[t] - e[t] - c[t] + d[t]*eta = net_load[t]
+    # Row T..2T-1: SOC dynamics
+    #   s[t] - s[t-1] - c[t]*eta + d[t] = 0  (for t>0)
+    #   s[0] - c[0]*eta + d[0] = cap*0.5      (for t=0)
 
-        # SOC dynamics
-        if t == 0:
-            prob += soc[t] == cap * 0.5 + charge[t] * eta - discharge[t]
-        else:
-            prob += soc[t] == soc[t-1] + charge[t] * eta - discharge[t]
+    # Build sparse A_eq in COO format
+    rows = []
+    cols = []
+    vals = []
 
-    # Solve
-    prob.solve(plp.PULP_CBC_CMD(msg=0, timeLimit=30))
+    tt = np.arange(T)
 
-    if prob.status != 1:
+    # Energy balance: g[t] coeff = 1
+    rows.append(tt); cols.append(tt); vals.append(np.ones(T))
+    # Energy balance: e[t] coeff = -1
+    rows.append(tt); cols.append(T + tt); vals.append(-np.ones(T))
+    # Energy balance: c[t] coeff = -1
+    rows.append(tt); cols.append(2*T + tt); vals.append(-np.ones(T))
+    # Energy balance: d[t] coeff = eta
+    rows.append(tt); cols.append(3*T + tt); vals.append(np.full(T, eta))
+
+    # SOC dynamics row indices: T + tt
+    soc_rows = T + tt
+    # s[t] coeff = 1
+    rows.append(soc_rows); cols.append(4*T + tt); vals.append(np.ones(T))
+    # s[t-1] coeff = -1 (for t > 0)
+    rows.append(soc_rows[1:]); cols.append(4*T + tt[:-1]); vals.append(-np.ones(T-1))
+    # c[t] coeff = -eta
+    rows.append(soc_rows); cols.append(2*T + tt); vals.append(np.full(T, -eta))
+    # d[t] coeff = 1
+    rows.append(soc_rows); cols.append(3*T + tt); vals.append(np.ones(T))
+
+    row_idx = np.concatenate(rows)
+    col_idx = np.concatenate(cols)
+    val_arr = np.concatenate(vals)
+
+    A_eq = csc_matrix((val_arr, (row_idx, col_idx)), shape=(2*T, n))
+
+    b_eq = np.zeros(2*T)
+    b_eq[0:T] = net_load               # energy balance RHS
+    b_eq[T] = cap * 0.5                # SOC(0) = cap*0.5 + c[0]*eta - d[0]
+    # b_eq[T+1:2T] = 0                 # already zeros
+
+    result = linprog(c_obj, A_eq=A_eq, b_eq=b_eq,
+                     bounds=list(zip(bounds[:, 0], bounds[:, 1])),
+                     method='highs', options={'time_limit': 60.0})
+
+    if not result.success:
         return None
 
-    # Extract results
-    grid_import_arr = np.array([g.varValue or 0 for g in grid_import])
-    grid_export_arr = np.array([e.varValue or 0 for e in grid_export])
-    charge_arr = np.array([c.varValue or 0 for c in charge])
-    discharge_arr = np.array([d.varValue or 0 for d in discharge])
-    soc_arr = np.array([s.varValue or 0 for s in soc])
+    x = result.x
+    grid_import_arr = x[0:T]
+    grid_export_arr = x[T:2*T]
+    charge_arr = x[2*T:3*T]
+    discharge_arr = x[3*T:4*T]
+    soc_arr = x[4*T:5*T]
 
     import_cost = np.dot(grid_import_arr, rate_array)
     export_credit = np.dot(grid_export_arr, eec_rates)
@@ -1377,24 +1417,65 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
                                      bl_entry_row, use_battery, prefix):
         """Compute post-adoption bills for all rate scenarios (designed + actual).
 
-        Runs separate LP/heuristic dispatch per rate scenario.
-        Returns dict of {col_name: bill_value}.
+        Optimization: all designed scenarios share the same TOU rate shape
+        (just uniformly scaled), so LP dispatch is solved ONCE using TOU-DR
+        rates and the resulting grid_import/export profile is reused to
+        compute bills under each designed scenario's rates.
+
+        Actual tariffs (TOU-DR, TOU-DR-F) have different rate structures,
+        so they get separate LP solves.
+
+        Returns dict of {col_name: bill_value} and lp_fail count.
         """
         result = {}
         lp_fail = 0
 
-        # Designed scenarios — direct LP dispatch per scenario
-        for sname, rate_arr in designed_rate_arrays.items():
-            fc = scenario_fixed_charges[sname]
-            fixed = fc['care'] if is_care else fc['noncare']
-            # Designed scenarios have no baseline credit (pure volumetric + fixed)
-            import_cost, export_credit, _ = _compute_bill_for_rate(
-                load_profile, solar_gen, rate_arr, eec_rates,
-                is_care, 0.0, None, 0.0, use_battery=use_battery)
-            bill = max(import_cost - export_credit, 0) + fixed
-            result[f'{sname}_bill_{prefix}'] = bill
+        days_per_month = np.array([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
+        hours_per_month = days_per_month * 24
+        month_boundaries = np.concatenate(([0], np.cumsum(hours_per_month)))
 
-        # Actual tariff bills (TOU-DR, TOU-DR-F) — LP dispatch per tariff
+        # --- Designed scenarios: solve LP once, reuse dispatch ---
+        # Use TOU-DR rate array for dispatch (same TOU shape as all designed)
+        ref_rate_name = list(designed_rate_arrays.keys())[0]
+        ref_rate_arr = designed_rate_arrays[ref_rate_name]
+
+        batt_dispatch = None
+        if use_battery:
+            batt_dispatch = stage5_battery_dispatch(
+                load_profile, solar_gen, ref_rate_arr, eec_rates)
+            if batt_dispatch is None:
+                lp_fail = 1
+
+        if batt_dispatch is not None:
+            # Reuse battery dispatch for all designed scenarios
+            grid_import_arr = batt_dispatch['grid_import']
+            grid_export_arr = batt_dispatch['grid_export']
+
+            for sname, rate_arr in designed_rate_arrays.items():
+                fc = scenario_fixed_charges[sname]
+                fixed = fc['care'] if is_care else fc['noncare']
+                import_cost = np.dot(grid_import_arr, rate_arr)
+                export_credit = np.dot(grid_export_arr, eec_rates)
+                # No baseline credit for designed scenarios
+                if is_care:
+                    import_cost *= (1 - 0.0)  # no CARE discount on designed
+                bill = max(import_cost - export_credit, 0) + fixed
+                result[f'{sname}_bill_{prefix}'] = bill
+        else:
+            # No battery — compute bills directly from net load
+            net = load_profile - solar_gen
+            hourly_import = np.maximum(net, 0)
+            hourly_export = np.maximum(-net, 0)
+
+            for sname, rate_arr in designed_rate_arrays.items():
+                fc = scenario_fixed_charges[sname]
+                fixed = fc['care'] if is_care else fc['noncare']
+                import_cost = np.dot(hourly_import, rate_arr)
+                export_credit = np.dot(hourly_export, eec_rates)
+                bill = max(import_cost - export_credit, 0) + fixed
+                result[f'{sname}_bill_{prefix}'] = bill
+
+        # --- Actual tariff bills: separate LP dispatch per tariff ---
         for rc, rc_info in actual_rates.items():
             col_prefix = ACTUAL_SDGE_RATES[rc]
             import_cost, export_credit, batt_import = _compute_bill_for_rate(
@@ -1407,7 +1488,7 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
             bill = max(import_cost - export_credit, 0) + rc_fixed
             result[f'{col_prefix}_bill_{prefix}'] = bill
             if use_battery and batt_import is None:
-                lp_fail = 1
+                lp_fail += 1
 
         return result, lp_fail
 

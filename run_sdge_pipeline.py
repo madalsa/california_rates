@@ -1136,7 +1136,8 @@ def make_ev_profile(daily_miles=None):
 
 
 def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_df,
-                               use_lp=True, annual_kwh_per_kw=None):
+                               use_lp=True, annual_kwh_per_kw=None,
+                               skip_s3=False):
     """
     Compute post-adoption bills under 4 technology adoption scenarios.
 
@@ -1159,6 +1160,9 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
     print("\n" + "=" * 80)
     print("STAGE 6: POST-ADOPTION BILLS")
     print("=" * 80)
+
+    if skip_s3:
+        print("  Skipping S3 (PV+storage+EV) — use --skip-s3 to re-enable")
 
     # Merge tech assignments with bills
     tech_cols = ['building_id', 'assigned_pv', 'assigned_battery', 'assigned_ev', 'assigned_hp']
@@ -1500,7 +1504,7 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
                 lp_failures += s2_lp_fail
 
             # ── S3: PV + Storage + EV (baseline demand, PV sized on baseline) ──
-            if row['assigned_pv'] == 1 and row['assigned_ev'] == 1:
+            if row['assigned_pv'] == 1 and row['assigned_ev'] == 1 and not skip_s3:
                 s3_load = hourly_load + ev_profile
                 # PV sized on baseline demand (before adding EV)
                 pv_size_s3 = size_pv_system(row.get('annual_kwh', hourly_load.sum()), annual_kwh_per_kw)
@@ -1778,6 +1782,8 @@ def main():
                         help='Number of buildings to process')
     parser.add_argument('--tech-only', action='store_true',
                         help='Run only tech stages (3-6), skip rate design and summary')
+    parser.add_argument('--skip-s3', action='store_true',
+                        help='Skip S3 (PV+storage+EV) adoption scenario in stage 6')
     args = parser.parse_args()
 
     n_buildings = 50 if args.test else args.n_buildings
@@ -1839,7 +1845,8 @@ def main():
         if args.stage <= 6:
             final_df = stage6_post_adoption_bills(
                 bills_df, tech_df, solar_per_kw, rate_scenarios,
-                use_lp=args.use_lp, annual_kwh_per_kw=annual_kwh_per_kw)
+                use_lp=args.use_lp, annual_kwh_per_kw=annual_kwh_per_kw,
+                skip_s3=args.skip_s3)
         else:
             final_df = pd.read_csv(POSTADOPT_BILLS_OUT)
             print(f"\nLoaded post-adoption bills from {POSTADOPT_BILLS_OUT}")

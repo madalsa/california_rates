@@ -1056,7 +1056,7 @@ def stage5_battery_dispatch(hourly_load, solar_gen, rate_array, eec_rates=None):
 
     result = linprog(c_obj, A_eq=A_eq, b_eq=b_eq,
                      bounds=list(zip(bounds[:, 0], bounds[:, 1])),
-                     method='highs', options={'time_limit': 60.0})
+                     method='highs', options={'time_limit': 300.0})
 
     if not result.success:
         return None

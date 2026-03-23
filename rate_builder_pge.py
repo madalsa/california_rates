@@ -30,8 +30,8 @@ RESIDENTIAL_SALES_KWH = 25_987_213_000  # Total residential sales (EIA 861 bundl
 TOTAL_UTILITY_REVENUE = 20_341_236_000  # All customer classes (EIA 861)
 
 CUSTOMERS = {
-    'care': 1_500_000,      # CARE-eligible (TODO: update from PGE filing)
-    'non_care': 3_547_461,  # Non-CARE (TODO: update from PGE filing)
+    'care': 1_371_555,      # CARE enrolled (PGE filing)
+    'non_care': 3_675_906,  # Non-CARE (total - CARE)
     'total': 5_047_461,     # EIA 861 bundled+unbundled
 }
 

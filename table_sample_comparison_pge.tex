@@ -1,0 +1,56 @@
+\begin{table}[htbp]
+\centering
+\caption{Comparison of Simulated Building Sample with Actual PG\&E Service Territory Characteristics}
+\label{tab:sample_comparison_pge}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Characteristic} & \textbf{Actual PG\&E} & \textbf{Simulated Sample} \\
+\midrule
+\multicolumn{3}{l}{\textit{Panel A: Service Territory}} \\
+Total residential customers & 5,047,461 & 22,722 (sample) \\
+Weighted households represented & 5,047,461 & 5,732,798 \\
+\midrule
+\multicolumn{3}{l}{\textit{Panel B: Electricity Consumption}} \\
+Total residential sales (GWh/yr) & 25,987 & 37,827$^a$ \\
+Mean consumption (kWh/cust/yr) & 5,149 & 6,598 \\
+Median consumption (kWh/cust/yr) & --- & 5,538 \\
+10th percentile (kWh/yr) & --- & 2,252 \\
+90th percentile (kWh/yr) & --- & 12,326 \\
+\midrule
+\multicolumn{3}{l}{\textit{Panel C: Customer Composition}} \\
+CARE-eligible (\%) & 27.2 & 27.5$^b$ \\
+Homeownership rate (\%) & $\sim$55$^c$ & 57.2 \\
+Solar PV adoption (\%) & $\sim$12$^c$ & 5.4 \\
+\midrule
+\multicolumn{3}{l}{\textit{Panel D: Housing Stock}} \\
+Single-family detached (\%) & $\sim$57$^c$ & 61.4 \\
+Single-family attached (\%) & $\sim$7$^c$ & 6.5 \\
+Multi-family (\%) & $\sim$32$^c$ & 28.1 \\
+Mobile home (\%) & $\sim$4$^c$ & 3.9 \\
+\midrule
+\multicolumn{3}{l}{\textit{Panel E: Climate Zone Distribution}} \\
+CZ 1--5 --- Coastal (\%) & --- & 51.5 \\
+CZ 11--13 --- Central Valley (\%) & --- & 46.0 \\
+CZ 16 --- Mountain/Sierra (\%) & --- & 2.5 \\
+\midrule
+\multicolumn{3}{l}{\textit{Panel F: Mean Consumption by Region (kWh/yr)}} \\
+CZ 1--5 (Coastal) & --- & 5,260 \\
+CZ 11--13 (Central Valley) & --- & 8,052 \\
+CZ 16 (Mountain/Sierra) & --- & 7,399 \\
+\midrule
+\multicolumn{3}{l}{\textit{Panel G: Building Systems}} \\
+Natural gas heating (\%) & --- & 62.3 \\
+Electric heating (\%) & --- & 27.9 \\
+Central AC (\%) & --- & 50.2 \\
+No cooling (\%) & --- & 26.0 \\
+\bottomrule
+\end{tabular}
+\begin{minipage}{\textwidth}
+\vspace{0.3em}
+\footnotesize
+\textit{Notes:} Actual PG\&E data from utility General Rate Case filings and EIA Form 861. Simulated sample from NREL ResStock with RASS-calibrated scaling factors applied to consumption. \\
+$^a$ Weighted total using ResStock sampling weights; exceeds actual PG\&E sales due to higher per-building consumption in the simulation (ResStock models occupied, full-year households only). \\
+$^b$ Based on ResStock income classification (low income category); actual CARE enrollment is 27.2\%. \\
+$^c$ ACS 2020--2024 estimates for PG\&E service territory counties; not precisely service-territory-specific.
+\end{minipage}
+\end{table}

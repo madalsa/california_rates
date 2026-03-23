@@ -775,7 +775,11 @@ def _generate_solar_profile_for_location(lat, lon, alt, name):
     ac_power = np.nan_to_num(ac_power, nan=0.0)
     ac_power = np.maximum(ac_power, 0)
 
-    stc_rating = module['Impo'] * module['Vmpo']
+    # CEC modules use I_mp_ref/V_mp_ref; Sandia uses Impo/Vmpo
+    try:
+        stc_rating = module['I_mp_ref'] * module['V_mp_ref']
+    except KeyError:
+        stc_rating = module.get('Impo', 0) * module.get('Vmpo', 0)
     if stc_rating > 0:
         solar_per_kw = ac_power / stc_rating
     else:

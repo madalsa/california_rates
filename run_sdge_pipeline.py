@@ -888,7 +888,11 @@ def stage4_solar_profiles(tech_df, bills_df):
     ac_power = np.maximum(ac_power, 0)
 
     # Normalize: module STC rating → per kW
-    stc_rating = module['Impo'] * module['Vmpo']  # watts
+    # CEC modules use I_mp_ref/V_mp_ref; Sandia uses Impo/Vmpo
+    try:
+        stc_rating = module['I_mp_ref'] * module['V_mp_ref']
+    except KeyError:
+        stc_rating = module.get('Impo', 0) * module.get('Vmpo', 0)
     if stc_rating > 0:
         solar_per_kw = ac_power / stc_rating
     else:

@@ -11,14 +11,14 @@ import numpy as np
 # ACTUAL SDGE DATA (from GRC filings, EIA, CPUC)
 # ============================================================================
 ACTUAL_SDGE = {
-    'total_customers': 1_323_612,
+    'total_customers': 1_364_361,           # EIA 861 bundled+unbundled
     'care_customers': 372_135,
-    'non_care_customers': 951_477,
-    'care_pct': 372_135 / 1_323_612 * 100,
-    'total_sales_gwh': 4_810,
-    'avg_consumption_kwh': 4_810_000_000 / 1_323_612,
+    'non_care_customers': 992_226,          # includes ~40k unbundled/CCA
+    'care_pct': 372_135 / 1_364_361 * 100,
+    'total_sales_gwh': 4_809.988,
+    'avg_consumption_kwh': 4_809_988_000 / 1_364_361,
     'residential_revenue_usd': 1_561_695_600,
-    'avg_rate_usd_kwh': 1_561_695_600 / 4_810_000_000,
+    'avg_rate_usd_kwh': 1_561_695_600 / 4_809_988_000,
     'rate_base': 13_590_538_000,
 }
 

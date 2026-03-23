@@ -33,14 +33,14 @@ from itertools import product
 # SDGE UTILITY DATA (from EIA and SDGE filings)
 # =============================================================================
 
-RESIDENTIAL_REVENUE = 1_561_695_600     # Annual residential revenue ($)
-RESIDENTIAL_SALES_KWH = 4_810_000_000   # Annual residential sales (kWh)
+RESIDENTIAL_REVENUE = 1_561_695_600     # Annual residential revenue ($, EIA 861 bundled+unbundled)
+RESIDENTIAL_SALES_KWH = 4_809_988_000   # Annual residential sales (kWh, EIA 861 bundled+unbundled)
 TOTAL_REVENUE = 4_233_072_000           # Total utility revenue ($)
 
 CUSTOMERS = {
     'care': 372_135,
-    'non_care': 951_477,
-    'total': 1_323_612
+    'non_care': 992_226,              # includes ~40k unbundled (CCA) customers
+    'total': 1_364_361                # EIA 861 bundled+unbundled
 }
 
 # Capital structure (SDGE 2024 GRC)

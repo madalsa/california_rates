@@ -29,14 +29,14 @@ from itertools import product
 # SDGE CONSTANTS (from GRC filings, EIA Form 861)
 # ============================================================================
 
-RESIDENTIAL_REVENUE = 1_561_695_600  # Total residential revenue (EIA)
-RESIDENTIAL_SALES_KWH = 4_810_000_000  # Total residential sales (EIA)
+RESIDENTIAL_REVENUE = 1_561_695_600  # Total residential revenue (EIA 861 bundled+unbundled)
+RESIDENTIAL_SALES_KWH = 4_809_988_000  # Total residential sales (EIA 861 bundled+unbundled)
 TOTAL_UTILITY_REVENUE = 4_233_072_000  # All customer classes
 
 CUSTOMERS = {
     'care': 372_135,      # CARE-eligible (low income)
-    'non_care': 951_477,  # Non-CARE
-    'total': 1_323_612,
+    'non_care': 992_226,  # Non-CARE (includes ~40k unbundled/CCA customers)
+    'total': 1_364_361,   # EIA 861 bundled+unbundled
 }
 
 RATE_BASE = 13_590_538_000  # Total utility rate base

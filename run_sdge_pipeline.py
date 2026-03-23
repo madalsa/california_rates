@@ -116,7 +116,7 @@ BEV_DVMT_CDF = np.array([
 ])
 
 # Sample building weight and customer count
-TOTAL_RESIDENTIAL_CUSTOMERS = 1_323_612
+TOTAL_RESIDENTIAL_CUSTOMERS = 1_364_361  # EIA 861 bundled+unbundled
 BUILDING_WEIGHT = 252.3  # uniform ResStock weight per sample building
 
 

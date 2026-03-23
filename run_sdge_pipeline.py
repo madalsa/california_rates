@@ -856,10 +856,10 @@ def stage4_solar_profiles(tech_df, bills_df):
         return per_kw, annual
 
     # Set up PV system
-    sandia_modules = pvlib.pvsystem.retrieve_sam('SandiaMod')
+    cec_modules = pvlib.pvsystem.retrieve_sam('CECMod')
     cec_inverters = pvlib.pvsystem.retrieve_sam('cecinverter')
 
-    module = sandia_modules.iloc[0]
+    module = cec_modules.iloc[0]
     inverter = cec_inverters.iloc[0]
 
     temp_params = TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_glass']
@@ -872,7 +872,7 @@ def stage4_solar_profiles(tech_df, bills_df):
         temperature_model_parameters=temp_params,
     )
 
-    mc = ModelChain(system, location, dc_model='sapm', aoi_model='physical',
+    mc = ModelChain(system, location, dc_model='cec', aoi_model='physical',
                     spectral_model='no_loss')
 
     # Prepare weather data (ensure 8760 hours)

@@ -761,7 +761,7 @@ def _generate_solar_profile_for_location(lat, lon, alt, name):
         temperature_model_parameters=temp_params,
     )
 
-    mc = ModelChain(system, location, aoi_model='physical',
+    mc = ModelChain(system, location, dc_model='sapm', aoi_model='physical',
                     spectral_model='no_loss')
 
     weather = tmy_data.copy()

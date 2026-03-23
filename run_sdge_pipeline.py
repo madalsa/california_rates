@@ -872,7 +872,7 @@ def stage4_solar_profiles(tech_df, bills_df):
         temperature_model_parameters=temp_params,
     )
 
-    mc = ModelChain(system, location, aoi_model='physical',
+    mc = ModelChain(system, location, dc_model='sapm', aoi_model='physical',
                     spectral_model='no_loss')
 
     # Prepare weather data (ensure 8760 hours)

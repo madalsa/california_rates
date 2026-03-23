@@ -27,7 +27,7 @@ from itertools import product
 
 RESIDENTIAL_REVENUE = 8_238_576_000  # Total residential revenue (EIA 861 bundled+unbundled)
 RESIDENTIAL_SALES_KWH = 25_987_213_000  # Total residential sales (EIA 861 bundled+unbundled)
-TOTAL_UTILITY_REVENUE = 20_340_000_000  # All customer classes (TODO: update from EIA 861)
+TOTAL_UTILITY_REVENUE = 20_341_236_000  # All customer classes (EIA 861)
 
 CUSTOMERS = {
     'care': 1_500_000,      # CARE-eligible (TODO: update from PGE filing)
@@ -35,18 +35,18 @@ CUSTOMERS = {
     'total': 5_047_461,     # EIA 861 bundled+unbundled
 }
 
-RATE_BASE = 40_000_000_000  # Total utility rate base (TODO: update from PGE GRC)
-EQUITY_SHARE = 0.52         # Equity portion of capital structure (TODO: update from PGE GRC)
+RATE_BASE = 41_987_991_000  # Total utility rate base (PGE GRC)
+EQUITY_SHARE = 0.52         # Equity portion of capital structure (PGE GRC)
+AUTHORIZED_ROE = 0.1028     # Current authorized ROE (10.28%)
 
 # Residential share of system-wide costs
-res_share = RESIDENTIAL_REVENUE / TOTAL_UTILITY_REVENUE
+res_share = RESIDENTIAL_REVENUE / TOTAL_UTILITY_REVENUE  # ≈ 0.405
 
 # Revenue components (system-wide values × residential share)
-# TODO: Update wildfire, transmission, distribution from PGE GRC filings
 REVENUE_COMPONENTS = {
-    'wildfire': 1_000_000_000 * res_share,       # Wildfire fund recovery (TODO)
-    'transmission': 2_000_000_000 * res_share,   # Transmission costs (TODO)
-    'distribution': 4_000_000_000 * res_share,   # Distribution costs (TODO)
+    'wildfire': 5_404_304_000 * res_share,       # Wildfire fund recovery
+    'transmission': 2_663_244_000 * res_share,   # Transmission costs
+    'distribution': 8_741_084_000 * res_share,   # Distribution costs
 }
 TD_COSTS = REVENUE_COMPONENTS['transmission'] + REVENUE_COMPONENTS['distribution']
 

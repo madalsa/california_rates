@@ -226,58 +226,62 @@ def generate_latex_table(stats):
     valley_scaled = region_avg(valley_czs, 'avg_kwh')
     mountain_scaled = region_avg(mountain_czs, 'avg_kwh')
 
+    coastal_raw = region_avg(coastal_czs, 'raw_avg_kwh')
+    valley_raw = region_avg(valley_czs, 'raw_avg_kwh')
+    mountain_raw = region_avg(mountain_czs, 'raw_avg_kwh')
+
     latex = r"""\begin{table}[htbp]
 \centering
 \caption{Comparison of Simulated Building Sample with Actual PG\&E Service Territory Characteristics}
 \label{tab:sample_comparison_pge}
-\begin{tabular}{lrr}
+\begin{tabular}{lrrr}
 \toprule
-\textbf{Characteristic} & \textbf{Actual PG\&E} & \textbf{Simulated Sample} \\
+\textbf{Characteristic} & \textbf{Actual PG\&E} & \textbf{ResStock (Raw)} & \textbf{ResStock (RASS-Adjusted)} \\
 \midrule
-\multicolumn{3}{l}{\textit{Panel A: Service Territory}} \\
-Total residential customers & """ + f"{A['total_customers']:,}" + r""" & """ + f"{S['n_buildings']:,}" + r""" (sample) \\
-Weighted households represented & """ + f"{A['total_customers']:,}" + r""" & """ + f"{S['total_represented']:,.0f}" + r""" \\
+\multicolumn{4}{l}{\textit{Panel A: Service Territory}} \\
+Total residential customers & """ + f"{A['total_customers']:,}" + r""" & \multicolumn{2}{c}{""" + f"{S['n_buildings']:,}" + r""" (sample)} \\
+Weighted households represented & """ + f"{A['total_customers']:,}" + r""" & \multicolumn{2}{c}{""" + f"{S['total_represented']:,.0f}" + r"""} \\
 \midrule
-\multicolumn{3}{l}{\textit{Panel B: Electricity Consumption}} \\
-Total residential sales (GWh/yr) & """ + f"{A['total_sales_gwh']:,.0f}" + r""" & """ + f"{S['scaled_total_gwh']:,.0f}" + r"""$^a$ \\
-Mean consumption (kWh/cust/yr) & """ + f"{A['avg_consumption_kwh']:,.0f}" + r""" & """ + f"{S['scaled_avg_kwh']:,.0f}" + r""" \\
-Median consumption (kWh/cust/yr) & --- & """ + f"{S['scaled_median_kwh']:,.0f}" + r""" \\
-10th percentile (kWh/yr) & --- & """ + f"{S['scaled_p10']:,.0f}" + r""" \\
-90th percentile (kWh/yr) & --- & """ + f"{S['scaled_p90']:,.0f}" + r""" \\
+\multicolumn{4}{l}{\textit{Panel B: Electricity Consumption}} \\
+Total residential sales (GWh/yr) & """ + f"{A['total_sales_gwh']:,.0f}" + r""" & """ + f"{S['raw_total_gwh']:,.0f}" + r""" & """ + f"{S['scaled_total_gwh']:,.0f}" + r"""$^a$ \\
+Mean consumption (kWh/cust/yr) & """ + f"{A['avg_consumption_kwh']:,.0f}" + r""" & """ + f"{S['raw_avg_kwh']:,.0f}" + r""" & """ + f"{S['scaled_avg_kwh']:,.0f}" + r""" \\
+Median consumption (kWh/cust/yr) & --- & --- & """ + f"{S['scaled_median_kwh']:,.0f}" + r""" \\
+10th percentile (kWh/yr) & --- & --- & """ + f"{S['scaled_p10']:,.0f}" + r""" \\
+90th percentile (kWh/yr) & --- & --- & """ + f"{S['scaled_p90']:,.0f}" + r""" \\
 \midrule
-\multicolumn{3}{l}{\textit{Panel C: Customer Composition}} \\
-CARE-eligible (\%) & """ + f"{A['care_pct']:.1f}" + r""" & """ + f"{S['low_income_pct']:.1f}" + r"""$^b$ \\
-Homeownership rate (\%) & $\sim$55$^c$ & """ + f"{S['owner_pct']:.1f}" + r""" \\
-Solar PV adoption (\%) & $\sim$12$^c$ & """ + f"{S['pv_pct']:.1f}" + r""" \\
+\multicolumn{4}{l}{\textit{Panel C: Customer Composition}} \\
+CARE-eligible (\%) & """ + f"{A['care_pct']:.1f}" + r""" & \multicolumn{2}{c}{""" + f"{S['low_income_pct']:.1f}" + r"""$^b$} \\
+Homeownership rate (\%) & $\sim$55$^c$ & \multicolumn{2}{c}{""" + f"{S['owner_pct']:.1f}" + r"""} \\
+Solar PV adoption (\%) & $\sim$12$^c$ & \multicolumn{2}{c}{""" + f"{S['pv_pct']:.1f}" + r"""} \\
 \midrule
-\multicolumn{3}{l}{\textit{Panel D: Housing Stock}} \\
-Single-family detached (\%) & $\sim$57$^c$ & """ + f"{S['sf_detached_pct']:.1f}" + r""" \\
-Single-family attached (\%) & $\sim$7$^c$ & """ + f"{S['sf_attached_pct']:.1f}" + r""" \\
-Multi-family (\%) & $\sim$32$^c$ & """ + f"{S['mf_pct']:.1f}" + r""" \\
-Mobile home (\%) & $\sim$4$^c$ & """ + f"{S['mobile_pct']:.1f}" + r""" \\
+\multicolumn{4}{l}{\textit{Panel D: Housing Stock}} \\
+Single-family detached (\%) & $\sim$57$^c$ & \multicolumn{2}{c}{""" + f"{S['sf_detached_pct']:.1f}" + r"""} \\
+Single-family attached (\%) & $\sim$7$^c$ & \multicolumn{2}{c}{""" + f"{S['sf_attached_pct']:.1f}" + r"""} \\
+Multi-family (\%) & $\sim$32$^c$ & \multicolumn{2}{c}{""" + f"{S['mf_pct']:.1f}" + r"""} \\
+Mobile home (\%) & $\sim$4$^c$ & \multicolumn{2}{c}{""" + f"{S['mobile_pct']:.1f}" + r"""} \\
 \midrule
-\multicolumn{3}{l}{\textit{Panel E: Climate Zone Distribution}} \\
-CZ 1--5 --- Coastal (\%) & --- & """ + f"{coastal_pct:.1f}" + r""" \\
-CZ 11--13 --- Central Valley (\%) & --- & """ + f"{valley_pct:.1f}" + r""" \\
-CZ 16 --- Mountain/Sierra (\%) & --- & """ + f"{mountain_pct:.1f}" + r""" \\
+\multicolumn{4}{l}{\textit{Panel E: Climate Zone Distribution}} \\
+CZ 1--5 --- Coastal (\%) & --- & \multicolumn{2}{c}{""" + f"{coastal_pct:.1f}" + r"""} \\
+CZ 11--13 --- Central Valley (\%) & --- & \multicolumn{2}{c}{""" + f"{valley_pct:.1f}" + r"""} \\
+CZ 16 --- Mountain/Sierra (\%) & --- & \multicolumn{2}{c}{""" + f"{mountain_pct:.1f}" + r"""} \\
 \midrule
-\multicolumn{3}{l}{\textit{Panel F: Mean Consumption by Region (kWh/yr)}} \\
-CZ 1--5 (Coastal) & --- & """ + f"{coastal_scaled:,.0f}" + r""" \\
-CZ 11--13 (Central Valley) & --- & """ + f"{valley_scaled:,.0f}" + r""" \\
-CZ 16 (Mountain/Sierra) & --- & """ + f"{mountain_scaled:,.0f}" + r""" \\
+\multicolumn{4}{l}{\textit{Panel F: Mean Consumption by Region (kWh/yr)}} \\
+CZ 1--5 (Coastal) & --- & """ + f"{coastal_raw:,.0f}" + r""" & """ + f"{coastal_scaled:,.0f}" + r""" \\
+CZ 11--13 (Central Valley) & --- & """ + f"{valley_raw:,.0f}" + r""" & """ + f"{valley_scaled:,.0f}" + r""" \\
+CZ 16 (Mountain/Sierra) & --- & """ + f"{mountain_raw:,.0f}" + r""" & """ + f"{mountain_scaled:,.0f}" + r""" \\
 \midrule
-\multicolumn{3}{l}{\textit{Panel G: Building Systems}} \\
-Natural gas heating (\%) & --- & """ + f"{S['heating_natgas_pct']:.1f}" + r""" \\
-Electric heating (\%) & --- & """ + f"{S['heating_elec_pct']:.1f}" + r""" \\
-Central AC (\%) & --- & """ + f"{S['cooling_central_pct']:.1f}" + r""" \\
-No cooling (\%) & --- & """ + f"{S['cooling_none_pct']:.1f}" + r""" \\
+\multicolumn{4}{l}{\textit{Panel G: Building Systems}} \\
+Natural gas heating (\%) & --- & \multicolumn{2}{c}{""" + f"{S['heating_natgas_pct']:.1f}" + r"""} \\
+Electric heating (\%) & --- & \multicolumn{2}{c}{""" + f"{S['heating_elec_pct']:.1f}" + r"""} \\
+Central AC (\%) & --- & \multicolumn{2}{c}{""" + f"{S['cooling_central_pct']:.1f}" + r"""} \\
+No cooling (\%) & --- & \multicolumn{2}{c}{""" + f"{S['cooling_none_pct']:.1f}" + r"""} \\
 \bottomrule
 \end{tabular}
 \begin{minipage}{\textwidth}
 \vspace{0.3em}
 \footnotesize
-\textit{Notes:} Actual PG\&E data from utility General Rate Case filings and EIA Form 861. Simulated sample from NREL ResStock with RASS-calibrated scaling factors applied to consumption. \\
-$^a$ Weighted total using ResStock sampling weights; exceeds actual PG\&E sales due to higher per-building consumption in the simulation (ResStock models occupied, full-year households only). \\
+\textit{Notes:} Actual PG\&E data from utility General Rate Case filings and EIA Form 861. ``Raw'' values are direct ResStock simulation output; ``RASS-Adjusted'' applies climate-zone-specific scaling factors calibrated to the 2019 Residential Appliance Saturation Survey (RASS). \\
+$^a$ Weighted total using ResStock sampling weights; exceeds actual PG\&E sales because ResStock models only occupied, full-year households, while utility counts include low-consumption accounts (vacant units, partial-year, common-area meters). \\
 $^b$ Based on ResStock income classification (low income category); actual CARE enrollment is """ + f"{A['care_pct']:.1f}" + r"""\%. \\
 $^c$ ACS 2020--2024 estimates for PG\&E service territory counties; not precisely service-territory-specific.
 \end{minipage}

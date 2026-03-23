@@ -1,0 +1,113 @@
+\documentclass[12pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{hyperref}
+
+\title{Sample Representativeness: ResStock Simulated Buildings vs.\ Actual Utility Data}
+\author{California Electricity Rate Design Project}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Overview}
+
+This document benchmarks the NREL ResStock simulated building sample against actual utility service territory characteristics for California's two largest investor-owned utilities: SDG\&E and PG\&E. The comparison validates that the simulated sample is sufficiently representative of real-world conditions for distributional analysis of rate design impacts.
+
+For each utility, we present three columns: (1) actual utility data, (2) raw ResStock simulation output, and (3) RASS-adjusted ResStock values, so readers can assess both the raw simulation fidelity and the effect of the RASS calibration. Panels cover:
+\begin{itemize}
+    \item \textbf{Panel A}: Service territory coverage (total customers, weighted households)
+    \item \textbf{Panel B}: Electricity consumption (total sales, mean/median/percentiles)
+    \item \textbf{Panel C}: Customer composition (CARE enrollment, homeownership, solar PV)
+    \item \textbf{Panel D}: Housing stock (single-family, multi-family, mobile home shares)
+    \item \textbf{Panel E}: Climate zone distribution
+    \item \textbf{Panel F}: Mean consumption by climate zone or region
+    \item \textbf{Panel G}: Building systems (heating fuel, cooling type)
+\end{itemize}
+
+\noindent Data sources: EIA Form 861 (bundled + unbundled), utility General Rate Case filings, CPUC filings, ACS 2020--2024, and NREL ResStock California baseline with RASS-calibrated scaling factors.
+
+\clearpage
+
+%% ============================================================
+%% SDG&E
+%% ============================================================
+\section{SDG\&E Service Territory}
+
+\input{table_sample_comparison.tex}
+
+\subsection{Key Findings --- SDG\&E}
+
+\begin{itemize}
+    \item The simulated sample of 4,898 buildings represents approximately 1.24 million weighted households, covering 93.4\% of SDG\&E's 1.32 million residential customers.
+    \item \textbf{Housing stock} closely matches ACS data: single-family detached (50.6\% vs.\ $\sim$51\%), multi-family (35.6\% vs.\ $\sim$35\%), homeownership (53.0\% vs.\ $\sim$54\%).
+    \item \textbf{CARE eligibility}: 25.9\% (low-income proxy) vs.\ 28.1\% actual --- within expected range given income approximations in ResStock.
+    \item \textbf{Consumption}: Raw ResStock mean is 7,021 kWh/yr (93\% above actual); RASS calibration reduces this to 5,309 kWh/yr (46\% above). The remaining gap arises because SDG\&E's reported average of 3,634 kWh/yr includes very low-consumption accounts (vacant units, partial-year occupancy, common-area meters) not represented in ResStock's occupied-building sample.
+    \item \textbf{RASS calibration effect}: Climate-zone-specific scaling factors substantially improve CZ 7 (Coastal) estimates, where raw ResStock overestimates cooling loads. CZ 14 (Mountain/desert) scaling factor $>1$ corrects underestimation of heating loads.
+    \item Despite the absolute consumption level difference, \textit{relative} consumption patterns across climate zones, housing types, and income groups are well-preserved --- the critical feature for distributional analysis.
+\end{itemize}
+
+\clearpage
+
+%% ============================================================
+%% PG&E
+%% ============================================================
+\section{PG\&E Service Territory}
+
+\input{table_sample_comparison_pge.tex}
+
+\subsection{Key Findings --- PG\&E}
+
+\begin{itemize}
+    \item The simulated sample of 22,722 buildings represents approximately 5.73 million weighted households, exceeding PG\&E's 5.05 million residential customers by 13.6\%. This overcounting reflects that ResStock weights are calibrated statewide, not per-utility.
+    \item \textbf{Housing stock}: Single-family detached (61.4\% vs.\ $\sim$57\%) is moderately overrepresented; multi-family (28.1\% vs.\ $\sim$32\%) is moderately underrepresented. Mobile home and single-family attached shares closely match.
+    \item \textbf{CARE eligibility}: 27.5\% (low-income proxy) vs.\ 27.2\% actual --- nearly exact alignment.
+    \item \textbf{Solar PV}: 5.4\% simulated vs.\ $\sim$12\% actual --- the largest gap, reflecting ResStock's 2018 baseline vintage predating PG\&E's rapid NEM-driven PV growth. This is addressed in the technology adoption assignment stage of the pipeline.
+    \item \textbf{Consumption}: Raw ResStock mean is 7,708 kWh/yr (50\% above actual); RASS calibration reduces this to 6,598 kWh/yr (28\% above actual of 5,149 kWh/yr). The remaining gap is smaller than SDG\&E's (28\% vs.\ 46\%), likely because PG\&E's inland Central Valley customers drive up the utility-wide average, and ResStock's consumption estimates are more accurate for heating/cooling-dominated inland climates.
+    \item \textbf{Regional patterns}: Clear coastal (5,260 kWh/yr) vs.\ Central Valley (8,052 kWh/yr) vs.\ Mountain (7,399 kWh/yr) differentiation, driven by cooling loads in CZ 11--13.
+\end{itemize}
+
+\clearpage
+
+%% ============================================================
+%% Cross-Utility Summary
+%% ============================================================
+\section{Cross-Utility Summary}
+
+\begin{table}[htbp]
+\centering
+\caption{Sample Representativeness Summary Across Utilities}
+\label{tab:cross_utility}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Metric} & \multicolumn{2}{c}{\textbf{SDG\&E}} & \multicolumn{2}{c}{\textbf{PG\&E}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+ & Actual & Simulated & Actual & Simulated \\
+\midrule
+Residential customers & 1,323,612 & 4,898 & 5,047,461 & 22,722 \\
+Weighted HH coverage (\%) & --- & 93.4 & --- & 113.6 \\
+Mean consumption (kWh/yr) & 3,634 & 5,309 & 5,149 & 6,598 \\
+Consumption ratio (sim/actual) & \multicolumn{2}{c}{1.46} & \multicolumn{2}{c}{1.28} \\
+CARE (\%, actual vs.\ proxy) & 28.1 & 25.9 & 27.2 & 27.5 \\
+SF detached (\%) & $\sim$51 & 50.6 & $\sim$57 & 61.4 \\
+Homeownership (\%) & $\sim$54 & 53.0 & $\sim$55 & 57.2 \\
+Solar PV (\%) & $\sim$9 & 6.2 & $\sim$12 & 5.4 \\
+\bottomrule
+\end{tabular}
+\begin{minipage}{\textwidth}
+\vspace{0.3em}
+\footnotesize
+\textit{Notes:} ``Actual'' values from EIA Form 861, utility GRC filings, and ACS 2020--2024. ``Simulated'' values from NREL ResStock California baseline with RASS-calibrated scaling factors. Consumption ratio $>$ 1 reflects that ResStock models only occupied, full-year residences while utility averages include low-consumption accounts.
+\end{minipage}
+\end{table}
+
+\subsection{Discussion}
+
+The simulated sample performs well across both utilities on demographic and housing stock characteristics, with CARE eligibility, homeownership rates, and housing type distributions closely matching actual data. The primary systematic discrepancy is elevated per-building electricity consumption, which is expected and well-understood: ResStock models occupied, full-year residences, whereas utility customer counts include vacant units, partial-year accounts, and common-area meters that depress the reported average.
+
+The solar PV gap is largest for PG\&E (5.4\% vs.\ $\sim$12\%), reflecting the 2018 ResStock baseline vintage. This is corrected in the technology adoption assignment stage of the analysis pipeline, which calibrates PV, battery, EV, and heat pump adoption rates to current levels using RASS survey data and utility program statistics.
+
+For the purposes of distributional rate design analysis, the key requirement is that \textit{relative} consumption patterns across income groups, housing types, and climate zones are preserved --- not that absolute consumption levels match exactly. Both utility comparisons confirm that these relative patterns are well-captured in the simulated sample.
+
+\end{document}

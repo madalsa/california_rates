@@ -859,8 +859,8 @@ def stage4_solar_profiles(tech_df, bills_df):
     cec_modules = pvlib.pvsystem.retrieve_sam('CECMod')
     cec_inverters = pvlib.pvsystem.retrieve_sam('cecinverter')
 
-    module = cec_modules.iloc[0]
-    inverter = cec_inverters.iloc[0]
+    module = cec_modules.iloc[:, 0]
+    inverter = cec_inverters.iloc[:, 0]
 
     temp_params = TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_glass']
 

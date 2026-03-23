@@ -749,8 +749,8 @@ def _generate_solar_profile_for_location(lat, lon, alt, name):
 
     cec_modules = pvlib.pvsystem.retrieve_sam('CECMod')
     cec_inverters = pvlib.pvsystem.retrieve_sam('cecinverter')
-    module = cec_modules.iloc[0]
-    inverter = cec_inverters.iloc[0]
+    module = cec_modules.iloc[:, 0]
+    inverter = cec_inverters.iloc[:, 0]
     temp_params = TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_glass']
 
     system = PVSystem(

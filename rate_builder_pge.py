@@ -13,7 +13,7 @@ Policy levers:
 
 Data sources:
   - Revenue/customer data: EIA Form 861 (bundled + unbundled)
-  - Rate structure: retail_rates_data_oct32025.xlsx
+  - Rate structure: retail_rates_data_PGE.xlsx
   - Rate base & capital structure: PGE GRC filings
 """
 
@@ -51,7 +51,7 @@ REVENUE_COMPONENTS = {
 TD_COSTS = REVENUE_COMPONENTS['transmission'] + REVENUE_COMPONENTS['distribution']
 
 # ============================================================================
-# ACTUAL PGE TARIFF RATES (from retail_rates_data_oct32025.xlsx)
+# ACTUAL PGE TARIFF RATES (from retail_rates_data_PGE.xlsx)
 # ============================================================================
 
 # E-TOU-C: Peak (4-9pm) / Off-peak (all other hours), same weekday/weekend

@@ -56,27 +56,30 @@ TD_COSTS = REVENUE_COMPONENTS['transmission'] + REVENUE_COMPONENTS['distribution
 
 # E-TOU-C: Peak (4-9pm) / Off-peak (all other hours), same weekday/weekend
 # Summer: June-October, Winter: November-May
+# Source: retail_rates_data_PGE.xlsx
 ACTUAL_TOU = {
-    'summer_peak': 0.52268,
-    'summer_offpeak': 0.39968,
-    'winter_peak': 0.39785,
-    'winter_offpeak': 0.36785,
+    'summer_peak': 0.58943,
+    'summer_offpeak': 0.46643,
+    'winter_peak': 0.46460,
+    'winter_offpeak': 0.43460,
 }
-BASELINE_CREDIT_TOU = 0.1031  # $/kWh baseline credit
+BASELINE_CREDIT_TOU = 0.09566  # $/kWh baseline credit
+MINIMUM_BILL_PER_DAY = 0.40317  # $/day minimum bill
 
 # E-TOU-C-F: With fixed charges (for validation)
 ACTUAL_TOU_F = {
-    'summer_peak': 0.47568,
-    'summer_offpeak': 0.35268,
-    'winter_peak': 0.35085,
-    'winter_offpeak': 0.32085,
+    'summer_peak': 0.52240,
+    'summer_offpeak': 0.39940,
+    'winter_peak': 0.39757,
+    'winter_offpeak': 0.36757,
 }
-ACTUAL_FIXED_LOW = 6.00       # $/month (CARE/low income)
-ACTUAL_FIXED_MED = 24.15      # $/month (medium income)
-ACTUAL_FIXED_HIGH = 24.15     # $/month (high income)
+BASELINE_CREDIT_TOU_F = 0.08140  # $/kWh baseline credit (E-TOU-C-F)
+ACTUAL_FIXED_LOW = 6.11072    # $/month (CARE/low income)
+ACTUAL_FIXED_MED = 24.59633   # $/month (medium income)
+ACTUAL_FIXED_HIGH = 24.59633  # $/month (high income)
 
 # CARE discount on volumetric rates
-CARE_VOLUMETRIC_DISCOUNT = 0.34965  # ~35% discount
+CARE_VOLUMETRIC_DISCOUNT = 0.35  # 35% discount
 
 # ============================================================================
 # TOU CONSUMPTION WEIGHTS

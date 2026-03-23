@@ -842,8 +842,9 @@ def stage4_solar_profiles(tech_df, bills_df):
                         SDGE_ALTITUDE, 'San Diego')
 
     try:
-        tmy_data, tmy_meta = pvlib.iotools.get_pvgis_tmy(
+        tmy_result = pvlib.iotools.get_pvgis_tmy(
             SDGE_LATITUDE, SDGE_LONGITUDE, map_variables=True)
+        tmy_data, tmy_meta = tmy_result[0], tmy_result[1]
         print("  Retrieved TMY data from PVGIS")
     except Exception as e:
         print(f"  Could not fetch TMY data: {e}")

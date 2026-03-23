@@ -741,7 +741,8 @@ def _generate_solar_profile_for_location(lat, lon, alt, name):
     location = Location(lat, lon, 'US/Pacific', alt, name)
 
     try:
-        tmy_data, _ = pvlib.iotools.get_pvgis_tmy(lat, lon, map_variables=True)
+        tmy_result = pvlib.iotools.get_pvgis_tmy(lat, lon, map_variables=True)
+        tmy_data = tmy_result[0]
     except Exception as e:
         print(f"    Could not fetch TMY for {name} ({lat},{lon}): {e}")
         return None

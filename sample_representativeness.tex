@@ -43,9 +43,9 @@ For each utility, we present three columns: (1) actual utility data, (2) raw Res
     \item The simulated sample of 4,898 buildings represents approximately 1.24 million weighted households, covering 93.4\% of SDG\&E's 1.32 million residential customers.
     \item \textbf{Housing stock} closely matches ACS data: single-family detached (50.6\% vs.\ $\sim$51\%), multi-family (35.6\% vs.\ $\sim$35\%), homeownership (53.0\% vs.\ $\sim$54\%).
     \item \textbf{CARE eligibility}: 25.9\% (low-income proxy) vs.\ 28.1\% actual --- within expected range given income approximations in ResStock.
-    \item \textbf{Consumption}: Raw ResStock mean is 7,021 kWh/yr (93\% above actual); RASS calibration reduces this to 5,309 kWh/yr (46\% above). The remaining gap arises because SDG\&E's reported average of 3,634 kWh/yr includes very low-consumption accounts (vacant units, partial-year occupancy, common-area meters) not represented in ResStock's occupied-building sample.
+    \item \textbf{Consumption}: Raw ResStock mean is 7,021 kWh/yr (93\% above actual net sales); RASS calibration reduces this to 5,309 kWh/yr (46\% above). However, a substantial portion of this gap is explained by behind-the-meter (BTM) solar generation. SDG\&E's reported sales of 3,634 kWh/customer/yr reflect \textit{net} purchases from the grid, excluding electricity that solar customers generate and consume on-site. With approximately 17\% PV adoption in SDG\&E's territory (CA DG Stats), estimated BTM solar generation adds $\sim$1,880 kWh/customer/yr, yielding a gross consumption estimate of $\sim$5,510 kWh/customer/yr. Compared to this BTM-adjusted figure, the RASS-scaled ResStock mean of 5,309 kWh/yr is within $\sim$4\%, indicating excellent alignment once the measurement basis difference is accounted for.
     \item \textbf{RASS calibration effect}: Climate-zone-specific scaling factors substantially improve CZ 7 (Coastal) estimates, where raw ResStock overestimates cooling loads. CZ 14 (Mountain/desert) scaling factor $>1$ corrects underestimation of heating loads.
-    \item Despite the absolute consumption level difference, \textit{relative} consumption patterns across climate zones, housing types, and income groups are well-preserved --- the critical feature for distributional analysis.
+    \item Despite the absolute consumption level difference in net sales, \textit{relative} consumption patterns across climate zones, housing types, and income groups are well-preserved --- the critical feature for distributional analysis. The BTM solar adjustment confirms that the gross consumption levels are also well-matched.
 \end{itemize}
 
 \clearpage
@@ -64,7 +64,7 @@ For each utility, we present three columns: (1) actual utility data, (2) raw Res
     \item \textbf{Housing stock}: Single-family detached (61.4\% vs.\ $\sim$57\%) is moderately overrepresented; multi-family (28.1\% vs.\ $\sim$32\%) is moderately underrepresented. Mobile home and single-family attached shares closely match.
     \item \textbf{CARE eligibility}: 27.5\% (low-income proxy) vs.\ 27.2\% actual --- nearly exact alignment.
     \item \textbf{Solar PV}: 5.4\% simulated vs.\ $\sim$12\% actual --- the largest gap, reflecting ResStock's 2018 baseline vintage predating PG\&E's rapid NEM-driven PV growth. This is addressed in the technology adoption assignment stage of the pipeline.
-    \item \textbf{Consumption}: Raw ResStock mean is 7,708 kWh/yr (50\% above actual); RASS calibration reduces this to 6,598 kWh/yr (28\% above actual of 5,149 kWh/yr). The remaining gap is smaller than SDG\&E's (28\% vs.\ 46\%), likely because PG\&E's inland Central Valley customers drive up the utility-wide average, and ResStock's consumption estimates are more accurate for heating/cooling-dominated inland climates.
+    \item \textbf{Consumption}: Raw ResStock mean is 7,708 kWh/yr (50\% above actual net sales); RASS calibration reduces this to 6,598 kWh/yr (28\% above actual of 5,149 kWh/yr). As with SDG\&E, a major driver of this gap is BTM solar. With $\sim$12\% PV adoption, estimated BTM solar generation adds $\sim$1,210 kWh/customer/yr, yielding a gross consumption estimate of $\sim$6,360 kWh/customer/yr. The RASS-scaled ResStock mean of 6,598 kWh/yr is within $\sim$4\% of this BTM-adjusted figure.
     \item \textbf{Regional patterns}: Clear coastal (5,260 kWh/yr) vs.\ Central Valley (8,052 kWh/yr) vs.\ Mountain (7,399 kWh/yr) differentiation, driven by cooling loads in CZ 11--13.
 \end{itemize}
 
@@ -87,8 +87,10 @@ For each utility, we present three columns: (1) actual utility data, (2) raw Res
 \midrule
 Residential customers & 1,323,612 & 4,898 & 5,047,461 & 22,722 \\
 Weighted HH coverage (\%) & --- & 93.4 & --- & 113.6 \\
-Mean consumption (kWh/yr) & 3,634 & 5,309 & 5,149 & 6,598 \\
-Consumption ratio (sim/actual) & \multicolumn{2}{c}{1.46} & \multicolumn{2}{c}{1.28} \\
+Mean consumption, net sales (kWh/yr) & 3,634 & --- & 5,149 & --- \\
+Mean consumption, gross$^*$ (kWh/yr) & $\sim$5,510 & 5,309 & $\sim$6,360 & 6,598 \\
+Consumption ratio (sim/net sales) & \multicolumn{2}{c}{1.46} & \multicolumn{2}{c}{1.28} \\
+Consumption ratio (sim/gross) & \multicolumn{2}{c}{0.96} & \multicolumn{2}{c}{1.04} \\
 CARE (\%, actual vs.\ proxy) & 28.1 & 25.9 & 27.2 & 27.5 \\
 SF detached (\%) & $\sim$51 & 50.6 & $\sim$57 & 61.4 \\
 Homeownership (\%) & $\sim$54 & 53.0 & $\sim$55 & 57.2 \\
@@ -98,16 +100,21 @@ Solar PV (\%) & $\sim$9 & 6.2 & $\sim$12 & 5.4 \\
 \begin{minipage}{\textwidth}
 \vspace{0.3em}
 \footnotesize
-\textit{Notes:} ``Actual'' values from EIA Form 861, utility GRC filings, and ACS 2020--2024. ``Simulated'' values from NREL ResStock California baseline with RASS-calibrated scaling factors. Consumption ratio $>$ 1 reflects that ResStock models only occupied, full-year residences while utility averages include low-consumption accounts.
+\textit{Notes:} ``Actual'' values from EIA Form 861, utility GRC filings, and ACS 2020--2024. ``Simulated'' values from NREL ResStock California baseline with RASS-calibrated scaling factors. ``Net sales'' is electricity purchased from the utility; ``gross'' adds estimated behind-the-meter (BTM) solar generation back to net sales to approximate total building electricity consumption. ResStock reports gross building load (before PV offset). \\
+$^*$ Gross consumption = net utility sales + estimated BTM solar generation. BTM generation estimated from PV adoption rates (CA DG Stats), average system size (6.5\,kW, CEC data), and territory-specific capacity factors (1,550\,kWh/kW/yr PG\&E, 1,700\,kWh/kW/yr SDG\&E).
 \end{minipage}
 \end{table}
 
 \subsection{Discussion}
 
-The simulated sample performs well across both utilities on demographic and housing stock characteristics, with CARE eligibility, homeownership rates, and housing type distributions closely matching actual data. The primary systematic discrepancy is elevated per-building electricity consumption, which is expected and well-understood: ResStock models occupied, full-year residences, whereas utility customer counts include vacant units, partial-year accounts, and common-area meters that depress the reported average.
+The simulated sample performs well across both utilities on demographic and housing stock characteristics, with CARE eligibility, homeownership rates, and housing type distributions closely matching actual data. The primary systematic discrepancy in the raw comparison is apparently elevated per-building electricity consumption. However, this is largely a measurement basis difference rather than a modeling error.
 
-The solar PV gap is largest for PG\&E (5.4\% vs.\ $\sim$12\%), reflecting the 2018 ResStock baseline vintage. This is corrected in the technology adoption assignment stage of the analysis pipeline, which calibrates PV, battery, EV, and heat pump adoption rates to current levels using RASS survey data and utility program statistics.
+\paragraph{Behind-the-meter solar adjustment.}
+Utility sales reported in EIA Form 861 represent \textit{net} electricity purchased from the grid, excluding electricity that customers with rooftop solar generate and consume on-site (or export). ResStock's consumption figures, by contrast, represent \textit{gross} building load before any PV offset. With PV adoption at $\sim$12\% for PG\&E and $\sim$17\% for SDG\&E (CA DG Stats), the volume of BTM solar generation is substantial. Estimating BTM generation from the number of solar customers, average system sizes ($\sim$6.5\,kW, CEC/CSI data), and territory-specific capacity factors (1,550\,kWh/kW/yr for PG\&E, 1,700\,kWh/kW/yr for SDG\&E), we find that adding BTM generation back to utility sales yields gross consumption estimates of $\sim$6,360\,kWh/yr for PG\&E and $\sim$5,510\,kWh/yr for SDG\&E. The RASS-scaled ResStock means (6,598 and 5,309\,kWh/yr respectively) are within $\sim$4\% of these BTM-adjusted figures, indicating that the apparent consumption gap is almost entirely explained by the difference between net sales and gross consumption.
 
-For the purposes of distributional rate design analysis, the key requirement is that \textit{relative} consumption patterns across income groups, housing types, and climate zones are preserved --- not that absolute consumption levels match exactly. Both utility comparisons confirm that these relative patterns are well-captured in the simulated sample.
+\paragraph{Solar PV adoption gap.}
+The solar PV gap is largest for PG\&E (5.4\% vs.\ $\sim$12\%), reflecting the 2018 ResStock baseline vintage. This is corrected in the technology adoption assignment stage of the analysis pipeline, which calibrates PV, battery, EV, and heat pump adoption rates to current levels using survey data and utility program statistics. The BTM solar adjustment to the benchmarking comparison confirms that, once PV generation is properly accounted for, the ResStock consumption estimates align well with observed gross consumption levels.
+
+For the purposes of distributional rate design analysis, the key requirement is that \textit{relative} consumption patterns across income groups, housing types, and climate zones are preserved --- not that absolute consumption levels match exactly. Both utility comparisons confirm that these relative patterns are well-captured in the simulated sample, and the BTM solar adjustment demonstrates that absolute levels are also well-matched when compared on a consistent gross-consumption basis.
 
 \end{document}

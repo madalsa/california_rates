@@ -2,6 +2,15 @@
 sdge_comparison.py - Compare simulated ResStock sample against actual SDGE utility data.
 
 Generates comparison tables and statistics for the paper's data validation section.
+
+Note on BTM solar adjustment:
+  EIA Form 861 "sales" report net electricity delivered to customers. Customers with
+  behind-the-meter (BTM) solar generate electricity that is either self-consumed on-site
+  or exported to the grid. Neither component appears in utility sales figures. Since
+  ResStock's out.electricity.total.energy_consumption.kwh reports gross building load
+  (before any PV offset), comparing it to net utility sales overstates the gap. We
+  estimate total BTM solar generation and add it back to utility sales to compute
+  "gross consumption" for a fairer apples-to-apples comparison.
 """
 
 import pandas as pd
@@ -21,6 +30,32 @@ ACTUAL_SDGE = {
     'avg_rate_usd_kwh': 1_561_695_600 / 4_809_988_000,
     'rate_base': 13_590_538_000,
 }
+
+# ============================================================================
+# BTM SOLAR ESTIMATES (for adjusting utility sales to gross consumption)
+# Sources: CA DG Stats (californiadgstats.ca.gov), CEC, CPUC NEM reports
+# ============================================================================
+BTM_SOLAR_SDGE = {
+    'pv_adoption_pct': 17.0,                  # ~17% of residential customers (CA DG Stats)
+    'avg_system_kw': 6.5,                     # avg residential system size (CEC/CSI data)
+    'annual_gen_kwh_per_kw': 1_700,           # SDG&E territory avg (excellent solar resource)
+    # Derived: ~232K solar customers × 6.5 kW × 1,700 kWh/kW = ~2,563 GWh BTM generation
+}
+
+def compute_btm_adjustment(actual_data, btm_data):
+    """Compute BTM solar generation and adjusted gross consumption figures."""
+    n_solar = actual_data['total_customers'] * btm_data['pv_adoption_pct'] / 100
+    total_capacity_mw = n_solar * btm_data['avg_system_kw'] / 1_000
+    btm_gen_gwh = n_solar * btm_data['avg_system_kw'] * btm_data['annual_gen_kwh_per_kw'] / 1e9
+    gross_sales_gwh = actual_data['total_sales_gwh'] + btm_gen_gwh
+    gross_avg_kwh = gross_sales_gwh * 1e6 / actual_data['total_customers']
+    return {
+        'n_solar_customers': n_solar,
+        'total_capacity_mw': total_capacity_mw,
+        'btm_gen_gwh': btm_gen_gwh,
+        'gross_sales_gwh': gross_sales_gwh,
+        'gross_avg_kwh': gross_avg_kwh,
+    }
 
 # SDGE climate zone baseline allowances (from puma_utility_data.csv)
 SDGE_CZ_BASELINES = {
@@ -111,14 +146,22 @@ def compute_simulated_stats(sdge_df):
     return stats
 
 
-def print_comparison_table(stats):
+def print_comparison_table(stats, btm_adj):
     """Print formatted comparison table."""
     A = ACTUAL_SDGE
     S = stats
+    B = btm_adj
 
-    print("\n" + "=" * 85)
+    print("\n" + "=" * 95)
     print("SIMULATED SAMPLE vs ACTUAL SDGE — COMPARISON FOR PAPER")
-    print("=" * 85)
+    print("=" * 95)
+
+    print(f"\n  BTM Solar Adjustment:")
+    print(f"    Est. solar customers: {B['n_solar_customers']:,.0f} ({BTM_SOLAR_SDGE['pv_adoption_pct']:.0f}% adoption)")
+    print(f"    Est. BTM generation:  {B['btm_gen_gwh']:,.0f} GWh/yr")
+    print(f"    Utility net sales:    {A['total_sales_gwh']:,.0f} GWh/yr")
+    print(f"    Gross consumption:    {B['gross_sales_gwh']:,.0f} GWh/yr (net sales + BTM solar)")
+    print(f"    Gross avg per cust:   {B['gross_avg_kwh']:,.0f} kWh/yr")
 
     rows = [
         ("Panel A: Service Territory", "", "", ""),
@@ -128,8 +171,10 @@ def print_comparison_table(stats):
         ("Panel B: Consumption", "", "", ""),
         ("Total sales, raw ResStock (GWh/yr)", f"{A['total_sales_gwh']:,}", f"{S['raw_total_gwh']:,.0f}", f"{S['raw_total_gwh']/A['total_sales_gwh']*100:.1f}%"),
         ("Total sales, RASS-scaled (GWh/yr)", f"{A['total_sales_gwh']:,}", f"{S['scaled_total_gwh']:,.0f}", f"{S['scaled_total_gwh']/A['total_sales_gwh']*100:.1f}%"),
+        ("  BTM-adj gross (GWh/yr)", f"{B['gross_sales_gwh']:,.0f}", f"{S['scaled_total_gwh']:,.0f}", f"{S['scaled_total_gwh']/B['gross_sales_gwh']*100:.1f}%"),
         ("Mean consumption, raw (kWh/yr)", f"{A['avg_consumption_kwh']:,.0f}", f"{S['raw_avg_kwh']:,.0f}", f"{S['raw_avg_kwh']/A['avg_consumption_kwh']*100:.1f}%"),
         ("Mean consumption, RASS-scaled (kWh/yr)", f"{A['avg_consumption_kwh']:,.0f}", f"{S['scaled_avg_kwh']:,.0f}", f"{S['scaled_avg_kwh']/A['avg_consumption_kwh']*100:.1f}%"),
+        ("  BTM-adj gross mean (kWh/yr)", f"{B['gross_avg_kwh']:,.0f}", f"{S['scaled_avg_kwh']:,.0f}", f"{S['scaled_avg_kwh']/B['gross_avg_kwh']*100:.1f}%"),
         ("Median consumption, RASS-scaled (kWh/yr)", "N/A", f"{S['scaled_median_kwh']:,.0f}", ""),
         ("", "", "", ""),
         ("Panel C: Customer Composition", "", "", ""),
@@ -169,10 +214,11 @@ def print_comparison_table(stats):
     print("  SDGE service territory covers most but not all of San Diego County")
 
 
-def generate_latex_table(stats):
+def generate_latex_table(stats, btm_adj):
     """Generate LaTeX table for the paper."""
     A = ACTUAL_SDGE
     S = stats
+    B = btm_adj
 
     latex = r"""
 \begin{table}[htbp]
@@ -190,8 +236,11 @@ Weighted households represented & """ + f"{A['total_customers']:,}" + r""" & """
 \multicolumn{3}{l}{\textit{Panel B: Electricity Consumption}} \\
 Total sales, raw ResStock (GWh/yr) & """ + f"{A['total_sales_gwh']:,}" + r""" & """ + f"{S['raw_total_gwh']:,.0f}" + r""" \\
 Total sales, RASS-scaled (GWh/yr) & """ + f"{A['total_sales_gwh']:,}" + r""" & """ + f"{S['scaled_total_gwh']:,.0f}" + r"""$^a$ \\
+\quad + Est.\ BTM solar gen.\ (GWh/yr) & """ + f"{B['btm_gen_gwh']:,.0f}" + r"""$^d$ & --- \\
+\quad = Gross consumption (GWh/yr) & """ + f"{B['gross_sales_gwh']:,.0f}" + r""" & """ + f"{S['scaled_total_gwh']:,.0f}" + r""" \\
 Mean consumption, raw (kWh/cust/yr) & """ + f"{A['avg_consumption_kwh']:,.0f}" + r""" & """ + f"{S['raw_avg_kwh']:,.0f}" + r""" \\
 Mean consumption, RASS-scaled (kWh/cust/yr) & """ + f"{A['avg_consumption_kwh']:,.0f}" + r""" & """ + f"{S['scaled_avg_kwh']:,.0f}" + r""" \\
+\quad BTM-adjusted gross mean (kWh/cust/yr) & """ + f"{B['gross_avg_kwh']:,.0f}" + r""" & """ + f"{S['scaled_avg_kwh']:,.0f}" + r""" \\
 Median consumption, RASS-scaled (kWh/cust/yr) & --- & """ + f"{S['scaled_median_kwh']:,.0f}" + r""" \\
 10th percentile (kWh/yr) & --- & """ + f"{S['scaled_p10']:,.0f}" + r""" \\
 90th percentile (kWh/yr) & --- & """ + f"{S['scaled_p90']:,.0f}" + r""" \\
@@ -228,9 +277,10 @@ No cooling (\%) & --- & """ + f"{S['cooling_none_pct']:.1f}" + r""" \\
 \vspace{0.3em}
 \footnotesize
 \textit{Notes:} Actual SDGE data from utility General Rate Case filings and EIA Form 861. ``Raw'' values are direct ResStock simulation output; ``RASS-scaled'' values apply RASS-calibrated per-building scaling factors to better match observed consumption patterns by building type. \\
-$^a$ Weighted total using ResStock sampling weights; RASS-scaled total exceeds actual SDGE sales due to overcounting in some building types. \\
+$^a$ Weighted total using ResStock sampling weights. ResStock reports gross building load (before any PV offset), while utility sales are net of BTM solar generation. \\
 $^b$ Based on ResStock income classification (low income category); actual CARE eligibility is 28.1\%. \\
-$^c$ ACS 2020--2024 estimates for San Diego County; not SDGE service-territory-specific.
+$^c$ ACS 2020--2024 estimates for San Diego County; not SDGE service-territory-specific. \\
+$^d$ Estimated BTM solar generation: """ + f"{B['n_solar_customers']:,.0f}" + r""" solar customers (""" + f"{BTM_SOLAR_SDGE['pv_adoption_pct']:.0f}" + r"""\% adoption $\times$ """ + f"{A['total_customers']:,}" + r""" customers) $\times$ """ + f"{BTM_SOLAR_SDGE['avg_system_kw']}" + r"""\,kW avg system $\times$ """ + f"{BTM_SOLAR_SDGE['annual_gen_kwh_per_kw']:,}" + r"""\,kWh/kW/yr. Sources: CA DG Stats, CEC interconnection data. Adding BTM generation back to utility sales yields gross consumption, which is the appropriate comparator for ResStock's gross building load.
 \end{minipage}
 \end{table}
 """
@@ -243,9 +293,10 @@ if __name__ == '__main__':
     print(f"Loaded {len(sdge_df)} buildings")
 
     stats = compute_simulated_stats(sdge_df)
-    print_comparison_table(stats)
+    btm_adj = compute_btm_adjustment(ACTUAL_SDGE, BTM_SOLAR_SDGE)
+    print_comparison_table(stats, btm_adj)
 
-    latex = generate_latex_table(stats)
+    latex = generate_latex_table(stats, btm_adj)
     print("\n\n" + "=" * 85)
     print("LATEX TABLE (copy into paper)")
     print("=" * 85)

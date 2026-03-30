@@ -97,3 +97,5 @@ Analysis of California electricity rates and billing across utilities.
 **Next step:** Test all three with `python run_all_pipelines.py --test`. Need scipy for LP. Debug any import issues.
 **User preferences:** No heuristic battery for SCE (LP only). Native demand for SCE. PGE/SDGE keep RASS-scaled demand + both LP/heuristic + Upgrade 11.
 **Known issues:** Need Baseline_*/Upgrade11_* parquets (local only). scipy needed for LP. EEC file may lack sce_total column.
+**User preferences:** No heuristic battery for SCE (LP only). Native demand for SCE. PGE/SDGE keep RASS-scaled demand + both LP/heuristic + Upgrade 11.
+**Known issues:** Need Baseline_*/Upgrade11_* parquets (local only). scipy needed for LP. EEC file may lack sce_total column.

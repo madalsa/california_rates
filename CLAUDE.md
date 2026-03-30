@@ -85,7 +85,7 @@ Analysis of California electricity rates and billing across utilities.
 |---------|--------|---------------|-------------|-------|---------|--------------|---------|-------------|--------|
 | **SCE** | `sce_config.py` | `sce_baseline_bills.py` | `sce_tech_assign.py` | `sce_solar.py` | `sce_battery_lp.py` | `sce_post_adoption.py` | `sce_summary.py` | `run_sce_pipeline.py` | **DONE** |
 | **PGE** | `pge_config.py` | `pge_baseline_bills.py` | `pge_tech_assign.py` | `pge_solar.py` | `pge_battery_lp.py` | `pge_post_adoption.py` | `pge_summary.py` | `run_pge_pipeline.py` | **DONE** |
-| **SDGE** | `sdge_config.py` | `sdge_baseline_bills.py` | `sdge_tech_assign.py` | `sdge_solar.py` | `sdge_battery_lp.py` | — | — | **old monolith** | **3 FILES LEFT** |
+| **SDGE** | `sdge_config.py` | `sdge_baseline_bills.py` | `sdge_tech_assign.py` | `sdge_solar.py` | `sdge_battery_lp.py` | `sdge_post_adoption.py` | `sdge_summary.py` | `run_sdge_pipeline.py` | **DONE** |
 
 **Unified runner:** `run_all_pipelines.py` — runs PGE/SCE/SDGE with `--utility pge sce sdge`, `--test`, `--stage N`
 
@@ -93,7 +93,7 @@ Analysis of California electricity rates and billing across utilities.
 8 total: 2 actual tariff + 6 designed (incl. F0_WF0_ROE1.0 = ROE-only reduction)
 
 ### Instructions for Next Session
-**What was just completed:** SCE pipeline fully modularized (8 files). PGE fully modularized (7 files). SDGE partially modularized (4 of 7 files done). Unified runner created.
-**Next step:** Finish SDGE modularization — need `sdge_post_adoption.py`, `sdge_summary.py`, and rewrite `run_sdge_pipeline.py` as thin orchestrator. Then test all three with `python run_all_pipelines.py --test`.
+**What was just completed:** All 3 utilities fully modularized. SCE (8 files), PGE (7 files), SDGE (7 files). Unified runner `run_all_pipelines.py` created. NOT yet tested/run.
+**Next step:** Test all three with `python run_all_pipelines.py --test`. Need scipy for LP. Debug any import issues.
 **User preferences:** No heuristic battery for SCE (LP only). Native demand for SCE. PGE/SDGE keep RASS-scaled demand + both LP/heuristic + Upgrade 11.
 **Known issues:** Need Baseline_*/Upgrade11_* parquets (local only). scipy needed for LP. EEC file may lack sce_total column.

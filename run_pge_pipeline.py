@@ -85,8 +85,7 @@ def main():
                         help='Start from this stage (1-7)')
     parser.add_argument('--skip-tech', action='store_true',
                         help='Skip technology adoption stages (3-6)')
-    parser.add_argument('--use-lp', action='store_true',
-                        help='Use LP for battery dispatch (slower but optimal)')
+    # Battery dispatch is heuristic-only for PGE (LP reserved for SCE)
     parser.add_argument('--n-buildings', type=int, default=None,
                         help='Number of buildings to process')
     parser.add_argument('--tech-only', action='store_true',
@@ -173,7 +172,7 @@ def main():
             from pge_post_adoption import stage6_post_adoption_bills
             final_df = stage6_post_adoption_bills(
                 bills_df, tech_df, solar_profiles, rate_scenarios,
-                use_lp=args.use_lp, annual_kwh_per_kw_by_cz=annual_kwh_per_kw_by_cz,
+                annual_kwh_per_kw_by_cz=annual_kwh_per_kw_by_cz,
                 skip_s3=args.skip_s3)
         else:
             final_df = pd.read_csv(POSTADOPT_BILLS_OUT)

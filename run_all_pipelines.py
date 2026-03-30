@@ -73,8 +73,6 @@ def main():
                         help='Skip technology adoption stages')
     parser.add_argument('--n-buildings', type=int, default=None,
                         help='Number of buildings per utility')
-    parser.add_argument('--use-lp', action='store_true',
-                        help='Use LP for battery dispatch (PGE/SDGE)')
     args = parser.parse_args()
 
     # Build extra args to pass through
@@ -87,8 +85,6 @@ def main():
         extra_args.append('--skip-tech')
     if args.n_buildings is not None:
         extra_args.extend(['--n-buildings', str(args.n_buildings)])
-    if args.use_lp:
-        extra_args.append('--use-lp')
 
     print("=" * 80)
     print("CALIFORNIA IOU RATE ANALYSIS — ALL UTILITIES")

@@ -11,7 +11,8 @@ SDGE-specific:
   - Uses RASS-scaled demand
   - Single solar centroid (not per-CZ)
   - 6 TOU periods (with midpeak)
-  - Supports both LP and heuristic battery dispatch
+  - Heuristic-only battery dispatch (no LP)
+  - Tracks grid import/export, export value, self-sufficiency
 """
 
 import time
@@ -28,7 +29,7 @@ from sdge_config import (
 )
 from sdge_baseline_bills import load_sdge_metadata, calculate_actual_sdge_bill_vectorized
 from sdge_solar import size_pv_system
-from sdge_battery_lp import battery_lp_dispatch, battery_heuristic_dispatch
+from sdge_battery_lp import battery_heuristic_dispatch
 
 
 def sample_ev_dvmt(n, seed=44):
@@ -73,7 +74,8 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
     if skip_s3:
         print("  Skipping S3 (PV+storage+EV)")
 
-    _dispatch = battery_lp_dispatch if use_lp else battery_heuristic_dispatch
+    _dispatch = battery_heuristic_dispatch
+    print(f"  Battery dispatch: heuristic")
 
     # Merge tech assignments
     tech_cols = ['building_id', 'assigned_pv', 'assigned_battery', 'assigned_ev', 'assigned_hp']
@@ -205,25 +207,28 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
 
         if batt is not None:
             gi, ge = batt['grid_import'], batt['grid_export']
-            for sname, rate_arr in designed_rate_arrays.items():
-                fc = scenario_fixed_charges[sname]
-                fixed = fc['care'] if is_care else fc['noncare']
-                imp = np.dot(gi, rate_arr)
-                exp = np.dot(ge, eec_rates)
-                if is_care and designed_care_discount > 0:
-                    imp *= (1 - designed_care_discount)
-                result[f'{sname}_bill_{prefix}'] = max(imp - exp, 0) + fixed
         else:
             net = load_profile - solar_gen
-            hi, he = np.maximum(net, 0), np.maximum(-net, 0)
-            for sname, rate_arr in designed_rate_arrays.items():
-                fc = scenario_fixed_charges[sname]
-                fixed = fc['care'] if is_care else fc['noncare']
-                imp = np.dot(hi, rate_arr)
-                exp = np.dot(he, eec_rates)
-                if is_care and designed_care_discount > 0:
-                    imp *= (1 - designed_care_discount)
-                result[f'{sname}_bill_{prefix}'] = max(imp - exp, 0) + fixed
+            gi, ge = np.maximum(net, 0), np.maximum(-net, 0)
+
+        # Track grid/export/self-sufficiency metrics
+        result[f'grid_import_kwh_{prefix}'] = gi.sum()
+        result[f'grid_export_kwh_{prefix}'] = ge.sum()
+        result[f'export_value_{prefix}'] = np.dot(ge, eec_rates)
+        solar_total = solar_gen.sum()
+        self_consumed = solar_total - ge.sum()
+        native_kwh = load_profile.sum()
+        result[f'self_consumption_kwh_{prefix}'] = max(self_consumed, 0)
+        result[f'self_sufficiency_{prefix}'] = max(self_consumed, 0) / native_kwh if native_kwh > 0 else 0
+
+        for sname, rate_arr in designed_rate_arrays.items():
+            fc = scenario_fixed_charges[sname]
+            fixed = fc['care'] if is_care else fc['noncare']
+            imp = np.dot(gi, rate_arr)
+            exp = np.dot(ge, eec_rates)
+            if is_care and designed_care_discount > 0:
+                imp *= (1 - designed_care_discount)
+            result[f'{sname}_bill_{prefix}'] = max(imp - exp, 0) + fixed
 
         # Actual tariff bills
         for rc, rc_info in actual_rates.items():
@@ -270,6 +275,11 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
     def _bill_volumetric(load_profile, is_care, income, puma_str, prefix):
         """Compute bills for EV-only (no PV/battery)."""
         result = {}
+        result[f'grid_import_kwh_{prefix}'] = load_profile.sum()
+        result[f'grid_export_kwh_{prefix}'] = 0.0
+        result[f'export_value_{prefix}'] = 0.0
+        result[f'self_consumption_kwh_{prefix}'] = 0.0
+        result[f'self_sufficiency_{prefix}'] = 0.0
         for sname, rate_arr in designed_rate_arrays.items():
             fc = scenario_fixed_charges[sname]
             fixed = fc['care'] if is_care else fc['noncare']

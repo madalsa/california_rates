@@ -79,8 +79,21 @@ Analysis of California electricity rates and billing across utilities.
 - **Data folders:** `Baseline_SCE/` (parquets, local only)
 - **Utility data:** from `utility_data_inputs.tex` — revenue $7.75B, customers 4.59M, rate base $41.43B
 
+### All-Utility Modularization Status
+
+| Utility | Config | Baseline Bills | Tech Assign | Solar | Battery | Post-Adoption | Summary | Orchestrator | Status |
+|---------|--------|---------------|-------------|-------|---------|--------------|---------|-------------|--------|
+| **SCE** | `sce_config.py` | `sce_baseline_bills.py` | `sce_tech_assign.py` | `sce_solar.py` | `sce_battery_lp.py` | `sce_post_adoption.py` | `sce_summary.py` | `run_sce_pipeline.py` | **DONE** |
+| **PGE** | `pge_config.py` | `pge_baseline_bills.py` | `pge_tech_assign.py` | `pge_solar.py` | `pge_battery_lp.py` | `pge_post_adoption.py` | `pge_summary.py` | `run_pge_pipeline.py` | **DONE** |
+| **SDGE** | `sdge_config.py` | `sdge_baseline_bills.py` | `sdge_tech_assign.py` | `sdge_solar.py` | `sdge_battery_lp.py` | — | — | **old monolith** | **3 FILES LEFT** |
+
+**Unified runner:** `run_all_pipelines.py` — runs PGE/SCE/SDGE with `--utility pge sce sdge`, `--test`, `--stage N`
+
+### Rate Scenarios (all 3 utilities)
+8 total: 2 actual tariff + 6 designed (incl. F0_WF0_ROE1.0 = ROE-only reduction)
+
 ### Instructions for Next Session
-**What was just completed:** Full SCE pipeline code written (8 modular files). NOT yet tested/run.
-**Next step:** Test pipeline with `python run_sce_pipeline.py --test` (50 buildings). Debug any import/data issues. Need scipy installed for LP.
-**User preferences:** No heuristic battery. Native demand for LP and PV sizing. No Upgrade 11. Blended rates for designed scenarios.
-**Known issues:** Need `Baseline_SCE/` parquets (local only). EEC file may lack `sce_total` column (falls back to `pge_total`). `rate_designer_sce.py` may need `generate_all_scenarios` to accept `r_gross_vol` param (check compatibility).
+**What was just completed:** SCE pipeline fully modularized (8 files). PGE fully modularized (7 files). SDGE partially modularized (4 of 7 files done). Unified runner created.
+**Next step:** Finish SDGE modularization — need `sdge_post_adoption.py`, `sdge_summary.py`, and rewrite `run_sdge_pipeline.py` as thin orchestrator. Then test all three with `python run_all_pipelines.py --test`.
+**User preferences:** No heuristic battery for SCE (LP only). Native demand for SCE. PGE/SDGE keep RASS-scaled demand + both LP/heuristic + Upgrade 11.
+**Known issues:** Need Baseline_*/Upgrade11_* parquets (local only). scipy needed for LP. EEC file may lack sce_total column.

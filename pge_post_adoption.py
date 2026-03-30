@@ -11,7 +11,7 @@ PGE-specific:
   - Uses RASS-scaled demand (hourly_load * sf)
   - PV sized to 80% of scaled demand
   - Has Upgrade 11 (S4 scenario) for full electrification
-  - Heuristic-only battery dispatch (no LP)
+  - LP-only battery dispatch
   - Tracks grid import/export, export value, self-sufficiency
   - 4 TOU periods (no midpeak)
 """
@@ -31,7 +31,7 @@ from pge_config import (
 )
 from pge_baseline_bills import load_pge_metadata, calculate_actual_pge_bill_vectorized
 from pge_solar import size_pv_system
-from pge_battery_lp import battery_heuristic_dispatch
+from pge_battery_lp import battery_lp_dispatch
 
 
 def _build_tou_rate_array_from_dict(rate_dict):
@@ -221,9 +221,9 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles, rate_scenarios
     lp_failures = 0
     pv_sizes = []
 
-    # Heuristic-only battery dispatch
-    _battery_dispatch = battery_heuristic_dispatch
-    print(f"  Battery dispatch: heuristic")
+    # LP-only battery dispatch
+    _battery_dispatch = battery_lp_dispatch
+    print(f"  Battery dispatch: LP (scipy/HiGHS)")
 
     def _compute_bill_for_rate(load_profile, solar_gen, rate_arr, eec_rate_arr,
                                is_care, care_disc, bl_entry_row, bl_credit_rate,

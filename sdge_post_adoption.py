@@ -11,7 +11,7 @@ SDGE-specific:
   - Uses RASS-scaled demand
   - Single solar centroid (not per-CZ)
   - 6 TOU periods (with midpeak)
-  - Heuristic-only battery dispatch (no LP)
+  - LP-only battery dispatch
   - Tracks grid import/export, export value, self-sufficiency
 """
 
@@ -29,7 +29,7 @@ from sdge_config import (
 )
 from sdge_baseline_bills import load_sdge_metadata, calculate_actual_sdge_bill_vectorized
 from sdge_solar import size_pv_system
-from sdge_battery_lp import battery_heuristic_dispatch
+from sdge_battery_lp import battery_lp_dispatch
 
 
 def sample_ev_dvmt(n, seed=44):
@@ -74,8 +74,8 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
     if skip_s3:
         print("  Skipping S3 (PV+storage+EV)")
 
-    _dispatch = battery_heuristic_dispatch
-    print(f"  Battery dispatch: heuristic")
+    _dispatch = battery_lp_dispatch
+    print(f"  Battery dispatch: LP (scipy/HiGHS)")
 
     # Merge tech assignments
     tech_cols = ['building_id', 'assigned_pv', 'assigned_battery', 'assigned_ev', 'assigned_hp']

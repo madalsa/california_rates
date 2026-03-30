@@ -42,34 +42,45 @@ Analysis of California electricity rates and billing across utilities.
 ## SCE Pipeline — Active Work Checkpoint
 
 **Branch:** `claude/sce-pipeline-checkpoints-RCmTl`
-**Last updated:** 2026-03-28
+**Last updated:** 2026-03-30
 
-### Pipeline Stages (modeled after PGE/SDGE pipelines)
+### Pipeline Architecture (modular, split into separate files)
 
 | # | Stage | Status | Files | Notes |
 |---|-------|--------|-------|-------|
-| 0 | TOU weights calculation | DONE | `calculate_tou_weights_sce.py` → `tou_weights_sce.csv` | 5 periods (summer peak/offpeak, winter peak/midpeak/offpeak) |
-| 1 | Rate scenario design | DONE | `rate_designer_sce.py`, `rate_builder_sce.py` → `rate_scenarios_sce.csv` | 20 scenarios, revenue-neutral, TOU-D-4-9 structure |
-| 1b | Building ID list | DONE | `sce_building_ids.txt` | ~5000 building IDs from PUMA-based filtering |
-| 2 | Baseline bill calculation | **TODO** | Need: hourly bill calc from parquets for all SCE buildings | Reference: `run_pge_pipeline.py` Stage 2 |
-| 3 | Tech assignments | **TODO** | Need: `tech_assignments_sce.csv` (PV, battery, EV, heat pump) | Reference: `run_pge_pipeline.py` Stage 3 |
-| 4 | Solar profiles | **TODO** | Need: pvlib generation for SCE climate zones | Reference: `run_pge_pipeline.py` Stage 4 |
-| 5 | Battery dispatch | **TODO** | Need: LP or heuristic optimization | Reference: `run_pge_pipeline.py` Stage 5 (integrated in 6) |
-| 6 | Post-adoption bills | **TODO** | Need: `post_adoption_bills_sce.csv` with net billing | Reference: `run_pge_pipeline.py` Stage 6 |
-| 7 | Summary & distributional analysis | **TODO** | Need: payback analysis, equity metrics | Reference: `run_pge_pipeline.py` Stage 7 |
-| E2E | Pipeline orchestration | **TODO** | Need: `run_sce_pipeline.py` | Reference: `run_pge_pipeline.py` (orchestrates all stages) |
+| 0 | TOU weights calculation | DONE | `calculate_tou_weights_sce.py` → `tou_weights_sce.csv` | 5 periods |
+| 1 | Rate scenario design | DONE | `rate_designer_sce.py`, `rate_builder_sce.py` → `rate_scenarios_sce.csv` | 20 scenarios |
+| 1b | Building ID list | DONE | `sce_building_ids.txt` | ~5000 building IDs |
+| 2 | Baseline bill calculation | **CODE WRITTEN** | `sce_baseline_bills.py` → `baseline_bills_sce.csv` | Native demand, weekday/weekend actual tariff |
+| 3 | Tech assignments | **CODE WRITTEN** | `sce_tech_assign.py` → `tech_assignments_sce.csv` | Survey-based or simplified |
+| 4 | Solar profiles | **CODE WRITTEN** | `sce_solar.py` | Per CZ (9 zones), pvlib or synthetic |
+| 5 | Battery dispatch | **CODE WRITTEN** | `sce_battery_lp.py` | LP only, native demand, no heuristic |
+| 6 | Post-adoption bills | **CODE WRITTEN** | `sce_post_adoption.py` → `post_adoption_bills_sce.csv` | 4 scenarios: EV, PV+stor, PV+EV+stor, fully_elec |
+| 7 | Summary & analysis | **CODE WRITTEN** | `sce_summary.py` → `pipeline_summary_sce.csv` | 5 customer types, CZ, exports, self-sufficiency |
+| cfg | Shared config | **CODE WRITTEN** | `sce_config.py` | Constants, utility data, TOU helpers |
+| E2E | Pipeline orchestration | **CODE WRITTEN** | `run_sce_pipeline.py` | `--test`, `--stage N`, `--skip-tech` |
+
+### Key Design Decisions (SCE vs PGE/SDGE)
+- **Native demand**: RASS scaling factor stored but NOT applied to load profiles; used only for population extrapolation
+- **PV sizing**: 90% offset of native annual demand (not 80%, not RASS-scaled)
+- **Battery**: LP only via scipy linprog/HiGHS — no heuristic fallback
+- **No Upgrade 11**: "Fully electrified" = buildings with HP already in ResStock baseline + PV + EV + battery
+- **Designed scenarios**: blended weekday/weekend rates (constant across week)
+- **Actual tariff**: weekday/weekend distinction for TOU-D-4-9 summer peak ($0.627 wd / $0.507 we)
+- **5 customer types**: non-adopter, EV only, PV+storage, PV+EV+storage, fully electrified
+- **Enhanced metrics**: bill Δ$ and Δ%, by CZ, grid demand changes, exports (EEC), self-sufficiency ratio
 
 ### Key SCE-Specific Details
 - **Tariff:** TOU-D-4-9 with weekday/weekend split for summer peak
-- **Summer weekday peak:** $0.49/kWh, **weekend:** $0.38/kWh
-- **Baseline credit:** $0.09514/kWh
+- **Rates:** summer wd peak $0.627, we $0.507, offpeak $0.387; winter peak $0.557, midpeak $0.417, offpeak $0.377
+- **Baseline credit:** $0.10/kWh, **CARE discount:** 32.5%
 - **TOU weights:** summer_peak 15.69%, summer_offpeak 34.05%, winter_peak 13.59%, winter_midpeak 20.29%, winter_offpeak 16.38%
+- **CEC climate zones:** 5, 6, 8, 9, 10, 13, 14, 15, 16
 - **Data folders:** `Baseline_SCE/` (parquets, local only)
-- **`corrected_bill_calc.py`** already supports SCE (has EEC rates, net billing) but is NOT yet integrated into pipeline
+- **Utility data:** from `utility_data_inputs.tex` — revenue $7.75B, customers 4.59M, rate base $41.43B
 
 ### Instructions for Next Session
-<!-- UPDATE THIS SECTION each session with what was just completed and what to do next -->
-**What was just completed:** Checkpoint system created. Stages 0-1 were done in prior sessions.
-**Next step:** Build Stage 2 (baseline bill calculation) — start by reading `run_pge_pipeline.py` Stage 2 and adapting for SCE.
-**User preferences:** (add any noted preferences here)
-**Known issues:** (add any blockers here)
+**What was just completed:** Full SCE pipeline code written (8 modular files). NOT yet tested/run.
+**Next step:** Test pipeline with `python run_sce_pipeline.py --test` (50 buildings). Debug any import/data issues. Need scipy installed for LP.
+**User preferences:** No heuristic battery. Native demand for LP and PV sizing. No Upgrade 11. Blended rates for designed scenarios.
+**Known issues:** Need `Baseline_SCE/` parquets (local only). EEC file may lack `sce_total` column (falls back to `pge_total`). `rate_designer_sce.py` may need `generate_all_scenarios` to accept `r_gross_vol` param (check compatibility).

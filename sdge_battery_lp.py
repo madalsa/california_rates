@@ -12,7 +12,7 @@ import numpy as np
 from sdge_config import BATTERY_CAPACITY_KWH, BATTERY_POWER_KW, BATTERY_EFFICIENCY
 
 
-def stage5_battery_dispatch(hourly_load, solar_gen, rate_array, eec_rates=None):
+def battery_lp_dispatch(hourly_load, solar_gen, rate_array, eec_rates=None):
     """
     Optimize battery dispatch to minimize net electricity cost via LP.
 
@@ -147,7 +147,7 @@ def stage5_battery_dispatch(hourly_load, solar_gen, rate_array, eec_rates=None):
     }
 
 
-def stage5_battery_dispatch_heuristic(hourly_load, solar_gen, rate_array, eec_rates=None):
+def battery_heuristic_dispatch(hourly_load, solar_gen, rate_array, eec_rates=None):
     """
     Fast heuristic battery dispatch (no LP solver needed).
 

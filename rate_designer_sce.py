@@ -177,13 +177,10 @@ def design_rate(fixed_pct_td=0, remove_wildfire=False, roe_reduction=0,
     # --- Step 3: Volumetric rates (TOU) ---
     r_vol = r_target - r_fixed
 
-    # Scale blended TOU-D-4-9 rates so that designed scenario bills match R_vol.
-    # With baseline credits included in designed bills:
-    #   R_vol = s * R_gross_vol - BL_total  =>  s = (R_vol + BL_total) / R_gross_vol
-    # For F0_WF0_ROE0: R_vol = R_sample, R_sample = R_gross_vol - BL_total (+ FC=0)
-    #   => s = (R_gross_vol - BL_total + BL_total) / R_gross_vol = 1.0
-    scale_denom = r_gross_vol if r_gross_vol is not None else r_sample
-    scaling = (r_vol + bl_total) / scale_denom
+    # Scale TOU rates proportionally. Since baseline credits are now included
+    # in designed bill calculations (constant, same as actual tariff), we scale
+    # directly against R_sample. For F0_WF0_ROE0: r_vol = r_sample, so s = 1.0.
+    scaling = r_vol / r_sample
     new_tou_rates = {k: v * scaling for k, v in BASELINE_TOU_RATES.items()}
 
     # Weighted average volumetric rate (for verification)

@@ -8,8 +8,8 @@ Computes bills for tech-adopted buildings under 4 adoption scenarios:
   S4 (full_elec):     Upgrade11 load + EV + PV + battery
 
 PGE-specific:
-  - Uses RASS-scaled demand (hourly_load * sf)
-  - PV sized to 80% of scaled demand
+  - Uses native demand (no RASS scaling; sf stored for population extrapolation)
+  - PV sized to 80% of native demand
   - Has Upgrade 11 (S4 scenario) for full electrification
   - LP-only battery dispatch
   - Tracks grid import/export, export value, self-sufficiency
@@ -388,8 +388,8 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles, rate_scenarios
             df = pd.read_parquet(pq_file)
             load_15min = df['out.electricity.total.energy_consumption'].values
             hourly_load = load_15min.reshape(-1, 4).sum(axis=1)
-            sf = row.get('scaling_factor', 1.0)
-            hourly_load = hourly_load * sf
+            # NATIVE demand — no RASS scaling
+            # sf stored for population extrapolation only
 
             # Natural gas
             gas_col = 'out.natural_gas.total.energy_consumption'
@@ -421,7 +421,7 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles, rate_scenarios
             if has_upgrade11 and u11_file.exists():
                 u11_df = pd.read_parquet(u11_file)
                 u11_15min = u11_df['out.electricity.total.energy_consumption'].values
-                u11_load = u11_15min.reshape(-1, 4).sum(axis=1) * sf
+                u11_load = u11_15min.reshape(-1, 4).sum(axis=1)  # native demand
 
             update_row = {'building_id': bid,
                           'ev_daily_miles': bldg_dvmt,

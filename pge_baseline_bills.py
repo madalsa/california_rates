@@ -5,7 +5,7 @@ Reads hourly parquets from Baseline_PGE/, computes bills under:
   1. Actual PGE tariff rates (E-TOU-C, E-TOU-C-F) with baseline credits
   2. Designed rate scenarios (blended rates from rate_scenarios_pge.csv)
 
-Uses RASS-scaled demand (hourly_load * sf) — unlike SCE which uses native.
+Uses native demand (no RASS scaling) — sf stored for population extrapolation only.
 PGE has 4 TOU periods (no midpeak): summer peak/offpeak, winter peak/offpeak.
 """
 
@@ -147,7 +147,7 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
     1. Actual PGE tariff rates (E-TOU-C, E-TOU-C-F) via corrected_bill_calc.py
     2. Designed rate scenarios (F0_WF0_ROE0, etc.) via direct TOU bill computation
 
-    Uses RASS-scaled demand (hourly_load * sf).
+    Uses native demand (no RASS scaling); sf stored for population extrapolation.
     """
     print("\n" + "=" * 80)
     print("STAGE 2: COMPUTE BASELINE BILLS")
@@ -184,6 +184,7 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
     # --- Pass 1: Compute actual tariff bills + TOU consumption ---
     results = []
     tou_consumption = {}
+    monthly_consumption = {}
     start_time = time.time()
     errors = 0
 
@@ -218,7 +219,9 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
             hourly_load = load_15min.reshape(-1, 4).sum(axis=1)
 
             sf = metadata[building_id]['scaling_factor']
-            hourly_load_scaled = hourly_load * sf
+            # NATIVE demand — no RASS scaling
+            # sf stored for population extrapolation only
+            hourly_load_native = hourly_load
 
             income = metadata[building_id]['income_category']
             is_care = (income == 'low')
@@ -229,21 +232,28 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
                 'puma': metadata[building_id]['puma'],
                 'income': income,
                 'is_care': is_care,
-                'annual_kwh': hourly_load_scaled.sum(),
+                'annual_kwh': hourly_load_native.sum(),
                 'scaling_factor': sf,
             }
 
             # Store TOU consumption by period
             bldg_tou = {}
             for period, mask in period_masks.items():
-                bldg_tou[period] = hourly_load_scaled[mask].sum()
+                bldg_tou[period] = hourly_load_native[mask].sum()
             tou_consumption[int(building_id)] = bldg_tou
+
+            # Store per-month consumption for baseline credits
+            bldg_monthly = {}
+            for m in range(12):
+                s, e = month_boundaries[m], month_boundaries[m + 1]
+                bldg_monthly[m] = hourly_load_native[s:e].sum()
+            monthly_consumption[int(building_id)] = bldg_monthly
 
             # Actual PGE tariff rates
             for rate_code, col_prefix in ACTUAL_PGE_RATES.items():
                 try:
                     bill = calculate_actual_pge_bill_vectorized(
-                        hourly_load_scaled, rate_code, puma_str,
+                        hourly_load_native, rate_code, puma_str,
                         income, is_care
                     )
                     row[f'{col_prefix}_bill'] = bill
@@ -306,6 +316,34 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
     print(f"    Gross volumetric revenue (with CARE, no BL credits): ${r_gross_vol/1e9:.4f}B")
     print(f"    Baseline credit + fixed charge gap: ${(r_gross_vol - R_0)/1e9:.4f}B")
 
+    # --- Compute BL_total (aggregate baseline credits, weighted by CARE and building_weight) ---
+    baseline_credit_rate = abs(float(_etoc_wd.get('baseline_credit', 0) or 0))
+    _, baseline_df_bl = _load_xl(EXCEL_FILE)
+
+    bl_total = 0.0
+    for _, bldg_row in df_bills.iterrows():
+        bid = bldg_row['building_id']
+        if bid not in monthly_consumption:
+            continue
+        puma_str = str(bldg_row['puma'])
+        bl_entry = baseline_df_bl[baseline_df_bl['puma'] == puma_str]
+        if bl_entry.empty:
+            continue
+        d_sum_bl = bl_entry['summer_baseline_allowance'].values[0]
+        d_win_bl = bl_entry['winter_baseline_allowance'].values[0]
+        bldg_bl_credit = 0.0
+        for m in range(12):
+            monthly_kwh = monthly_consumption[bid][m]
+            if 6 <= (m + 1) <= 10:
+                monthly_bl = d_sum_bl * days_per_month[m]
+            else:
+                monthly_bl = d_win_bl * days_per_month[m]
+            bldg_bl_credit += baseline_credit_rate * min(monthly_kwh, monthly_bl)
+        care_factor = (1 - baseline_care_discount) if bldg_row['is_care'] else 1.0
+        bl_total += bldg_bl_credit * care_factor
+    bl_total *= BUILDING_WEIGHT
+    print(f"    BL_total (aggregate baseline credits): ${bl_total/1e9:.4f}B")
+
     # --- Generate rate scenarios ---
     if rate_scenarios_df is None:
         from rate_designer_pge import generate_all_scenarios
@@ -313,6 +351,7 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
             output_csv=RATE_SCENARIOS_OUT,
             r_sample=R_0,
             r_gross_vol=r_gross_vol,
+            bl_total=bl_total,
             sample_n_care=sample_n_care,
             sample_n_noncare=sample_n_noncare,
         )
@@ -326,6 +365,7 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
     # --- Direct bill computation for designed scenarios ---
     print(f"\n  Computing bills directly from designed rates:")
     print(f"  CARE volumetric discount for designed scenarios: {baseline_care_discount:.2%}")
+    print(f"  Baseline credit for designed scenarios: ${baseline_credit_rate:.5f}/kWh")
 
     for _, scenario in selected_designed.iterrows():
         scenario_name = scenario['Scenario']
@@ -340,6 +380,23 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
                 continue
             bldg_tou = tou_consumption[bid]
             vol_bill = sum(bldg_tou[p] * scenario[p] for p in tou_periods)
+
+            # Subtract baseline credit (same as actual tariff)
+            puma_str = str(bldg_row['puma'])
+            bl_entry = baseline_df_bl[baseline_df_bl['puma'] == puma_str]
+            if not bl_entry.empty and bid in monthly_consumption:
+                d_sum_bl = bl_entry['summer_baseline_allowance'].values[0]
+                d_win_bl = bl_entry['winter_baseline_allowance'].values[0]
+                bldg_bl = 0.0
+                for m in range(12):
+                    monthly_kwh = monthly_consumption[bid][m]
+                    if 6 <= (m + 1) <= 10:
+                        monthly_bl = d_sum_bl * days_per_month[m]
+                    else:
+                        monthly_bl = d_win_bl * days_per_month[m]
+                    bldg_bl += baseline_credit_rate * min(monthly_kwh, monthly_bl)
+                vol_bill -= bldg_bl
+
             if bldg_row['is_care'] and baseline_care_discount > 0:
                 vol_bill *= (1 - baseline_care_discount)
             fixed = fixed_care_annual if bldg_row['is_care'] else fixed_noncare_annual

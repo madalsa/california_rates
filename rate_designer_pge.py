@@ -87,7 +87,7 @@ def load_tou_weights(csv_path='tou_weights_pge.csv'):
 
 def design_rate(fixed_pct_td=0, remove_wildfire=False, roe_reduction=0,
                 care_fixed_ratio=0.248, tou_weights=None,
-                r_sample=None, r_gross_vol=None,
+                r_sample=None, r_gross_vol=None, bl_total=None,
                 sample_n_care=None, sample_n_noncare=None):
     """
     Design a revenue-neutral rate scenario using R_sample approach.
@@ -108,6 +108,8 @@ def design_rate(fixed_pct_td=0, remove_wildfire=False, roe_reduction=0,
         Weighted sample E-TOU-C revenue (R_sample). Required.
     r_gross_vol : float, optional
         Gross volumetric revenue (with CARE, without baseline credits).
+    bl_total : float, optional
+        Aggregate baseline credits (weighted). Used in scaling formula.
     sample_n_care : int
         Number of CARE customers in sample (weighted).
     sample_n_noncare : int
@@ -149,8 +151,11 @@ def design_rate(fixed_pct_td=0, remove_wildfire=False, roe_reduction=0,
     r_vol = r_target - r_fixed
 
     # Scale E-TOU-C rates so that designed scenario bills match R_vol.
+    # scaling = (R_vol + BL_total) / R_gross_vol
+    # BL_total is subtracted from bills, so rates must be scaled up to compensate.
+    _bl = bl_total if bl_total is not None else 0.0
     scale_denom = r_gross_vol if r_gross_vol is not None else r_sample
-    scaling = r_vol / scale_denom
+    scaling = (r_vol + _bl) / scale_denom
     new_tou_rates = {k: v * scaling for k, v in BASELINE_TOU_RATES.items()}
 
     # Weighted average volumetric rate (for verification)
@@ -172,7 +177,7 @@ def design_rate(fixed_pct_td=0, remove_wildfire=False, roe_reduction=0,
 
 def generate_all_scenarios(fixed_percentages=None, wildfire_options=None,
                            roe_reductions=None, output_csv=None,
-                           r_sample=None, r_gross_vol=None,
+                           r_sample=None, r_gross_vol=None, bl_total=None,
                            sample_n_care=None, sample_n_noncare=None):
     """
     Generate all rate scenarios from parameter grid.
@@ -219,6 +224,8 @@ def generate_all_scenarios(fixed_percentages=None, wildfire_options=None,
     if r_gross_vol is not None:
         print(f"R_gross_vol (gross volumetric w/ CARE, no BL credits): ${r_gross_vol/1e9:.4f}B")
         print(f"  Baseline credit + fixed gap: ${(r_gross_vol - r_sample)/1e9:.4f}B")
+    if bl_total is not None:
+        print(f"BL_total (aggregate baseline credits): ${bl_total/1e9:.4f}B")
     if sample_n_care is not None:
         print(f"Sample customers: {sample_n_care:,} CARE, {sample_n_noncare:,} non-CARE")
 
@@ -241,6 +248,7 @@ def generate_all_scenarios(fixed_percentages=None, wildfire_options=None,
             tou_weights=tou_weights,
             r_sample=r_sample,
             r_gross_vol=r_gross_vol,
+            bl_total=bl_total,
             sample_n_care=sample_n_care,
             sample_n_noncare=sample_n_noncare,
         ))

@@ -5,7 +5,8 @@ Reads hourly parquets from Baseline_SDGE/, computes bills under:
   1. Actual SDGE tariff rates (TOU-DR, TOU-DR-F) with baseline credits
   2. Designed rate scenarios (blended rates from rate_scenarios_sdge.csv)
 
-Uses RASS-scaled demand — scaling factor applied to load profiles.
+Uses native demand — RASS scaling factor stored but NOT applied to load profiles.
+Baseline credits ($0.11017/kWh) included in designed scenario bills.
 SDGE has 6 TOU periods (with midpeak).
 """
 
@@ -233,9 +234,8 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
             load_15min = df['out.electricity.total.energy_consumption'].values
             hourly_load = load_15min.reshape(-1, 4).sum(axis=1)
 
-            # Scale by RASS factor
+            # Native demand — do NOT apply RASS scaling factor to load
             sf = metadata[building_id]['scaling_factor']
-            hourly_load_scaled = hourly_load * sf
 
             income = metadata[building_id]['income_category']
             is_care = (income == 'low')
@@ -246,21 +246,21 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
                 'puma': metadata[building_id]['puma'],
                 'income': income,
                 'is_care': is_care,
-                'annual_kwh': hourly_load_scaled.sum(),
+                'annual_kwh': hourly_load.sum(),
                 'scaling_factor': sf,
             }
 
             # Store TOU consumption by period for direct bill computation
             bldg_tou = {}
             for period, mask in period_masks.items():
-                bldg_tou[period] = hourly_load_scaled[mask].sum()
+                bldg_tou[period] = hourly_load[mask].sum()
             tou_consumption[int(building_id)] = bldg_tou
 
             # --- Actual SDGE tariff rates (vectorized) ---
             for rate_code, col_prefix in ACTUAL_SDGE_RATES.items():
                 try:
                     bill = calculate_actual_sdge_bill_vectorized(
-                        hourly_load_scaled, rate_code, puma_str,
+                        hourly_load, rate_code, puma_str,
                         income, is_care
                     )
                     row[f'{col_prefix}_bill'] = bill
@@ -302,30 +302,80 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
     print(f"    Mean TOU-DR bill: ${np.nanmean(V):,.0f}/yr")
     print(f"    Sample customers: {sample_n_care:,} CARE, {sample_n_noncare:,} non-CARE")
 
-    # --- Compute R_gross_vol: gross volumetric revenue with CARE discount ---
-    # This is sum(load x TOU-DR_rate) x care_factor for all buildings,
-    # WITHOUT baseline credits subtracted. Needed for correct rate scaling:
-    # designed scenario bills don't have baseline credits, so the scaling
-    # denominator must be the gross volumetric revenue, not R_sample.
+    # --- Compute R_gross_vol and BL_total ---
+    # R_gross_vol: sum(load x TOU-DR_rate) x care_factor for all buildings,
+    # WITHOUT baseline credits subtracted.
+    # BL_total: aggregate baseline credits across all buildings (weighted).
     from rate_designer import BASELINE_TOU_RATES
     from corrected_bill_calc import load_excel_data as _load_xl
-    _rates_df, _ = _load_xl(EXCEL_FILE)
+    _rates_df, _baseline_df = _load_xl(EXCEL_FILE)
     _tou_dr_entries = _rates_df[_rates_df['rate_type'] == 'TOU-DR']
     _tou_dr_wd = _tou_dr_entries[_tou_dr_entries['weekday'] == 'weekday'].iloc[0]
     baseline_care_discount = abs(float(_tou_dr_wd.get('care_discount', 0) or 0))
+    baseline_credit_rate = abs(float(_tou_dr_wd.get('baseline_credit', 0) or 0))
     tou_periods = ['summer_peak', 'summer_midpeak', 'summer_offpeak',
                    'winter_peak', 'winter_midpeak', 'winter_offpeak']
+
+    # We need monthly consumption per building for baseline credit computation.
+    # Re-read parquets to get monthly totals (or compute from hourly_load stored above).
+    # Store monthly consumption during Pass 1 — recompute here from TOU data and hourly.
+    # Actually, we need hourly loads again for monthly sums. Store them in Pass 1.
+    # For efficiency, let's do a second pass only for monthly baseline credit computation.
+
+    # First compute gross vol and baseline credits per building.
+    # Also store per-building baseline credit for designed scenario billing.
+    print(f"\n  Computing BL_total and R_gross_vol (baseline credit rate: ${baseline_credit_rate:.5f}/kWh)...")
     r_gross_vol = 0.0
+    bl_total_unweighted = 0.0  # sum of baseline credits across sample (before weighting)
+    bldg_bl_credits = {}  # building_id -> baseline credit (before CARE discount)
+
     for _, bldg_row in df_bills.iterrows():
         bid = bldg_row['building_id']
         if bid not in tou_consumption:
             continue
         bldg_tou = tou_consumption[bid]
+
+        # Gross volumetric (no baseline credit)
         gross = sum(bldg_tou[p] * BASELINE_TOU_RATES[p] for p in tou_periods)
         care_factor = (1 - baseline_care_discount) if bldg_row['is_care'] else 1.0
         r_gross_vol += gross * care_factor
+
+        # Baseline credit: need monthly kWh for this building
+        puma_str = bldg_row.get('puma', '')
+        bl_entry = _baseline_df[_baseline_df['puma'] == puma_str]
+        if bl_entry.empty:
+            bldg_bl_credits[bid] = 0.0
+            continue
+        d_sum = bl_entry.iloc[0]['summer_baseline_allowance']
+        d_win = bl_entry.iloc[0]['winter_baseline_allowance']
+
+        # Re-read hourly load for monthly breakdown
+        pq_file = Path(BASELINE_DIR) / f"{bid}-0.parquet"
+        if not pq_file.exists():
+            bldg_bl_credits[bid] = 0.0
+            continue
+        df_pq = pd.read_parquet(pq_file)
+        load_15min = df_pq['out.electricity.total.energy_consumption'].values
+        hourly_load_bldg = load_15min.reshape(-1, 4).sum(axis=1)  # native demand
+
+        bldg_bl_credit = 0.0
+        for m in range(12):
+            s, e = month_boundaries[m], month_boundaries[m + 1]
+            monthly_kwh = hourly_load_bldg[s:e].sum()
+            if 6 <= (m + 1) <= 10:
+                monthly_baseline = d_sum * days_per_month[m]
+            else:
+                monthly_baseline = d_win * days_per_month[m]
+            bldg_bl_credit += baseline_credit_rate * min(monthly_kwh, monthly_baseline)
+
+        bldg_bl_credits[bid] = bldg_bl_credit  # before CARE discount
+        # Apply CARE discount to baseline credit (same as actual tariff)
+        bl_total_unweighted += bldg_bl_credit * care_factor
+
     r_gross_vol *= BUILDING_WEIGHT
+    bl_total = bl_total_unweighted * BUILDING_WEIGHT
     print(f"    Gross volumetric revenue (with CARE, no BL credits): ${r_gross_vol/1e9:.4f}B")
+    print(f"    BL_total (aggregate baseline credits): ${bl_total/1e9:.4f}B")
     print(f"    Baseline credit + fixed charge gap: ${(r_gross_vol - R_0)/1e9:.4f}B")
 
     # --- Generate rate scenarios using R_sample approach ---
@@ -335,6 +385,7 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
             output_csv=RATE_SCENARIOS_OUT,
             r_sample=R_0,
             r_gross_vol=r_gross_vol,
+            bl_total=bl_total,
             sample_n_care=sample_n_care,
             sample_n_noncare=sample_n_noncare,
         )
@@ -365,6 +416,9 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
                 continue
             bldg_tou = tou_consumption[bid]
             vol_bill = sum(bldg_tou[p] * scenario[p] for p in tou_periods)
+            # Subtract baseline credit (same as actual tariff)
+            bl_credit = bldg_bl_credits.get(bid, 0.0)
+            vol_bill -= bl_credit
             if bldg_row['is_care'] and baseline_care_discount > 0:
                 vol_bill *= (1 - baseline_care_discount)
             fixed = fixed_care_annual if bldg_row['is_care'] else fixed_noncare_annual

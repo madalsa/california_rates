@@ -1,0 +1,305 @@
+% ratedesignaprl1.tex — Mathematical Formulation of Rate Design
+% California IOU Rate Analysis (PGE, SCE, SDGE)
+% Last updated: 2026-04-02
+
+\documentclass[11pt]{article}
+\usepackage{amsmath, amssymb}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+
+\newcommand{\Rsample}{R_{\text{sample}}}
+\newcommand{\Rtarget}{R_{\text{target}}}
+\newcommand{\Rvol}{R_{\text{vol}}}
+\newcommand{\Rfixed}{R_{\text{fixed}}}
+\newcommand{\BLtotal}{BL_{\text{total}}}
+
+\title{Rate Design: Mathematical Formulation}
+\author{California IOU Rate Analysis}
+\date{April 2026}
+
+\begin{document}
+\maketitle
+
+% =============================================================================
+\section{Definitions}
+% =============================================================================
+
+\subsection{Indices and Sets}
+
+\begin{tabular}{ll}
+$i$ & Building index (ResStock sample building) \\
+$p \in \mathcal{P}$ & TOU period (e.g., summer\_peak, winter\_offpeak) \\
+$m \in \{1, \ldots, 12\}$ & Month \\
+$w$ & Building weight (uniform ResStock weight, $w = 252.3$) \\
+\end{tabular}
+
+\subsection{Building-Level Variables}
+
+\begin{tabular}{ll}
+$Q_i^p$ & Annual electricity consumption of building $i$ in TOU period $p$ (kWh) \\
+         & Computed from \textbf{native demand} (no RASS scaling) \\
+$Q_i^m$ & Monthly consumption of building $i$ in month $m$ (kWh) \\
+$B_i^m$ & Monthly baseline allowance for building $i$ in month $m$ (kWh) \\
+         & $= \text{daily\_baseline}_i \times \text{days\_in\_month}_m$ \\
+         & (summer baseline for Jun--Oct, winter baseline for Nov--May) \\
+$d_i$ & CARE discount factor for building $i$ \\
+         & $d_i = \begin{cases} 0.35 & \text{PGE (CARE)} \\ 0.325 & \text{SCE (CARE)} \\ 0.37 & \text{SDGE (CARE)} \\ 0 & \text{non-CARE} \end{cases}$ \\
+$\text{sf}_i$ & RASS scaling factor for building $i$ \\
+         & Used only for population-level extrapolation, NOT applied to load profiles \\
+\end{tabular}
+
+\subsection{Rate Parameters}
+
+\begin{tabular}{ll}
+$r^p$ & Actual tariff volumetric rate for TOU period $p$ (\$/kWh) \\
+$b$ & Baseline credit rate (\$/kWh), constant across all scenarios \\
+      & PGE: \$0.09566, SCE: \$0.10, SDGE: \$0.11017 \\
+$\text{FC}_i$ & Annual fixed charges for building $i$ (from actual tariff) \\
+$s$ & Scaling factor for designed TOU rates (dimensionless) \\
+\end{tabular}
+
+\subsection{Utility-Level Parameters}
+
+\begin{tabular}{ll}
+$R$ & Current residential revenue requirement (\$) \\
+$C_{\text{wf}}$ & Wildfire cost component (\$) \\
+$C_{\text{td}}$ & Transmission + distribution cost component (\$) \\
+$C_{\text{roe}}(\Delta)$ & ROE savings from $\Delta$ pp reduction (\$) \\
+   & $= \text{RateBase} \times \text{EquityShare} \times \frac{\Delta}{100} \times \text{ResShare}$ \\
+$\alpha_{\text{wf}}$ & Wildfire share $= C_{\text{wf}} / R$ \\
+$\alpha_{\text{td}}$ & T\&D share $= C_{\text{td}} / R$ \\
+$\alpha_{\text{roe}}$ & ROE share per pp $= C_{\text{roe}}(1) / R$ \\
+$\omega^p$ & TOU consumption weight for period $p$ \\
+   & $= \sum_i Q_i^p \big/ \sum_i \sum_{p'} Q_i^{p'}$ \\
+\end{tabular}
+
+% =============================================================================
+\section{Actual Tariff Bill}
+% =============================================================================
+
+The actual tariff bill for building $i$ under the current rate (e.g., TOU-D-4-9 for SCE):
+
+\begin{equation}
+\text{Bill}_i^{\text{actual}} = \left[ \underbrace{\sum_p Q_i^p \cdot r^p}_{\text{gross volumetric}} - \underbrace{\sum_{m=1}^{12} b \cdot \min(Q_i^m, B_i^m)}_{\text{baseline credit}} \right] \times (1 - d_i) + \text{FC}_i
+\label{eq:actual_bill}
+\end{equation}
+
+The baseline credit $b \cdot \min(Q_i^m, B_i^m)$ provides a per-kWh discount on consumption up to the baseline allowance, protecting low-usage customers.
+
+The CARE discount $d_i$ applies to the net volumetric charges (after baseline credit), not to fixed charges.
+
+\subsection{Sample Revenue}
+
+The weighted sample revenue under the actual tariff:
+\begin{equation}
+\Rsample = \sum_i \text{Bill}_i^{\text{actual}} \times w
+\label{eq:r_sample}
+\end{equation}
+
+The total baseline credit across the sample:
+\begin{equation}
+\BLtotal = \sum_i \left[ \sum_{m=1}^{12} b \cdot \min(Q_i^m, B_i^m) \right] \times (1 - d_i) \times w
+\label{eq:bl_total}
+\end{equation}
+
+% =============================================================================
+\section{Designed Rate Scenarios}
+% =============================================================================
+
+\subsection{Policy Levers}
+
+Three policy levers modify the revenue requirement:
+
+\begin{enumerate}
+    \item \textbf{Fixed cost allocation} ($F\%$): Shift $F\%$ of T\&D costs from volumetric to fixed charges. This is revenue restructuring (same total revenue).
+    \item \textbf{Wildfire removal} ($\mathbb{1}_{\text{wf}}$): Remove wildfire cost recovery from rates. This reduces total revenue.
+    \item \textbf{ROE reduction} ($\Delta$ pp): Reduce the authorized return on equity. This reduces total revenue.
+\end{enumerate}
+
+\subsection{Revenue Target}
+
+\begin{equation}
+\Rtarget = \Rsample - \mathbb{1}_{\text{wf}} \cdot \Rsample \cdot \alpha_{\text{wf}} - \Rsample \cdot \alpha_{\text{roe}} \cdot \Delta
+\label{eq:r_target}
+\end{equation}
+
+For the benchmark scenario F0\_WF0\_ROE0: $\Rtarget = \Rsample$.
+
+For cost-removal scenarios: $\Rtarget < \Rsample$.
+
+\subsection{Fixed Charge Revenue}
+
+\begin{equation}
+\Rfixed = \Rsample \cdot \alpha_{\text{td}} \cdot \frac{F\%}{100}
+\label{eq:r_fixed}
+\end{equation}
+
+Per-customer monthly fixed charges, with CARE ratio $\gamma$:
+\begin{align}
+\text{FC}_{\text{nonCARE}} &= \frac{\Rfixed}{(N_{\text{nonCARE}} + \gamma \cdot N_{\text{CARE}}) \times 12} \\
+\text{FC}_{\text{CARE}} &= \gamma \cdot \text{FC}_{\text{nonCARE}}
+\label{eq:fixed_charges}
+\end{align}
+
+For $F\% = 0$: $\Rfixed = 0$ and no fixed charges.
+
+\subsection{Volumetric Revenue and Scaling}
+
+The remaining revenue to be collected volumetrically:
+\begin{equation}
+\Rvol = \Rtarget - \Rfixed
+\label{eq:r_vol}
+\end{equation}
+
+The designed TOU rates are proportionally scaled from the actual tariff:
+\begin{equation}
+\tilde{r}^p = s \cdot r^p \quad \forall \, p \in \mathcal{P}
+\label{eq:designed_rates}
+\end{equation}
+
+The scaling factor $s$ is chosen so that the designed bills, \textit{including baseline credits}, collect exactly $\Rvol$ in volumetric revenue:
+\begin{equation}
+\sum_i \left[ \sum_p Q_i^p \cdot (s \cdot r^p) - \sum_{m=1}^{12} b \cdot \min(Q_i^m, B_i^m) \right] \times (1 - d_i) \times w = \Rvol
+\label{eq:revenue_constraint}
+\end{equation}
+
+Solving for $s$:
+\begin{equation}
+\boxed{s = \frac{\Rvol + \BLtotal}{\sum_i \left[ \sum_p Q_i^p \cdot r^p \right] \times (1 - d_i) \times w} = \frac{\Rvol + \BLtotal}{R_{\text{gross\_vol}}}}
+\label{eq:scaling}
+\end{equation}
+
+where $R_{\text{gross\_vol}} = \sum_i \left[\sum_p Q_i^p \cdot r^p\right] (1 - d_i) \cdot w$ is the gross volumetric revenue (TOU rates $\times$ consumption, with CARE discount, no baseline credits).
+
+\subsection{Verification: Benchmark Scenario}
+
+For F0\_WF0\_ROE0: $\Rtarget = \Rsample$, $\Rfixed = 0$, $\Rvol = \Rsample$.
+
+From Equations~\eqref{eq:actual_bill} and \eqref{eq:r_sample}:
+\[
+\Rsample = R_{\text{gross\_vol}} - \BLtotal + \text{FC}_{\text{total}}
+\]
+
+Since F0\_WF0\_ROE0 has no designed fixed charges and the actual fixed charges are handled separately:
+\[
+s = \frac{\Rsample + \BLtotal}{R_{\text{gross\_vol}}} = \frac{(R_{\text{gross\_vol}} - \BLtotal) + \BLtotal}{R_{\text{gross\_vol}}} = 1.0
+\]
+
+Therefore, $\tilde{r}^p = r^p$ for all periods, and the designed bill equals the actual bill for every building. $\checkmark$
+
+% =============================================================================
+\section{Designed Bill Calculation}
+% =============================================================================
+
+The designed bill for building $i$ under scenario $k$:
+
+\begin{equation}
+\boxed{\text{Bill}_i^{(k)} = \left[ \sum_p Q_i^p \cdot (s_k \cdot r^p) - \sum_{m=1}^{12} b \cdot \min(Q_i^m, B_i^m) \right] \times (1 - d_i) + \text{FC}_i^{(k)}}
+\label{eq:designed_bill}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $s_k$ is the scaling factor for scenario $k$ (Equation~\ref{eq:scaling})
+    \item $b$ is the \textbf{constant} baseline credit rate (same as actual tariff, not scaled)
+    \item $\text{FC}_i^{(k)}$ is the annual fixed charge for building $i$ under scenario $k$
+\end{itemize}
+
+\textbf{Key property:} The baseline credit $b$ does not change across scenarios. It is a structural feature of the rate design, not a cost component. When the revenue requirement changes (via wildfire removal or ROE reduction), the volumetric rates $s_k \cdot r^p$ adjust, but the credit remains at the actual tariff value.
+
+% =============================================================================
+\section{Population Extrapolation and RASS Scaling}
+% =============================================================================
+
+All bills are computed on \textbf{native demand} (unscaled ResStock load profiles). The RASS scaling factor $\text{sf}_i$ is used only for population-level extrapolation:
+
+\begin{equation}
+R_{\text{population}}^{(k)} = \sum_i \text{Bill}_i^{(k)} \times \text{sf}_i \times w
+\label{eq:population_revenue}
+\end{equation}
+
+This separates the physical model (load profiles, PV sizing, battery dispatch, grid interactions) from the statistical weighting (how many real households each sample building represents).
+
+% =============================================================================
+\section{Utility-Specific Parameters}
+% =============================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{Utility-Specific Rate Design Parameters}
+\label{tab:utility_params}
+\begin{tabular}{l r r r}
+\toprule
+\textbf{Parameter} & \textbf{PG\&E} & \textbf{SCE} & \textbf{SDG\&E} \\
+\midrule
+\multicolumn{4}{l}{\textit{Revenue \& Customers}} \\
+Residential revenue (\$B) & 8.24 & 7.75 & 1.56 \\
+Residential customers & 5,047,461 & 4,594,415 & 1,364,361 \\
+CARE customers & 1,371,555 & 1,353,981 & 305,902 \\
+\midrule
+\multicolumn{4}{l}{\textit{Cost Components (\$B)}} \\
+Transmission + Distribution & 11.40 & 10.06 & 2.41 \\
+Wildfire & 5.40 & 2.93 & 0.414 \\
+Rate base & 41.99 & 41.43 & 13.59 \\
+Authorized ROE (\%) & 10.28 & 10.33 & 10.22 \\
+Equity share (\%) & 52 & 52 & 52 \\
+\midrule
+\multicolumn{4}{l}{\textit{Rate Structure}} \\
+Actual tariff & E-TOU-C & TOU-D-4-9 & TOU-DR \\
+TOU periods & 4 & 5 & 6 \\
+Baseline credit (\$/kWh) & 0.09566 & 0.10 & 0.11017 \\
+CARE discount (\%) & 35.0 & 32.5 & 37.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Rate Scenarios (8 per utility)}
+\label{tab:scenarios}
+\begin{tabular}{l c c c l}
+\toprule
+\textbf{Scenario} & \textbf{$F\%$} & \textbf{$\mathbb{1}_{\text{wf}}$} & \textbf{$\Delta$ (pp)} & \textbf{Description} \\
+\midrule
+Actual tariff & --- & --- & --- & Current rate (no fixed charge) \\
+Actual tariff-F & --- & --- & --- & Current rate with fixed charges \\
+F0\_WF0\_ROE0 & 0 & 0 & 0 & Benchmark (= actual tariff) \\
+F50\_WF0\_ROE0 & 50 & 0 & 0 & 50\% T\&D to fixed \\
+F100\_WF0\_ROE0 & 100 & 0 & 0 & 100\% T\&D to fixed \\
+F0\_WF1\_ROE0 & 0 & 1 & 0 & Remove wildfire costs \\
+F0\_WF0\_ROE1.0 & 0 & 0 & 1.0 & Reduce ROE by 1\% \\
+F50\_WF1\_ROE1.0 & 50 & 1 & 1.0 & Combined \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =============================================================================
+\section{Post-Adoption Scenarios}
+% =============================================================================
+
+Five customer types are analyzed:
+
+\begin{enumerate}
+    \item \textbf{Non-adopter}: No technology adoption. Bill = baseline bill under designed rates.
+    \item \textbf{EV only}: Baseline load $+$ EV charging profile. No PV or battery.
+    \item \textbf{PV + storage}: Baseline load $+$ PV generation $+$ battery dispatch (LP-optimized). PV sized to 90\% (SCE) or 80\% (PGE, SDGE) of native annual demand.
+    \item \textbf{PV + EV + storage}: Baseline load $+$ EV $+$ PV $+$ battery.
+    \item \textbf{Fully electrified}: Buildings with heat pump already in ResStock baseline $+$ EV $+$ PV $+$ battery. (No Upgrade~11 load substitution for SCE.)
+\end{enumerate}
+
+\subsection{Grid Interaction Metrics}
+
+For each adoption scenario and building:
+
+\begin{align}
+\text{Grid import} &= \sum_t \max(\ell_t - g_t + c_t - d_t \cdot \eta, 0) \label{eq:grid_import} \\
+\text{Grid export} &= \sum_t \max(g_t - \ell_t - c_t + d_t \cdot \eta, 0) \label{eq:grid_export} \\
+\text{Export value} &= \sum_t e_t^{\text{export}} \cdot r_t^{\text{EEC}} \label{eq:export_value} \\
+\text{Self-sufficiency} &= \frac{G_{\text{total}} - E_{\text{total}}}{\sum_t \ell_t} \label{eq:self_sufficiency}
+\end{align}
+
+where $\ell_t$ is native hourly load, $g_t$ is PV generation, $c_t$ is battery charge, $d_t$ is battery discharge, $\eta$ is one-way battery efficiency, and $r_t^{\text{EEC}}$ is the hourly export compensation rate.
+
+Self-sufficiency measures the fraction of native demand met by self-generation (solar consumed on-site after battery optimization), indicating the household's buffer against energy cost and supply shocks.
+
+\end{document}

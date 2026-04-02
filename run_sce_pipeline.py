@@ -73,15 +73,14 @@ def main():
     pipeline_start = time.time()
 
     # ------------------------------------------------------------------
-    # Stage 1: Rate scenarios (pre-computed)
+    # Stage 1: Rate scenarios (loaded if available, generated in Stage 2)
     # ------------------------------------------------------------------
-    if not os.path.exists(RATE_SCENARIOS_OUT):
-        print("\n  Rate scenarios not found. Running rate_designer_sce.py...")
-        from rate_designer_sce import generate_all_scenarios
-        generate_all_scenarios(output_csv=RATE_SCENARIOS_OUT)
-
-    rate_scenarios = pd.read_csv(RATE_SCENARIOS_OUT)
-    print(f"\nLoaded {len(rate_scenarios)} rate scenarios from {RATE_SCENARIOS_OUT}")
+    if os.path.exists(RATE_SCENARIOS_OUT):
+        rate_scenarios = pd.read_csv(RATE_SCENARIOS_OUT)
+        print(f"\nLoaded {len(rate_scenarios)} rate scenarios from {RATE_SCENARIOS_OUT}")
+    else:
+        rate_scenarios = None
+        print(f"\n  Rate scenarios not found — will generate in Stage 2 after computing R_sample")
 
     # ------------------------------------------------------------------
     # Stage 2: Baseline bills

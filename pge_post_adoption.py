@@ -320,11 +320,31 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles, rate_scenarios
         result[f'self_consumption_kwh_{prefix}'] = max(self_consumed, 0)
         result[f'self_sufficiency_{prefix}'] = max(self_consumed, 0) / native_kwh if native_kwh > 0 else 0
 
+        # Compute monthly grid import for baseline credit on designed scenarios
+        days_per_month_arr = np.array([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
+        hours_per_month_arr = days_per_month_arr * 24
+        mb = np.concatenate(([0], np.cumsum(hours_per_month_arr)))
+        designed_bl_credit = 0.0
+        if bl_entry_row is not None:
+            d_sum_bl = bl_entry_row['summer_baseline_allowance']
+            d_win_bl = bl_entry_row['winter_baseline_allowance']
+            bl_cr = actual_rates['E-TOU-C']['baseline_credit']
+            for m_idx in range(12):
+                s_h, e_h = mb[m_idx], mb[m_idx + 1]
+                monthly_import = grid_import_arr[s_h:e_h].sum()
+                if 6 <= (m_idx + 1) <= 10:
+                    monthly_bl = d_sum_bl * days_per_month_arr[m_idx]
+                else:
+                    monthly_bl = d_win_bl * days_per_month_arr[m_idx]
+                designed_bl_credit += bl_cr * min(monthly_import, monthly_bl)
+
         for sname, rate_arr in designed_rate_arrays.items():
             fc = scenario_fixed_charges[sname]
             fixed = fc['care'] if is_care else fc['noncare']
             import_cost = np.dot(grid_import_arr, rate_arr)
             export_credit = np.dot(grid_export_arr, eec_rates)
+            # Subtract baseline credit (applied to grid import)
+            import_cost -= designed_bl_credit
             if is_care and designed_care_discount > 0:
                 import_cost *= (1 - designed_care_discount)
             bill = max(import_cost - export_credit, 0) + fixed
@@ -360,11 +380,31 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles, rate_scenarios
         result[f'self_consumption_kwh_{prefix}'] = 0.0
         result[f'self_sufficiency_{prefix}'] = 0.0
 
+        # Compute monthly baseline credit for designed scenarios (no PV, load = grid import)
+        days_per_month_arr = np.array([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
+        hours_per_month_arr = days_per_month_arr * 24
+        mb = np.concatenate(([0], np.cumsum(hours_per_month_arr)))
+        designed_bl_credit = 0.0
+        if bl_entry_row is not None:
+            d_sum_bl = bl_entry_row['summer_baseline_allowance']
+            d_win_bl = bl_entry_row['winter_baseline_allowance']
+            bl_cr = actual_rates['E-TOU-C']['baseline_credit']
+            for m_idx in range(12):
+                s_h, e_h = mb[m_idx], mb[m_idx + 1]
+                monthly_kwh = load_profile[s_h:e_h].sum()
+                if 6 <= (m_idx + 1) <= 10:
+                    monthly_bl = d_sum_bl * days_per_month_arr[m_idx]
+                else:
+                    monthly_bl = d_win_bl * days_per_month_arr[m_idx]
+                designed_bl_credit += bl_cr * min(monthly_kwh, monthly_bl)
+
         # Designed scenarios
         for sname, rate_arr in designed_rate_arrays.items():
             fc = scenario_fixed_charges[sname]
             fixed = fc['care'] if is_care else fc['noncare']
             vol_cost = np.dot(load_profile, rate_arr)
+            # Subtract baseline credit
+            vol_cost -= designed_bl_credit
             if is_care and designed_care_discount > 0:
                 vol_cost *= (1 - designed_care_discount)
             result[f'{sname}_bill_{prefix}'] = vol_cost + fixed

@@ -8,10 +8,11 @@ Computes bills for tech-adopted buildings under 4 adoption scenarios:
   S4 (full_elec):     Upgrade11 load + EV + PV + battery
 
 SDGE-specific:
-  - Uses RASS-scaled demand
+  - Uses native demand (RASS sf stored but not applied)
   - Single solar centroid (not per-CZ)
   - 6 TOU periods (with midpeak)
   - LP-only battery dispatch
+  - Baseline credits included in designed scenario bills
   - Tracks grid import/export, export value, self-sufficiency
 """
 
@@ -221,14 +222,29 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
         result[f'self_consumption_kwh_{prefix}'] = max(self_consumed, 0)
         result[f'self_sufficiency_{prefix}'] = max(self_consumed, 0) / native_kwh if native_kwh > 0 else 0
 
+        # Baseline credit for designed scenarios: applies to grid IMPORT
+        bl_entry = baseline_df_xl[baseline_df_xl['puma'] == puma_str]
+        designed_bl_credit = 0.0
+        if not bl_entry.empty:
+            d_sum = bl_entry.iloc[0]['summer_baseline_allowance']
+            d_win = bl_entry.iloc[0]['winter_baseline_allowance']
+            bl_rate = actual_rates['TOU-DR']['baseline_credit']
+            for m in range(12):
+                s, e = month_boundaries[m], month_boundaries[m + 1]
+                mi = gi[s:e].sum()
+                bl = (d_sum if 6 <= (m+1) <= 10 else d_win) * days_per_month[m]
+                designed_bl_credit += bl_rate * min(mi, bl)
+
         for sname, rate_arr in designed_rate_arrays.items():
             fc = scenario_fixed_charges[sname]
             fixed = fc['care'] if is_care else fc['noncare']
             imp = np.dot(gi, rate_arr)
             exp = np.dot(ge, eec_rates)
+            # Subtract baseline credit
+            vol_after_credit = imp - designed_bl_credit
             if is_care and designed_care_discount > 0:
-                imp *= (1 - designed_care_discount)
-            result[f'{sname}_bill_{prefix}'] = max(imp - exp, 0) + fixed
+                vol_after_credit *= (1 - designed_care_discount)
+            result[f'{sname}_bill_{prefix}'] = max(vol_after_credit - exp, 0) + fixed
 
         # Actual tariff bills
         for rc, rc_info in actual_rates.items():
@@ -280,10 +296,25 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
         result[f'export_value_{prefix}'] = 0.0
         result[f'self_consumption_kwh_{prefix}'] = 0.0
         result[f'self_sufficiency_{prefix}'] = 0.0
+
+        # Baseline credit for designed scenarios (load_profile = grid import)
+        bl_entry = baseline_df_xl[baseline_df_xl['puma'] == puma_str]
+        designed_bl_credit = 0.0
+        if not bl_entry.empty:
+            d_sum = bl_entry.iloc[0]['summer_baseline_allowance']
+            d_win = bl_entry.iloc[0]['winter_baseline_allowance']
+            bl_rate = actual_rates['TOU-DR']['baseline_credit']
+            for m in range(12):
+                s, e = month_boundaries[m], month_boundaries[m + 1]
+                mi = load_profile[s:e].sum()
+                bl = (d_sum if 6 <= (m+1) <= 10 else d_win) * days_per_month[m]
+                designed_bl_credit += bl_rate * min(mi, bl)
+
         for sname, rate_arr in designed_rate_arrays.items():
             fc = scenario_fixed_charges[sname]
             fixed = fc['care'] if is_care else fc['noncare']
             vol = np.dot(load_profile, rate_arr)
+            vol -= designed_bl_credit  # subtract baseline credit
             if is_care and designed_care_discount > 0:
                 vol *= (1 - designed_care_discount)
             result[f'{sname}_bill_{prefix}'] = vol + fixed
@@ -305,8 +336,7 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
             df = pd.read_parquet(pq_file)
             load_15min = df['out.electricity.total.energy_consumption'].values
             hourly_load = load_15min.reshape(-1, 4).sum(axis=1)
-            sf = row.get('scaling_factor', 1.0)
-            hourly_load = hourly_load * sf  # RASS-scaled
+            sf = row.get('scaling_factor', 1.0)  # stored but NOT applied
 
             gas_col = 'out.natural_gas.total.energy_consumption'
             baseline_gas = 0.0
@@ -367,7 +397,7 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
                 if u11_file.exists():
                     u11_df = pd.read_parquet(u11_file)
                     u11_15min = u11_df['out.electricity.total.energy_consumption'].values
-                    u11_load = u11_15min.reshape(-1, 4).sum(axis=1) * sf
+                    u11_load = u11_15min.reshape(-1, 4).sum(axis=1)  # native demand
                     s4_load = u11_load + ev_profile
                     pv_size_s4 = size_pv_system(s4_load.sum(), annual_kwh_per_kw)
                     bldg_solar_s4 = solar_profile * pv_size_s4

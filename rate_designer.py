@@ -272,6 +272,7 @@ def generate_all_scenarios(fixed_percentages=None, wildfire_options=None,
             tou_weights=tou_weights,
             r_sample=r_sample,
             r_gross_vol=r_gross_vol,
+            bl_total=bl_total,
             sample_n_care=sample_n_care,
             sample_n_noncare=sample_n_noncare,
         ))

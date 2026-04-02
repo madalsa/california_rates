@@ -217,6 +217,22 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles,
             if batt_dispatch is None:
                 lp_fail = 1
 
+        # Precompute baseline credit for designed scenarios (based on grid import)
+        def _designed_bl_credit(grid_import_profile):
+            bl_entry = baseline_df_xl[baseline_df_xl['puma'] == _current_puma]
+            if bl_entry.empty:
+                return 0.0
+            d_sum = bl_entry.iloc[0]['summer_baseline_allowance']
+            d_win = bl_entry.iloc[0]['winter_baseline_allowance']
+            bl_credit_rate = actual_rates['TOU-D-4-9']['baseline_credit']
+            tot = 0.0
+            for m in range(12):
+                s, e = month_boundaries[m], month_boundaries[m + 1]
+                mi = grid_import_profile[s:e].sum()
+                bl = (d_sum if 6 <= (m + 1) <= 10 else d_win) * days_per_month[m]
+                tot += bl_credit_rate * min(mi, bl)
+            return tot
+
         if batt_dispatch is not None:
             gi = batt_dispatch['grid_import']
             ge = batt_dispatch['grid_export']
@@ -226,10 +242,11 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles,
             result[f'export_value_{prefix}'] = np.dot(ge, eec_rates)
             result[f'self_consumption_kwh_{prefix}'] = solar_gen.sum() - ge.sum()
 
+            bl_credit = _designed_bl_credit(gi)
             for sname, rate_arr in designed_rate_arrays.items():
                 fc = scenario_fixed_charges[sname]
                 fixed = fc['care'] if is_care else fc['noncare']
-                imp_cost = np.dot(gi, rate_arr)
+                imp_cost = np.dot(gi, rate_arr) - bl_credit
                 exp_credit = np.dot(ge, eec_rates)
                 if is_care and designed_care_discount > 0:
                     imp_cost *= (1 - designed_care_discount)
@@ -243,10 +260,11 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles,
             result[f'export_value_{prefix}'] = np.dot(he, eec_rates)
             result[f'self_consumption_kwh_{prefix}'] = solar_gen.sum() - he.sum()
 
+            bl_credit = _designed_bl_credit(hi)
             for sname, rate_arr in designed_rate_arrays.items():
                 fc = scenario_fixed_charges[sname]
                 fixed = fc['care'] if is_care else fc['noncare']
-                imp_cost = np.dot(hi, rate_arr)
+                imp_cost = np.dot(hi, rate_arr) - bl_credit
                 exp_credit = np.dot(he, eec_rates)
                 if is_care and designed_care_discount > 0:
                     imp_cost *= (1 - designed_care_discount)
@@ -305,10 +323,23 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles,
         result[f'export_value_{prefix}'] = 0.0
         result[f'self_consumption_kwh_{prefix}'] = 0.0
 
+        # Baseline credit for designed scenarios (all consumption is grid import)
+        bl_credit_designed = 0.0
+        bl_entry = baseline_df_xl[baseline_df_xl['puma'] == puma_str]
+        if not bl_entry.empty:
+            d_sum = bl_entry.iloc[0]['summer_baseline_allowance']
+            d_win = bl_entry.iloc[0]['winter_baseline_allowance']
+            bl_credit_rate = actual_rates['TOU-D-4-9']['baseline_credit']
+            for m in range(12):
+                s, e = month_boundaries[m], month_boundaries[m + 1]
+                mkwh = load_profile[s:e].sum()
+                bl = (d_sum if 6 <= (m + 1) <= 10 else d_win) * days_per_month[m]
+                bl_credit_designed += bl_credit_rate * min(mkwh, bl)
+
         for sname, rate_arr in designed_rate_arrays.items():
             fc = scenario_fixed_charges[sname]
             fixed = fc['care'] if is_care else fc['noncare']
-            vol_cost = np.dot(load_profile, rate_arr)
+            vol_cost = np.dot(load_profile, rate_arr) - bl_credit_designed
             if is_care and designed_care_discount > 0:
                 vol_cost *= (1 - designed_care_discount)
             result[f'{sname}_bill_{prefix}'] = vol_cost + fixed

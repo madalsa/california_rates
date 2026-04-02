@@ -176,6 +176,7 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
 
     results = []
     tou_consumption = {}
+    monthly_consumption = {}
     start_time = time.time()
     errors = 0
 
@@ -212,6 +213,13 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
             for period, mask in period_masks.items():
                 bldg_tou[period] = hourly_load[mask].sum()
             tou_consumption[int(building_id)] = bldg_tou
+
+            # Monthly consumption (for baseline credit calculation)
+            bldg_monthly = []
+            for m in range(12):
+                s, e = ta['month_boundaries'][m], ta['month_boundaries'][m + 1]
+                bldg_monthly.append(hourly_load[s:e].sum())
+            monthly_consumption[int(building_id)] = bldg_monthly
 
             # Actual tariff bills
             for rate_code, col_prefix in ACTUAL_SCE_RATES.items():
@@ -256,15 +264,25 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
     print(f"    Sample weighted baseline revenue (R_0): ${R_0/1e9:.4f}B")
     print(f"    Mean bill: ${np.nanmean(V):,.0f}/yr")
 
-    # --- Compute R_gross_vol ---
+    # --- Compute R_gross_vol and BL_total ---
     from rate_designer_sce import BASELINE_TOU_RATES
     sce_wd = rates_df[
         (rates_df['rate_type'] == 'TOU-D-4-9') &
         (rates_df['weekday'] == 'weekday')
     ].iloc[0]
     baseline_care_discount = abs(safe_float(sce_wd.get('care_discount', 0)))
+    baseline_credit_rate = safe_float(sce_wd.get('baseline_credit', 0))
+
+    days_per_month = ta['days_per_month']
+    month_boundaries = ta['month_boundaries']
+
+    # Pre-compute per-building monthly consumption for baseline credit calc
+    # We stored hourly loads during the main loop; re-read from parquets is
+    # too expensive, so we compute monthly totals in the main loop above.
+    # Instead, compute BL credits from the parquet re-read below.
 
     r_gross_vol = 0.0
+    bl_total = 0.0
     for _, bldg_row in df_bills.iterrows():
         bid = bldg_row['building_id']
         if bid not in tou_consumption:
@@ -273,8 +291,26 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
         gross = sum(bldg_tou[p] * BASELINE_TOU_RATES[p] for p in TOU_PERIODS)
         care_factor = (1 - baseline_care_discount) if bldg_row['is_care'] else 1.0
         r_gross_vol += gross * care_factor
+
+        # Baseline credit for this building (same logic as actual tariff)
+        puma_str = bldg_row.get('puma', '')
+        bl_entry = baseline_df[baseline_df['puma'] == puma_str]
+        if not bl_entry.empty and bid in monthly_consumption:
+            d_sum = bl_entry['summer_baseline_allowance'].values[0]
+            d_win = bl_entry['winter_baseline_allowance'].values[0]
+            bldg_bl = 0.0
+            for m in range(12):
+                mkwh = monthly_consumption[bid][m]
+                bl_allow = (d_sum if 6 <= (m + 1) <= 10 else d_win) * days_per_month[m]
+                bldg_bl += baseline_credit_rate * min(mkwh, bl_allow)
+            # Apply CARE factor to baseline credit (same as actual tariff)
+            bldg_bl *= care_factor
+            bl_total += bldg_bl
+
     r_gross_vol *= BUILDING_WEIGHT
+    bl_total *= BUILDING_WEIGHT
     print(f"    Gross volumetric revenue: ${r_gross_vol/1e9:.4f}B")
+    print(f"    Aggregate baseline credits (BL_total): ${bl_total/1e9:.4f}B")
 
     # --- Generate rate scenarios if needed ---
     if rate_scenarios_df is None:
@@ -283,6 +319,7 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
             output_csv=RATE_SCENARIOS_OUT,
             r_sample=R_0,
             r_gross_vol=r_gross_vol,
+            bl_total=bl_total,
             sample_n_care=sample_n_care,
             sample_n_noncare=sample_n_noncare,
         )
@@ -315,6 +352,18 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
                 continue
             bldg_tou = tou_consumption[bid]
             vol_bill = sum(bldg_tou[p] * blended[p] for p in TOU_PERIODS)
+
+            # Baseline credit (same structure as actual tariff)
+            puma_str = bldg_row.get('puma', '')
+            bl_entry = baseline_df[baseline_df['puma'] == puma_str]
+            if not bl_entry.empty and bid in monthly_consumption:
+                d_sum = bl_entry['summer_baseline_allowance'].values[0]
+                d_win = bl_entry['winter_baseline_allowance'].values[0]
+                for m in range(12):
+                    mkwh = monthly_consumption[bid][m]
+                    bl_allow = (d_sum if 6 <= (m + 1) <= 10 else d_win) * days_per_month[m]
+                    vol_bill -= baseline_credit_rate * min(mkwh, bl_allow)
+
             if bldg_row['is_care'] and baseline_care_discount > 0:
                 vol_bill *= (1 - baseline_care_discount)
             fixed = fc_care_annual if bldg_row['is_care'] else fc_noncare_annual

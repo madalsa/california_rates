@@ -99,6 +99,13 @@ def battery_lp_dispatch(hourly_load, solar_gen, rate_array, eec_rates=None):
                                               'dual_feasibility_tolerance': 1e-6,
                                               'primal_feasibility_tolerance': 1e-6})
 
+    # Log any failures for diagnostics
+    if result.status not in (0, 1) or result.x is None:
+        import sys
+        print(f"    LP status={result.status} msg='{result.message}' "
+              f"net_load range=[{net_load.min():.1f}, {net_load.max():.1f}]",
+              file=sys.stderr)
+
     # Accept optimal (0) and iteration-limit-with-feasible (1)
     if result.status in (0, 1) and result.x is not None:
         x = result.x

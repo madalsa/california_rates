@@ -98,7 +98,7 @@ def battery_lp_dispatch(hourly_load, solar_gen, rate_array, eec_rates=None):
 
     result = linprog(c_obj, A_eq=A_eq, b_eq=b_eq,
                      bounds=list(zip(bounds[:, 0], bounds[:, 1])),
-                     method='highs', options={'time_limit': 300.0,
+                     method='highs', options={'time_limit': 30.0,
                                               'presolve': True,
                                               'dual_feasibility_tolerance': 1e-6,
                                               'primal_feasibility_tolerance': 1e-6})
@@ -120,7 +120,7 @@ def battery_lp_dispatch(hourly_load, solar_gen, rate_array, eec_rates=None):
         result2 = linprog(c_obj, A_eq=A_eq, b_eq=b_eq_scaled,
                           bounds=[(lo/scale, hi/scale if hi != np.inf else hi)
                                   for lo, hi in zip(bounds[:, 0], bounds[:, 1])],
-                          method='highs', options={'time_limit': 300.0})
+                          method='highs', options={'time_limit': 30.0})
         if result2.status in (0, 1) and result2.x is not None:
             x = result2.x * scale
         else:

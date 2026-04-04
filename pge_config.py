@@ -99,7 +99,7 @@ PGE_CZ_COORDINATES = {
 # ---------------------------------------------------------------------------
 
 DEFAULT_PV_SIZE_KW = 5.0
-PV_OFFSET_TARGET = 0.80           # 80% for PGE (uses native demand)
+PV_OFFSET_TARGET = 0.90           # 90% of native annual demand
 PV_MIN_SIZE_KW = 2.0
 PV_MAX_SIZE_KW = 12.0
 PGE_ANNUAL_KWH_PER_KW = 1600.0

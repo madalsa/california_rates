@@ -87,7 +87,7 @@ SDGE_ALTITUDE = 130
 # ---------------------------------------------------------------------------
 
 DEFAULT_PV_SIZE_KW = 5.0
-PV_OFFSET_TARGET = 0.80
+PV_OFFSET_TARGET = 0.90           # 90% of native annual demand
 PV_MIN_SIZE_KW = 2.0
 PV_MAX_SIZE_KW = 12.0
 SDGE_ANNUAL_KWH_PER_KW = 1700.0

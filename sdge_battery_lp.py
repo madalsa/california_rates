@@ -68,7 +68,8 @@ def battery_lp_dispatch(hourly_load, solar_gen, rate_array, eec_rates=None):
     # Bounds
     bounds = np.zeros((n, 2))
     bounds[0:T, 1] = np.inf        # g >= 0, no upper bound
-    bounds[T:2*T, 1] = np.inf      # e >= 0, no upper bound
+    # Export bounded: can't pull from grid to re-export
+    bounds[T:2*T, 1] = np.maximum(solar_gen, 0) + pmax
     bounds[2*T:3*T, 1] = pmax      # 0 <= c <= pmax
     bounds[3*T:4*T, 1] = pmax      # 0 <= d <= pmax
     bounds[4*T:5*T, 1] = cap       # 0 <= s <= cap
@@ -124,13 +125,6 @@ def battery_lp_dispatch(hourly_load, solar_gen, rate_array, eec_rates=None):
                                               'presolve': True,
                                               'dual_feasibility_tolerance': 1e-6,
                                               'primal_feasibility_tolerance': 1e-6})
-
-    # Debug: log failure reason
-    if result.status not in (0, 1) or result.x is None:
-        import sys
-        print(f"    LP status={result.status} msg='{result.message}' "
-              f"net_load range=[{net_load.min():.1f}, {net_load.max():.1f}]",
-              file=sys.stderr)
 
     # Accept optimal (0) and iteration-limit-with-feasible (1)
     if result.status in (0, 1) and result.x is not None:

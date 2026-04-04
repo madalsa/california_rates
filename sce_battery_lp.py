@@ -60,7 +60,8 @@ def battery_lp_dispatch(hourly_load, solar_gen, rate_array, eec_rates=None):
     # Bounds
     bounds = np.zeros((n, 2))
     bounds[0:T, 1] = np.inf        # grid import
-    bounds[T:2*T, 1] = np.inf      # grid export
+    # Export bounded: can't pull from grid to re-export
+    bounds[T:2*T, 1] = np.maximum(solar_gen, 0) + pmax
     bounds[2*T:3*T, 1] = pmax      # charge
     bounds[3*T:4*T, 1] = pmax      # discharge
     bounds[4*T:5*T, 1] = cap       # SOC

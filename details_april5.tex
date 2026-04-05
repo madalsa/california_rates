@@ -1,4 +1,4 @@
-% details_april5.tex — Baseline Allowance Methodology
+% details_april5.tex — Baseline Allowance, LP Battery Dispatch, and EV Charging
 % California IOU Rate Analysis (PGE, SCE, SDGE)
 % Date: 2026-04-05
 
@@ -7,7 +7,7 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{booktabs}
 
-\title{Baseline Allowance Methodology}
+\title{Methodology Details: Baseline Allowance, LP Battery Dispatch, and EV Charging}
 \author{California IOU Rate Analysis}
 \date{April 5, 2026}
 
@@ -151,5 +151,242 @@ SDG\&E & \texttt{sdge\_baseline\_bills.py} & \texttt{sdge\_post\_adoption.py} \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+% =============================================================================
+% =============================================================================
+%
+%  PART 2: LP BATTERY DISPATCH
+%
+% =============================================================================
+% =============================================================================
+
+\newpage
+\section{Battery Dispatch Optimization}
+
+For households with PV and battery storage, we solve a linear program (LP) to determine the optimal hourly battery charge/discharge schedule that minimizes the household's annual electricity cost. The LP is solved using the HiGHS solver via \texttt{scipy.optimize.linprog}.
+
+\subsection{PV System Sizing}
+
+PV capacity is determined before the LP, based on native (unscaled) annual demand:
+
+\begin{equation}
+    C_i = \text{clip}\!\left(\frac{0.90 \times D_i^{\text{annual}}}{v^{\text{annual}}},\; C_{\min},\; C_{\max}\right)
+\end{equation}
+
+where $D_i^{\text{annual}}$ is the building's native annual electricity consumption (kWh), $v^{\text{annual}}$ is the annual generation per kW from the pvlib solar profile for the building's CEC climate zone, $C_{\min} = 3$ kW, and $C_{\max} = 15$ kW. The 90\% offset target reflects median residential PV sizing in California IOU territories.
+
+The hourly solar generation profile is:
+\begin{equation}
+    V_t = C_i \cdot v_t \quad \forall \, t \in \{1, \ldots, 8760\}
+\end{equation}
+where $v_t$ is the per-kW hourly generation from pvlib (climate-zone specific).
+
+\subsection{Battery Parameters}
+
+The battery is modeled as a Tesla Powerwall equivalent with fixed parameters (not optimized):
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{l c l}
+\toprule
+\textbf{Parameter} & \textbf{Value} & \textbf{Description} \\
+\midrule
+$E$ & 13.5 kWh & Energy capacity \\
+$P_{\max}$ & 5.0 kW & Maximum charge/discharge power \\
+$\eta_{\text{rt}}$ & 0.90 & Round-trip efficiency \\
+$\eta = \sqrt{\eta_{\text{rt}}}$ & 0.949 & One-way efficiency \\
+$s_0$ & $0.5 \times E = 6.75$ kWh & Initial state of charge \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{LP Formulation}
+
+\subsubsection{Decision Variables}
+
+Five variables per hour, $T = 8760$ hours, giving $5T = 43{,}800$ variables total:
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{l c l}
+\toprule
+\textbf{Variable} & \textbf{Bounds} & \textbf{Meaning} \\
+\midrule
+$g_t$ & $[0, \infty)$ & Grid import at hour $t$ (kWh) \\
+$e_t$ & $[0,\; V_t + P_{\max}]$ & Grid export at hour $t$ (kWh) \\
+$c_t$ & $[0,\; P_{\max}]$ & Battery charge at hour $t$ (kWh) \\
+$d_t$ & $[0,\; P_{\max}]$ & Battery discharge at hour $t$ (kWh) \\
+$s_t$ & $[0,\; E]$ & State of charge at hour $t$ (kWh) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The export upper bound $V_t + P_{\max}$ prevents the model from importing electricity from the grid solely to re-export it for profit. At any hour, exports cannot exceed the combined PV generation and maximum battery discharge.
+
+\subsubsection{Objective Function}
+
+Minimize the net annual electricity cost:
+
+\begin{equation}
+    \min \sum_{t=1}^{T} \left( p_t \cdot g_t - q_t \cdot e_t \right)
+\end{equation}
+
+where $p_t$ is the hourly retail import rate (\$/kWh) from the TOU tariff, and $q_t$ is the hourly export compensation rate (\$/kWh) from the EEC schedule.
+
+\subsubsection{Constraints}
+
+\textbf{Energy balance} ($T$ equality constraints):
+\begin{equation}
+    g_t - e_t - c_t + d_t \cdot \eta = D_t - V_t \quad \forall \, t \in \{1, \ldots, T\}
+\end{equation}
+
+The left-hand side represents the net grid interaction plus battery flows. The right-hand side is the net load (demand minus solar generation). When $D_t - V_t > 0$, the household must import from the grid or discharge the battery. When $D_t - V_t < 0$, excess solar can charge the battery or be exported.
+
+\textbf{SOC dynamics} ($T - 1$ equality constraints):
+\begin{equation}
+    s_t - s_{t-1} - c_t \cdot \eta + d_t = 0 \quad \forall \, t \in \{2, \ldots, T\}
+\end{equation}
+
+The state of charge increases by $c_t \cdot \eta$ when charging (accounting for one-way efficiency loss) and decreases by $d_t$ when discharging.
+
+\textbf{Initial SOC}:
+\begin{equation}
+    s_1 - c_1 \cdot \eta + d_1 = 0.5 \times E
+\end{equation}
+
+The battery starts at 50\% capacity. This is a standard assumption; the choice has negligible effect on annual results since the battery cycles daily.
+
+\subsection{Dispatch Reuse Across Rate Scenarios}
+
+The LP is solved \textbf{once per building per adoption scenario} using the actual tariff rate array (E-TOU-C for PG\&E, TOU-D-4-9 for SCE, TOU-DR for SDG\&E). The resulting dispatch profile --- the hourly vectors $g_t$, $e_t$, $c_t$, $d_t$, $s_t$ --- is then reused to compute bills under all 8 rate scenarios (6 designed + 2 actual tariff variants).
+
+This is valid because all rate scenarios share the same TOU period structure:
+\begin{itemize}
+    \item \textbf{PG\&E}: Peak 4--9 PM, Off-peak all other hours (4 periods)
+    \item \textbf{SCE}: Peak 4--9 PM, Mid-peak 9 PM--8 AM (winter only), Off-peak remainder (5 periods)
+    \item \textbf{SDG\&E}: Peak 4--9 PM, Mid-peak 6 AM--4 PM \& 9--10 PM, Off-peak 10 PM--6 AM (6 periods)
+\end{itemize}
+
+The designed rate scenarios apply a uniform scaling factor $s$ to all TOU period rates (see Section~4 of \texttt{ratedesignaprl1.tex}). This preserves the \textit{timing} of peak and off-peak hours --- only the rate levels change. Since the optimal battery dispatch depends on \textit{when} rates are high vs.\ low (not the absolute level), the dispatch profile is invariant to uniform rate scaling.
+
+\textbf{Result}: Each building requires only 2 LP solves total:
+\begin{itemize}
+    \item 1 LP for S2 (PV + storage): demand $D_t$ = native building load
+    \item 1 LP for S3 (PV + storage + EV): demand $D_t$ = native load + EV charging
+\end{itemize}
+
+Each LP solve takes approximately 0.5 seconds (HiGHS solver). Bills for all 8 rate scenarios are computed from the shared dispatch using simple dot products ($\sim$0.001 seconds each).
+
+\subsection{Bill Computation from Dispatch}
+
+Given the dispatch profile $(g_t, e_t)$ from the LP, the bill under rate scenario $k$ is:
+
+\begin{equation}
+    \text{Bill}_i^{(k)} = \left[ \sum_t g_t \cdot r_t^{(k)} - BL_{\text{post}}(i) \right] \times (1 - d_i) - \sum_t e_t \cdot q_t + \text{FC}_i^{(k)}
+\end{equation}
+
+where $r_t^{(k)}$ is the hourly rate under scenario $k$, $BL_{\text{post}}(i)$ is the baseline credit applied to monthly grid imports (Section~3.4), $d_i$ is the CARE discount, $q_t$ is the EEC export rate, and $\text{FC}_i^{(k)}$ is the annual fixed charge under scenario $k$. The bill is floored at zero.
+
+% =============================================================================
+% =============================================================================
+%
+%  PART 3: EV CHARGING PROFILE
+%
+% =============================================================================
+% =============================================================================
+
+\newpage
+\section{EV Charging Profile}
+
+\subsection{Daily Driving Distance}
+
+Each EV-adopted building is assigned a persistent daily driving distance sampled from the empirical BEV daily vehicle miles traveled (DVMT) distribution (source: vehicletrends.us, BEV All). The inverse-CDF sampling ensures the distribution of driving distances across the building sample matches observed BEV usage patterns.
+
+\begin{table}[htbp]
+\centering
+\caption{BEV Daily VMT empirical CDF}
+\begin{tabular}{r r}
+\toprule
+\textbf{Daily Miles} & \textbf{Cumulative Probability} \\
+\midrule
+0 & 0.00 \\
+5 & 0.03 \\
+10 & 0.12 \\
+15 & 0.25 \\
+20 & 0.42 \\
+25 & 0.58 \\
+30 & 0.70 \\
+35 & 0.80 \\
+40 & 0.87 \\
+50 & 0.95 \\
+60 & 0.98 \\
+70 & 1.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The mean daily VMT from this distribution is approximately 24 miles/day.
+
+\subsection{Charging Parameters}
+
+EV charging is modeled as Level 2 home charging with the following parameters:
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{l c l}
+\toprule
+\textbf{Parameter} & \textbf{Value} & \textbf{Description} \\
+\midrule
+Charger power & 7.2 kW & Level 2 (240V $\times$ 30A) \\
+Efficiency & 3.0 mi/kWh & Wall-to-wheels \\
+Start time & 10:00 PM & Daily charging start \\
+Duration & Variable & Depends on daily miles driven \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Charging Profile Construction}
+
+The daily energy requirement and charging duration for building $i$ are:
+
+\begin{align}
+    E_i^{\text{EV}} &= \frac{\text{daily\_miles}_i}{\text{efficiency}} = \frac{\text{daily\_miles}_i}{3.0} \quad \text{(kWh/day)} \\
+    \tau_i &= \frac{E_i^{\text{EV}}}{P_{\text{charger}}} = \frac{E_i^{\text{EV}}}{7.2} \quad \text{(hours)}
+\end{align}
+
+The hourly charging profile is constructed as:
+
+\begin{equation}
+    \text{EV}_t = \begin{cases}
+        P_{\text{charger}} = 7.2 \text{ kW} & \text{for full hours after 10 PM} \\
+        P_{\text{charger}} \times (\tau_i - \lfloor \tau_i \rfloor) & \text{for the fractional last hour} \\
+        0 & \text{otherwise}
+    \end{cases}
+\end{equation}
+
+The profile is identical every day of the year (no weekday/weekend or seasonal variation).
+
+\textbf{Examples}:
+\begin{itemize}
+    \item 24 mi/day $\rightarrow$ 8.0 kWh $\rightarrow$ 1.11 hours: 7.2 kW from 10:00--11:00 PM, 0.8 kW from 11:00--11:07 PM
+    \item 40 mi/day $\rightarrow$ 13.3 kWh $\rightarrow$ 1.85 hours: 7.2 kW from 10:00--11:00 PM, 6.1 kW from 11:00--11:51 PM
+    \item 60 mi/day $\rightarrow$ 20.0 kWh $\rightarrow$ 2.78 hours: 7.2 kW from 10:00 PM--12:00 AM, 5.6 kW from 12:00--12:47 AM
+\end{itemize}
+
+\subsection{Integration with Adoption Scenarios}
+
+The EV charging profile enters the analysis in two adoption scenarios:
+
+\begin{itemize}
+    \item \textbf{S1 (EV only)}: The demand profile is $D_t + \text{EV}_t$. No PV or battery. Bills are computed directly from the augmented load profile (no LP).
+
+    \item \textbf{S3 (PV + Storage + EV)}: The demand profile entering the LP is $D_t + \text{EV}_t$. The LP optimizes battery dispatch against the combined load minus solar:
+    \begin{equation}
+        \text{net\_load}_t = (D_t + \text{EV}_t) - V_t
+    \end{equation}
+    The battery can shift EV charging costs by discharging stored solar during the charging window, or by storing cheap off-peak grid electricity to offset the EV load.
+\end{itemize}
+
+Note that the EV charging schedule is \textit{not} optimized by the LP --- it is a fixed exogenous load profile. The LP optimizes only the battery dispatch given the total demand (building + EV) and solar generation.
 
 \end{document}

@@ -155,7 +155,136 @@ SDG\&E & \texttt{sdge\_baseline\_bills.py} & \texttt{sdge\_post\_adoption.py} \\
 % =============================================================================
 % =============================================================================
 %
-%  PART 2: LP BATTERY DISPATCH
+%  PART 2: RATE DESIGN METHOD
+%
+% =============================================================================
+% =============================================================================
+
+\newpage
+\section{Rate Design Method}
+
+\subsection{Overview}
+
+We design counterfactual rate scenarios by modifying three policy levers in the utility's revenue requirement, then computing new TOU volumetric rates that collect the adjusted revenue. The baseline credit and CARE discount are held constant across all scenarios as structural features of the rate, not policy variables.
+
+\subsection{Policy Levers}
+
+Three levers modify the revenue collected through rates:
+
+\begin{enumerate}
+    \item \textbf{Fixed cost allocation} ($F\%$): Shift $F\%$ of transmission and distribution (T\&D) costs from volumetric rates to fixed monthly charges. This is revenue-neutral --- total revenue is unchanged, only the collection mechanism shifts.
+
+    \item \textbf{Wildfire cost removal} ($\mathbb{1}_{\text{wf}}$): Remove wildfire fund recovery costs from the revenue requirement. This \textit{reduces} total revenue.
+
+    \item \textbf{ROE reduction} ($\Delta$ pp): Reduce the utility's authorized return on equity by $\Delta$ percentage points. Revenue impact: $\text{RateBase} \times \text{EquityShare} \times \frac{\Delta}{100} \times \text{ResShare}$. This \textit{reduces} total revenue.
+\end{enumerate}
+
+\subsection{Revenue Target}
+
+The target revenue under scenario $k$ is:
+
+\begin{equation}
+    R_{\text{target}}^{(k)} = R_{\text{sample}} - \mathbb{1}_{\text{wf}} \cdot R_{\text{sample}} \cdot \alpha_{\text{wf}} - R_{\text{sample}} \cdot \alpha_{\text{roe}} \cdot \Delta
+\end{equation}
+
+where $R_{\text{sample}}$ is the weighted sample revenue under the current actual tariff, $\alpha_{\text{wf}} = C_{\text{wf}} / R_{\text{sample}}$ is the wildfire cost share, and $\alpha_{\text{roe}} = (\text{RateBase} \times \text{EquityShare} \times 0.01 \times \text{ResShare}) / R_{\text{sample}}$ is the ROE share per percentage point.
+
+For the benchmark scenario F0\_WF0\_ROE0: $R_{\text{target}} = R_{\text{sample}}$ (no cost removal).
+
+\subsection{Fixed Charge Calculation}
+
+When $F\% > 0$, a portion of T\&D costs is collected through monthly fixed charges:
+
+\begin{equation}
+    R_{\text{fixed}} = R_{\text{sample}} \cdot \alpha_{\text{td}} \cdot \frac{F\%}{100}
+\end{equation}
+
+Per-customer monthly charges are differentiated by CARE status using ratio $\gamma = 0.248$:
+
+\begin{align}
+    \text{FC}_{\text{nonCARE}} &= \frac{R_{\text{fixed}}}{(N_{\text{nonCARE}} + \gamma \cdot N_{\text{CARE}}) \times 12} \\
+    \text{FC}_{\text{CARE}} &= \gamma \cdot \text{FC}_{\text{nonCARE}}
+\end{align}
+
+\subsection{Volumetric Rate Scaling}
+
+The remaining revenue to be collected volumetrically:
+
+\begin{equation}
+    R_{\text{vol}} = R_{\text{target}} - R_{\text{fixed}}
+\end{equation}
+
+Designed TOU rates are proportionally scaled from the actual tariff:
+
+\begin{equation}
+    \tilde{r}^p = s \cdot r^p \quad \text{where} \quad s = \frac{R_{\text{vol}}}{R_{\text{sample}}}
+\end{equation}
+
+This proportional scaling preserves the TOU rate shape (peak-to-offpeak ratio) while uniformly adjusting rate levels. For the benchmark F0\_WF0\_ROE0, $s = 1.0$ and designed rates exactly equal actual tariff rates.
+
+\subsection{CARE Discount in Designed Rates}
+
+The CARE discount is applied identically to the actual tariff:
+
+\begin{equation}
+    \text{Bill}_i^{(k)} = \left[ \sum_p Q_i^p \cdot (s_k \cdot r^p) - BL(i) \right] \times (1 - d_i) + \text{FC}_i^{(k)}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $s_k \cdot r^p$ are the scaled TOU rates for scenario $k$
+    \item $BL(i)$ is the baseline credit (constant, same as actual tariff --- see Section~3)
+    \item $d_i$ is the CARE discount (applied to net volumetric charges, not fixed charges)
+    \item $\text{FC}_i^{(k)}$ is the annual fixed charge: $\text{FC}_{\text{CARE}} \times 12$ or $\text{FC}_{\text{nonCARE}} \times 12$
+\end{itemize}
+
+The CARE discount percentages are utility-specific constants taken from the actual tariff schedule: 35\% for PG\&E, 32.5\% for SCE, 37\% for SDG\&E.
+
+\subsection{Rate Scenarios}
+
+Eight rate scenarios are evaluated per utility:
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{l c c c l}
+\toprule
+\textbf{Scenario} & $F\%$ & $\mathbb{1}_{\text{wf}}$ & $\Delta$ & \textbf{Description} \\
+\midrule
+Actual tariff & --- & --- & --- & Status quo (no fixed charge variant) \\
+Actual tariff-F & --- & --- & --- & Status quo with income-graduated fixed charges \\
+F0\_WF0\_ROE0 & 0 & 0 & 0 & Benchmark (= actual tariff) \\
+F50\_WF0\_ROE0 & 50 & 0 & 0 & 50\% of T\&D to fixed charges \\
+F100\_WF0\_ROE0 & 100 & 0 & 0 & 100\% of T\&D to fixed charges \\
+F0\_WF1\_ROE0 & 0 & 1 & 0 & Remove wildfire costs from rates \\
+F0\_WF0\_ROE1.0 & 0 & 0 & 1.0 & Reduce authorized ROE by 1 pp \\
+F50\_WF1\_ROE1.0 & 50 & 1 & 1.0 & Combined: 50\% fixed + wildfire removal + ROE cut \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Utility Cost Shares}
+
+The cost component shares determine the magnitude of each policy lever:
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{l r r r}
+\toprule
+\textbf{Cost Share} & \textbf{PG\&E} & \textbf{SCE} & \textbf{SDG\&E} \\
+\midrule
+T\&D ($\alpha_{\text{td}}$) & 56.1\% & 55.9\% & 56.9\% \\
+Wildfire ($\alpha_{\text{wf}}$) & 26.6\% & 16.3\% & 9.8\% \\
+ROE per pp ($\alpha_{\text{roe}}$) & 1.1\% & 1.2\% & 1.7\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Note: PG\&E has the largest wildfire cost share (26.6\%), reflecting its disproportionate wildfire liability. SDG\&E has the highest ROE sensitivity per percentage point (1.7\%) due to its smaller revenue base relative to rate base.
+
+% =============================================================================
+% =============================================================================
+%
+%  PART 3: LP BATTERY DISPATCH (was Part 2)
 %
 % =============================================================================
 % =============================================================================

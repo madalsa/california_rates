@@ -1,0 +1,155 @@
+% details_april5.tex — Baseline Allowance Methodology
+% California IOU Rate Analysis (PGE, SCE, SDGE)
+% Date: 2026-04-05
+
+\documentclass[11pt]{article}
+\usepackage{amsmath, amssymb}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+
+\title{Baseline Allowance Methodology}
+\author{California IOU Rate Analysis}
+\date{April 5, 2026}
+
+\begin{document}
+\maketitle
+
+% =============================================================================
+\section{Baseline Allowance Overview}
+% =============================================================================
+
+California's baseline allowance program provides a per-kWh credit on electricity consumption up to a threshold, protecting low-usage customers from high volumetric rates. The threshold varies by geography (PUMA/climate zone) and season, reflecting differences in climate-driven energy needs.
+
+% =============================================================================
+\section{Baseline Allowance Structure}
+% =============================================================================
+
+\subsection{Allowance Determination}
+
+Each building $i$ is assigned a daily baseline allowance based on its PUMA (Public Use Microdata Area), which serves as a proxy for climate zone:
+
+\begin{align}
+    B_i^{\text{daily, summer}} &= \text{baseline\_puma}(i, \text{summer}) \quad \text{(kWh/day)} \\
+    B_i^{\text{daily, winter}} &= \text{baseline\_puma}(i, \text{winter}) \quad \text{(kWh/day)}
+\end{align}
+
+These values are sourced from the \texttt{baseline\_puma} sheet in each utility's rate data file (\texttt{retail\_rates\_data\_PGE.xlsx}, \texttt{retail\_rates\_data\_SCE.xlsx}, \texttt{retail\_rates\_data\_SDGE.xlsx}).
+
+\subsection{Monthly Baseline Threshold}
+
+The monthly baseline allowance for building $i$ in month $m$ is:
+
+\begin{equation}
+    B_i^m = \begin{cases}
+        B_i^{\text{daily, summer}} \times D_m & \text{if } m \in \{6, 7, 8, 9, 10\} \text{ (Jun--Oct)} \\
+        B_i^{\text{daily, winter}} \times D_m & \text{if } m \in \{1, 2, 3, 4, 5, 11, 12\} \text{ (Nov--May)}
+    \end{cases}
+\end{equation}
+
+where $D_m$ is the number of days in month $m$.
+
+% =============================================================================
+\section{Baseline Credit Calculation}
+% =============================================================================
+
+\subsection{Credit Rate}
+
+Each utility applies a constant baseline credit rate $b$ (\$/kWh) to consumption within the baseline threshold:
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{l c}
+\toprule
+\textbf{Utility} & \textbf{Baseline Credit Rate} $b$ \textbf{(\$/kWh)} \\
+\midrule
+PG\&E (E-TOU-C) & 0.09566 \\
+SCE (TOU-D-4-9) & 0.10000 \\
+SDG\&E (TOU-DR) & 0.11017 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Annual Baseline Credit}
+
+The annual baseline credit for building $i$ is computed month by month:
+
+\begin{equation}
+    BL(i) = \sum_{m=1}^{12} b \cdot \min\!\left(Q_i^m,\; B_i^m\right)
+\end{equation}
+
+where $Q_i^m$ is the total electricity consumption (kWh) of building $i$ in month $m$.
+
+\begin{itemize}
+    \item If $Q_i^m \leq B_i^m$: the full monthly consumption receives the credit.
+    \item If $Q_i^m > B_i^m$: only the baseline portion receives the credit; consumption above the threshold pays the full TOU rate.
+\end{itemize}
+
+\subsection{Effect on Bill}
+
+The baseline credit is subtracted from gross volumetric charges before applying the CARE discount:
+
+\begin{equation}
+    \text{Bill}_i = \left[\underbrace{\sum_p Q_i^p \cdot r^p}_{\text{gross volumetric}} - \underbrace{BL(i)}_{\text{baseline credit}}\right] \times (1 - d_i) + \text{FC}_i
+\end{equation}
+
+where $r^p$ is the TOU rate for period $p$, $d_i$ is the CARE discount (0.35 for PG\&E, 0.325 for SCE, 0.37 for SDG\&E; 0 for non-CARE), and $\text{FC}_i$ is the annual fixed charge.
+
+% =============================================================================
+\section{Application Across Rate Scenarios}
+% =============================================================================
+
+\subsection{Actual Tariff Rates}
+
+For the status quo tariff (E-TOU-C, TOU-D-4-9, TOU-DR), the baseline credit is applied to the building's total metered consumption $Q_i^m$.
+
+\subsection{Designed Rate Scenarios}
+
+For designed rate scenarios (F0\_WF0\_ROE0, F50\_WF0\_ROE0, etc.), the same baseline credit rate $b$ and allowance thresholds $B_i^m$ are used. The credit is constant across all designed scenarios---it is a structural feature of the rate, not a policy lever.
+
+The volumetric rates $\tilde{r}^p = s \cdot r^p$ change with the scenario scaling factor $s$, but the credit $b$ does not.
+
+\subsection{Post-Adoption Scenarios (PV + Storage)}
+
+For technology adopters with PV and battery storage, the baseline credit is applied to \textbf{grid import} rather than total consumption. After the LP-optimized battery dispatch determines the hourly grid import profile $g_t$, the monthly grid import is:
+
+\begin{equation}
+    G_i^m = \sum_{t \in m} g_t
+\end{equation}
+
+The baseline credit then becomes:
+
+\begin{equation}
+    BL_{\text{post}}(i) = \sum_{m=1}^{12} b \cdot \min\!\left(G_i^m,\; B_i^m\right)
+\end{equation}
+
+This reflects the fact that under net billing, the baseline credit applies to electricity purchased from the grid, not to self-consumed solar generation. A household with PV + storage that imports less from the grid receives a smaller baseline credit.
+
+% =============================================================================
+\section{Data Sources}
+% =============================================================================
+
+\begin{itemize}
+    \item \textbf{Baseline allowances by PUMA}: \texttt{baseline\_puma} sheet in each utility's \texttt{retail\_rates\_data\_*.xlsx} file.
+    \item \textbf{Baseline credit rate}: \texttt{baseline\_credit} field in the rate structure for each tariff (weekday entry).
+    \item \textbf{CARE discount}: \texttt{care\_discount} field in the rate structure.
+\end{itemize}
+
+% =============================================================================
+\section{Implementation}
+% =============================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{Code files implementing baseline credit calculations}
+\begin{tabular}{l l l}
+\toprule
+\textbf{Utility} & \textbf{Actual Tariff Bills} & \textbf{Designed \& Post-Adoption Bills} \\
+\midrule
+PG\&E & \texttt{pge\_baseline\_bills.py} & \texttt{pge\_post\_adoption.py} \\
+SCE & \texttt{sce\_baseline\_bills.py} & \texttt{sce\_post\_adoption.py} \\
+SDG\&E & \texttt{sdge\_baseline\_bills.py} & \texttt{sdge\_post\_adoption.py} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}

@@ -25,7 +25,7 @@ from pge_config import (
     BASELINE_DIR, UPGRADE11_DIR, EXCEL_FILE, EEC_FILE, POSTADOPT_BILLS_OUT,
     ACTUAL_PGE_RATES, DESIGNED_SCENARIOS,
     PGE_ANNUAL_KWH_PER_KW, PV_OFFSET_TARGET,
-    BEV_DVMT_CDF, EV_MILES_PER_KWH, EV_CHARGE_START_HOUR, EV_CHARGE_HOURS,
+    BEV_DVMT_CDF, EV_MILES_PER_KWH, EV_CHARGE_START_HOUR, EV_CHARGER_KW,
     BATTERY_EFFICIENCY,
     safe_float,
 )
@@ -63,18 +63,28 @@ def sample_ev_dvmt(n, seed=44):
 
 
 def make_ev_profile(daily_miles=None):
-    """Generate a Level 2 EV charging profile (8760 hours)."""
+    """Generate Level 2 EV charging profile (8760 hours).
+
+    Charges at fixed Level 2 rate (7.2 kW) starting at 10 PM.
+    Duration varies by daily miles — ends when daily kWh is replenished.
+    """
     if daily_miles is None:
         daily_miles = np.trapz(BEV_DVMT_CDF[:, 0], BEV_DVMT_CDF[:, 1])
     daily_kwh = daily_miles / EV_MILES_PER_KWH
-    hourly_charge_rate = daily_kwh / EV_CHARGE_HOURS
+    charge_hours = daily_kwh / EV_CHARGER_KW
+    full_hours = int(charge_hours)
+    partial = charge_hours - full_hours
 
     profile = np.zeros(8760)
     for day in range(365):
-        for h in range(EV_CHARGE_HOURS):
+        for h in range(full_hours):
             hour = day * 24 + (EV_CHARGE_START_HOUR + h) % 24
             if hour < 8760:
-                profile[hour] = hourly_charge_rate
+                profile[hour] = EV_CHARGER_KW
+        if partial > 0:
+            hour = day * 24 + (EV_CHARGE_START_HOUR + full_hours) % 24
+            if hour < 8760:
+                profile[hour] = EV_CHARGER_KW * partial
 
     return profile
 

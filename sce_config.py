@@ -123,7 +123,7 @@ BATTERY_EFFICIENCY = 0.90  # round-trip
 
 EV_MILES_PER_KWH = 3.0
 EV_CHARGE_START_HOUR = 22  # 10 PM
-EV_CHARGE_HOURS = 5        # 10 PM – 3 AM
+EV_CHARGER_KW = 7.2        # Level 2 charger (240V × 30A)
 
 # BEV daily VMT empirical CDF (vehicletrends.us, BEV All)
 BEV_DVMT_CDF = np.array([

@@ -117,8 +117,8 @@ BATTERY_EFFICIENCY = 0.90
 # ---------------------------------------------------------------------------
 
 EV_MILES_PER_KWH = 3.0
-EV_CHARGE_START_HOUR = 22
-EV_CHARGE_HOURS = 5
+EV_CHARGE_START_HOUR = 22  # 10 PM
+EV_CHARGER_KW = 7.2        # Level 2 charger (240V × 30A)
 
 BEV_DVMT_CDF = np.array([
     [0,  0.00], [5,  0.03], [10, 0.12], [15, 0.25], [20, 0.42],

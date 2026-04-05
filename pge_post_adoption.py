@@ -362,8 +362,6 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles, rate_scenarios
             if rc_info['has_fixed']:
                 rc_fixed += rc_info['fc_monthly'].get(income, 0.0) * 12
             bill = max(import_cost - export_credit, 0) + rc_fixed
-            annual_min = rc_info['min_bill_daily'] * 365
-            bill = max(bill, annual_min)
             result[f'{col_prefix}_bill_{prefix}'] = bill
             if use_battery and batt_import is None:
                 lp_fail += 1

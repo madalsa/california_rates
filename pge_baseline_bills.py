@@ -135,7 +135,7 @@ def calculate_actual_pge_bill_vectorized(hourly_load, rate_code, puma_str,
             monthly_fixed = _safe(weekday_rate.get('fixedcharge_high', 0))
     annual_fixed = annual_base_fixed + monthly_fixed * 12
 
-    total_bill = max(energy_after_credit + annual_fixed, annual_min_bill)
+    total_bill = energy_after_credit + annual_fixed
     return total_bill
 
 

@@ -125,7 +125,7 @@ def calculate_actual_sce_bill(hourly_load, rate_code, puma_str, income, is_care,
     min_bill_daily = safe_float(wd.get('minimum_bill_per_day', 0))
     annual_min = min_bill_daily * 365
 
-    total_bill = max(energy_after_credit + annual_fixed, annual_min)
+    total_bill = energy_after_credit + annual_fixed
     return total_bill
 
 

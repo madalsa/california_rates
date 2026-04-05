@@ -310,7 +310,7 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles,
             if rc_info['has_fixed']:
                 rc_fixed += rc_info['fc_monthly'].get(_current_income, 0.0) * 12
             bill = max(imp_cost - exp_credit, 0) + rc_fixed
-            bill = max(bill, rc_info['min_bill_daily'] * 365)
+            # minimum bill removed — compare designed vs actual on same basis
             result[f'{col_pfx}_bill_{prefix}'] = bill
 
         return result, lp_fail

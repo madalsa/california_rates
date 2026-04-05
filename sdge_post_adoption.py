@@ -391,24 +391,25 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
                 update_row.update(s3_bills)
                 lp_failures += s3_lp
 
-            # S4: Full electrification + PV + Storage + EV
-            if row['assigned_pv'] == 1 and has_upgrade11:
-                u11_file = upgrade11_dir / f"{bid}-11.parquet"
-                if u11_file.exists():
-                    u11_df = pd.read_parquet(u11_file)
-                    u11_15min = u11_df['out.electricity.total.energy_consumption'].values
-                    u11_load = u11_15min.reshape(-1, 4).sum(axis=1)  # native demand
-                    s4_load = u11_load + ev_profile
-                    pv_size_s4 = size_pv_system(s4_load.sum(), annual_kwh_per_kw)
-                    bldg_solar_s4 = solar_profile * pv_size_s4
-                    update_row['pv_size_kw_s4'] = pv_size_s4
-                    update_row['annual_kwh_s4'] = s4_load.sum()
-
-                    s4_bills, s4_lp = _compute_all_bills(
-                        s4_load, bldg_solar_s4, is_care, income, puma_str,
-                        use_battery=(row['assigned_battery'] == 1), prefix='s4_full_elec')
-                    update_row.update(s4_bills)
-                    lp_failures += s4_lp
+            # S4: Full electrification (Upgrade 11) — DISABLED
+            # Not running Upgrade 11 scenarios
+            # if row['assigned_pv'] == 1 and has_upgrade11:
+            #     u11_file = upgrade11_dir / f"{bid}-11.parquet"
+            #     if u11_file.exists():
+            #         u11_df = pd.read_parquet(u11_file)
+            #         u11_15min = u11_df['out.electricity.total.energy_consumption'].values
+            #         u11_load = u11_15min.reshape(-1, 4).sum(axis=1)
+            #         s4_load = u11_load + ev_profile
+            #         pv_size_s4 = size_pv_system(s4_load.sum(), annual_kwh_per_kw)
+            #         bldg_solar_s4 = solar_profile * pv_size_s4
+            #         update_row['pv_size_kw_s4'] = pv_size_s4
+            #         update_row['annual_kwh_s4'] = s4_load.sum()
+            #
+            #         s4_bills, s4_lp = _compute_all_bills(
+            #             s4_load, bldg_solar_s4, is_care, income, puma_str,
+            #             use_battery=(row['assigned_battery'] == 1), prefix='s4_full_elec')
+            #         update_row.update(s4_bills)
+            #         lp_failures += s4_lp
 
             results_update[bid] = update_row
             processed += 1

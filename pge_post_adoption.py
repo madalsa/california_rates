@@ -453,13 +453,13 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles, rate_scenarios
             bl_entry = baseline_df_xl[baseline_df_xl['puma'] == puma_str]
             bl_row = bl_entry.iloc[0].to_dict() if not bl_entry.empty else None
 
-            # Load Upgrade 11 profile
-            u11_file = upgrade11_dir / f"{bid}-11.parquet"
-            u11_load = None
-            if has_upgrade11 and u11_file.exists():
-                u11_df = pd.read_parquet(u11_file)
-                u11_15min = u11_df['out.electricity.total.energy_consumption'].values
-                u11_load = u11_15min.reshape(-1, 4).sum(axis=1)  # native demand
+            # Upgrade 11 — DISABLED (not running full electrification scenarios)
+            # u11_file = upgrade11_dir / f"{bid}-11.parquet"
+            # u11_load = None
+            # if has_upgrade11 and u11_file.exists():
+            #     u11_df = pd.read_parquet(u11_file)
+            #     u11_15min = u11_df['out.electricity.total.energy_consumption'].values
+            #     u11_load = u11_15min.reshape(-1, 4).sum(axis=1)
 
             update_row = {'building_id': bid,
                           'ev_daily_miles': bldg_dvmt,
@@ -503,20 +503,22 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles, rate_scenarios
                 update_row['annual_kwh_s3'] = s3_load.sum()
                 lp_failures += s3_lp_fail
 
-            # S4: Full electrification + PV + Storage + EV
-            if row['assigned_pv'] == 1 and u11_load is not None:
-                s4_load = u11_load + ev_profile
-                post_elec_kwh = s4_load.sum()
-                pv_size_s4 = size_pv_system(post_elec_kwh, bldg_annual_kwh_per_kw)
-                bldg_solar_s4 = bldg_solar_profile * pv_size_s4
-                update_row['pv_size_kw_s4'] = pv_size_s4
-
-                s4_bills, s4_lp_fail = _compute_all_scenario_bills(
-                    s4_load, bldg_solar_s4, is_care, income,
-                    bl_row, use_battery=(row['assigned_battery'] == 1),
-                    prefix='s4_full_elec')
-                update_row.update(s4_bills)
-                update_row['annual_kwh_s4'] = s4_load.sum()
+            # S4: Full electrification (Upgrade 11) — DISABLED
+            # u11_load code commented out; not running Upgrade 11 scenarios
+            # if row['assigned_pv'] == 1 and u11_load is not None:
+            #     s4_load = u11_load + ev_profile
+            #     post_elec_kwh = s4_load.sum()
+            #     pv_size_s4 = size_pv_system(post_elec_kwh, bldg_annual_kwh_per_kw)
+            #     bldg_solar_s4 = bldg_solar_profile * pv_size_s4
+            #     update_row['pv_size_kw_s4'] = pv_size_s4
+            #
+            #     s4_bills, s4_lp_fail = _compute_all_scenario_bills(
+            #         s4_load, bldg_solar_s4, is_care, income,
+            #         bl_row, use_battery=(row['assigned_battery'] == 1),
+            #         prefix='s4_full_elec')
+            #     update_row.update(s4_bills)
+            #     update_row['annual_kwh_s4'] = s4_load.sum()
+            #     lp_failures += s4_lp_fail
                 lp_failures += s4_lp_fail
 
             results_update[bid] = update_row

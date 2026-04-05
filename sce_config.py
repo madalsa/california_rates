@@ -20,8 +20,8 @@ EXCEL_FILE = 'retail_rates_data_SCE.xlsx'
 BUILDING_IDS_FILE = 'sce_building_ids.txt'
 
 # Output files
-RATE_SCENARIOS_OUT = 'rate_scenarios_sce.csv'
-BASELINE_BILLS_OUT = 'baseline_bills_sce.csv'
+RATE_SCENARIOS_OUT = 'rate_scenarios_sce_fresh.csv'
+BASELINE_BILLS_OUT = 'baseline_bills_sce_fresh.csv'
 TECH_ASSIGNMENTS_OUT = 'tech_assignments_sce.csv'
 POSTADOPT_BILLS_OUT = 'post_adoption_bills_sce.csv'
 SUMMARY_OUT = 'pipeline_summary_sce.csv'

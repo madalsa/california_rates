@@ -287,18 +287,21 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles, rate_scenarios
 
     def _compute_all_scenario_bills(load_profile, solar_gen, is_care, income,
                                      bl_entry_row, use_battery, prefix):
-        """Compute post-adoption bills for all rate scenarios."""
+        """Compute post-adoption bills for all rate scenarios (designed + actual).
+
+        Solves LP ONCE using actual tariff (E-TOU-C) rate array, then reuses
+        the dispatch profile for all 8 rate scenarios. Valid because all scenarios
+        share the same TOU period structure (peak 4-9pm) — only rate levels differ.
+        """
         result = {}
         lp_fail = 0
 
-        # Designed scenarios: solve LP once, reuse dispatch
-        ref_rate_name = list(designed_rate_arrays.keys())[0]
-        ref_rate_arr = designed_rate_arrays[ref_rate_name]
-
+        # Solve LP once with actual tariff rates
+        actual_rate_arr = actual_rates['E-TOU-C']['rate_arr']
         batt_dispatch = None
         if use_battery:
             batt_dispatch = _battery_dispatch(
-                load_profile, solar_gen, ref_rate_arr, eec_rates)
+                load_profile, solar_gen, actual_rate_arr, eec_rates)
             if batt_dispatch is None:
                 lp_fail = 1
 
@@ -320,7 +323,7 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles, rate_scenarios
         result[f'self_consumption_kwh_{prefix}'] = max(self_consumed, 0)
         result[f'self_sufficiency_{prefix}'] = max(self_consumed, 0) / native_kwh if native_kwh > 0 else 0
 
-        # Compute monthly grid import for baseline credit on designed scenarios
+        # Compute baseline credit on grid import (same dispatch for all rates)
         days_per_month_arr = np.array([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
         hours_per_month_arr = days_per_month_arr * 24
         mb = np.concatenate(([0], np.cumsum(hours_per_month_arr)))
@@ -338,33 +341,44 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles, rate_scenarios
                     monthly_bl = d_win_bl * days_per_month_arr[m_idx]
                 designed_bl_credit += bl_cr * min(monthly_import, monthly_bl)
 
+        # Designed scenario bills (reuse dispatch)
         for sname, rate_arr in designed_rate_arrays.items():
             fc = scenario_fixed_charges[sname]
             fixed = fc['care'] if is_care else fc['noncare']
-            import_cost = np.dot(grid_import_arr, rate_arr)
+            import_cost = np.dot(grid_import_arr, rate_arr) - designed_bl_credit
             export_credit = np.dot(grid_export_arr, eec_rates)
-            # Subtract baseline credit (applied to grid import)
-            import_cost -= designed_bl_credit
             if is_care and designed_care_discount > 0:
                 import_cost *= (1 - designed_care_discount)
             bill = max(import_cost - export_credit, 0) + fixed
             result[f'{sname}_bill_{prefix}'] = bill
 
-        # Actual tariff bills: separate LP dispatch per tariff
+        # Actual tariff bills (reuse same dispatch)
         for rc, rc_info in actual_rates.items():
             col_prefix = ACTUAL_PGE_RATES[rc]
-            import_cost, export_credit, batt_import = _compute_bill_for_rate(
-                load_profile, solar_gen, rc_info['rate_arr'], eec_rates,
-                is_care, rc_info['care_discount'], bl_entry_row,
-                rc_info['baseline_credit'], rc_info['min_bill_daily'],
-                use_battery=use_battery)
+            import_cost = np.dot(grid_import_arr, rc_info['rate_arr'])
+            export_credit = np.dot(grid_export_arr, eec_rates)
+
+            # Baseline credit on import
+            if bl_entry_row is not None:
+                tot_bl = 0.0
+                for m_idx in range(12):
+                    s_h, e_h = mb[m_idx], mb[m_idx + 1]
+                    monthly_import = grid_import_arr[s_h:e_h].sum()
+                    if 6 <= (m_idx + 1) <= 10:
+                        monthly_bl = d_sum_bl * days_per_month_arr[m_idx]
+                    else:
+                        monthly_bl = d_win_bl * days_per_month_arr[m_idx]
+                    tot_bl += rc_info['baseline_credit'] * min(monthly_import, monthly_bl)
+                import_cost -= tot_bl
+
+            if is_care and rc_info['care_discount'] > 0:
+                import_cost *= (1 - rc_info['care_discount'])
+
             rc_fixed = rc_info['base_svc_daily'] * 365
             if rc_info['has_fixed']:
                 rc_fixed += rc_info['fc_monthly'].get(income, 0.0) * 12
             bill = max(import_cost - export_credit, 0) + rc_fixed
             result[f'{col_prefix}_bill_{prefix}'] = bill
-            if use_battery and batt_import is None:
-                lp_fail += 1
 
         return result, lp_fail
 

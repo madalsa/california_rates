@@ -205,15 +205,20 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles,
     pv_sizes = []
 
     def _compute_designed_bills(load_profile, solar_gen, is_care, use_battery, prefix):
-        """Compute post-adoption bills for all designed scenarios."""
+        """Compute post-adoption bills for all rate scenarios (designed + actual).
+
+        Solves LP ONCE using actual tariff (TOU-D-4-9) rate array, then reuses
+        the dispatch profile for all 8 rate scenarios. Valid because all scenarios
+        share the same TOU period structure (peak 4-9pm) — only rate levels differ.
+        """
         result = {}
         lp_fail = 0
 
-        # LP dispatch once (reuse for all designed scenarios with same TOU shape)
-        ref_rate_arr = list(designed_rate_arrays.values())[0]
+        # Solve LP once with actual tariff rates
+        actual_rate_arr = actual_rates['TOU-D-4-9']['rate_arr']
         batt_dispatch = None
         if use_battery:
-            batt_dispatch = battery_lp_dispatch(load_profile, solar_gen, ref_rate_arr, eec_rates)
+            batt_dispatch = battery_lp_dispatch(load_profile, solar_gen, actual_rate_arr, eec_rates)
             if batt_dispatch is None:
                 lp_fail = 1
 
@@ -236,59 +241,34 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles,
         if batt_dispatch is not None:
             gi = batt_dispatch['grid_import']
             ge = batt_dispatch['grid_export']
-            # Store grid metrics
-            result[f'grid_import_kwh_{prefix}'] = gi.sum()
-            result[f'grid_export_kwh_{prefix}'] = ge.sum()
-            result[f'export_value_{prefix}'] = np.dot(ge, eec_rates)
-            result[f'self_consumption_kwh_{prefix}'] = solar_gen.sum() - ge.sum()
-
-            bl_credit = _designed_bl_credit(gi)
-            for sname, rate_arr in designed_rate_arrays.items():
-                fc = scenario_fixed_charges[sname]
-                fixed = fc['care'] if is_care else fc['noncare']
-                imp_cost = np.dot(gi, rate_arr) - bl_credit
-                exp_credit = np.dot(ge, eec_rates)
-                if is_care and designed_care_discount > 0:
-                    imp_cost *= (1 - designed_care_discount)
-                result[f'{sname}_bill_{prefix}'] = max(imp_cost - exp_credit, 0) + fixed
         else:
             net = load_profile - solar_gen
-            hi = np.maximum(net, 0)
-            he = np.maximum(-net, 0)
-            result[f'grid_import_kwh_{prefix}'] = hi.sum()
-            result[f'grid_export_kwh_{prefix}'] = he.sum()
-            result[f'export_value_{prefix}'] = np.dot(he, eec_rates)
-            result[f'self_consumption_kwh_{prefix}'] = solar_gen.sum() - he.sum()
+            gi = np.maximum(net, 0)
+            ge = np.maximum(-net, 0)
 
-            bl_credit = _designed_bl_credit(hi)
-            for sname, rate_arr in designed_rate_arrays.items():
-                fc = scenario_fixed_charges[sname]
-                fixed = fc['care'] if is_care else fc['noncare']
-                imp_cost = np.dot(hi, rate_arr) - bl_credit
-                exp_credit = np.dot(he, eec_rates)
-                if is_care and designed_care_discount > 0:
-                    imp_cost *= (1 - designed_care_discount)
-                result[f'{sname}_bill_{prefix}'] = max(imp_cost - exp_credit, 0) + fixed
+        # Store grid metrics (same dispatch for all rates)
+        result[f'grid_import_kwh_{prefix}'] = gi.sum()
+        result[f'grid_export_kwh_{prefix}'] = ge.sum()
+        result[f'export_value_{prefix}'] = np.dot(ge, eec_rates)
+        result[f'self_consumption_kwh_{prefix}'] = solar_gen.sum() - ge.sum()
 
-        # Actual tariff bills (separate LP per tariff)
+        bl_credit = _designed_bl_credit(gi)
+
+        # Designed scenario bills (reuse dispatch)
+        for sname, rate_arr in designed_rate_arrays.items():
+            fc = scenario_fixed_charges[sname]
+            fixed = fc['care'] if is_care else fc['noncare']
+            imp_cost = np.dot(gi, rate_arr) - bl_credit
+            exp_credit = np.dot(ge, eec_rates)
+            if is_care and designed_care_discount > 0:
+                imp_cost *= (1 - designed_care_discount)
+            result[f'{sname}_bill_{prefix}'] = max(imp_cost - exp_credit, 0) + fixed
+
+        # Actual tariff bills (reuse same dispatch)
         for rc, rc_info in actual_rates.items():
             col_pfx = ACTUAL_SCE_RATES[rc]
-            batt_rc = None
-            if use_battery:
-                batt_rc = battery_lp_dispatch(load_profile, solar_gen,
-                                              rc_info['rate_arr'], eec_rates)
-                if batt_rc is None:
-                    lp_fail += 1
-
-            if batt_rc is not None:
-                imp_cost = batt_rc['bill_energy']
-                exp_credit = batt_rc['export_credit']
-                batt_import = batt_rc['grid_import']
-            else:
-                net = load_profile - solar_gen
-                batt_import = np.maximum(net, 0)
-                imp_cost = np.dot(batt_import, rc_info['rate_arr'])
-                exp_credit = np.dot(np.maximum(-net, 0), eec_rates)
+            imp_cost = np.dot(gi, rc_info['rate_arr'])
+            exp_credit = np.dot(ge, eec_rates)
 
             # Baseline credit on import
             bl_entry = baseline_df_xl[baseline_df_xl['puma'] == _current_puma]
@@ -298,7 +278,7 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles,
                 tot_bl = 0.0
                 for m in range(12):
                     s, e = month_boundaries[m], month_boundaries[m + 1]
-                    mi = batt_import[s:e].sum()
+                    mi = gi[s:e].sum()
                     bl = (d_sum if 6 <= (m+1) <= 10 else d_win) * days_per_month[m]
                     tot_bl += rc_info['baseline_credit'] * min(mi, bl)
                 imp_cost -= tot_bl

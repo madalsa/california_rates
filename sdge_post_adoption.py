@@ -194,15 +194,20 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
 
     def _compute_all_bills(load_profile, solar_gen, is_care, income, puma_str,
                            use_battery, prefix):
-        """Compute bills for all rate scenarios."""
+        """Compute bills for all rate scenarios (designed + actual).
+
+        Solves LP ONCE using actual tariff (TOU-DR) rate array, then reuses
+        the dispatch profile for all 8 rate scenarios. Valid because all scenarios
+        share the same TOU period structure — only rate levels differ.
+        """
         result = {}
         lp_fail = 0
 
-        # LP/heuristic dispatch once for designed scenarios
-        ref_arr = list(designed_rate_arrays.values())[0]
+        # Solve LP once with actual tariff rates
+        actual_rate_arr = actual_rates['TOU-DR']['rate_arr']
         batt = None
         if use_battery:
-            batt = _dispatch(load_profile, solar_gen, ref_arr, eec_rates)
+            batt = _dispatch(load_profile, solar_gen, actual_rate_arr, eec_rates)
             if batt is None:
                 lp_fail = 1
 
@@ -222,7 +227,7 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
         result[f'self_consumption_kwh_{prefix}'] = max(self_consumed, 0)
         result[f'self_sufficiency_{prefix}'] = max(self_consumed, 0) / native_kwh if native_kwh > 0 else 0
 
-        # Baseline credit for designed scenarios: applies to grid IMPORT
+        # Baseline credit on grid import (same dispatch for all rates)
         bl_entry = baseline_df_xl[baseline_df_xl['puma'] == puma_str]
         designed_bl_credit = 0.0
         if not bl_entry.empty:
@@ -235,45 +240,28 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profile, rate_scenarios_
                 bl = (d_sum if 6 <= (m+1) <= 10 else d_win) * days_per_month[m]
                 designed_bl_credit += bl_rate * min(mi, bl)
 
+        # Designed scenario bills (reuse dispatch)
         for sname, rate_arr in designed_rate_arrays.items():
             fc = scenario_fixed_charges[sname]
             fixed = fc['care'] if is_care else fc['noncare']
-            imp = np.dot(gi, rate_arr)
+            vol_after_credit = np.dot(gi, rate_arr) - designed_bl_credit
             exp = np.dot(ge, eec_rates)
-            # Subtract baseline credit
-            vol_after_credit = imp - designed_bl_credit
             if is_care and designed_care_discount > 0:
                 vol_after_credit *= (1 - designed_care_discount)
             result[f'{sname}_bill_{prefix}'] = max(vol_after_credit - exp, 0) + fixed
 
-        # Actual tariff bills
+        # Actual tariff bills (reuse same dispatch)
         for rc, rc_info in actual_rates.items():
             col_pfx = ACTUAL_SDGE_RATES[rc]
-            batt_rc = None
-            if use_battery:
-                batt_rc = _dispatch(load_profile, solar_gen, rc_info['rate_arr'], eec_rates)
-                if batt_rc is None:
-                    lp_fail += 1
+            imp = np.dot(gi, rc_info['rate_arr'])
+            exp = np.dot(ge, eec_rates)
 
-            if batt_rc is not None:
-                imp = batt_rc['bill_energy']
-                exp = batt_rc['export_credit']
-                batt_imp = batt_rc['grid_import']
-            else:
-                net = load_profile - solar_gen
-                batt_imp = np.maximum(net, 0)
-                imp = np.dot(batt_imp, rc_info['rate_arr'])
-                exp = np.dot(np.maximum(-net, 0), eec_rates)
-
-            # Baseline credit
-            bl_entry = baseline_df_xl[baseline_df_xl['puma'] == puma_str]
+            # Baseline credit on import
             if not bl_entry.empty:
-                d_sum = bl_entry.iloc[0]['summer_baseline_allowance']
-                d_win = bl_entry.iloc[0]['winter_baseline_allowance']
                 tot_bl = 0.0
                 for m in range(12):
                     s, e = month_boundaries[m], month_boundaries[m + 1]
-                    mi = batt_imp[s:e].sum()
+                    mi = gi[s:e].sum()
                     bl = (d_sum if 6 <= (m+1) <= 10 else d_win) * days_per_month[m]
                     tot_bl += rc_info['baseline_credit'] * min(mi, bl)
                 imp -= tot_bl

@@ -38,8 +38,8 @@ RESIDENTIAL_SALES_KWH = 4_809_988_000   # Annual residential sales (kWh, EIA 861
 TOTAL_REVENUE = 4_233_072_000           # Total utility revenue ($)
 
 CUSTOMERS = {
-    'care': 372_135,
-    'non_care': 992_226,              # includes ~40k unbundled (CCA) customers
+    'care': 305_902,
+    'non_care': 1_058_459,
     'total': 1_364_361                # EIA 861 bundled+unbundled
 }
 

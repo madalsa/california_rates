@@ -36,27 +36,27 @@ from itertools import product
 
 RESIDENTIAL_REVENUE = 7_745_773_000      # Annual residential revenue ($, EIA 861 bundled+unbundled)
 RESIDENTIAL_SALES_KWH = 27_414_312_000   # Annual residential sales (kWh, EIA 861 bundled+unbundled)
-TOTAL_REVENUE = 18_000_000_000           # Total utility revenue ($)
+TOTAL_REVENUE = 17_530_066_000           # Total utility revenue ($, SCE revenue requirement)
 
 CUSTOMERS = {
-    'care': 1_300_000,
-    'non_care': 3_294_415,
+    'care': 1_353_981,
+    'non_care': 3_240_434,
     'total': 4_594_415                   # EIA 861 bundled+unbundled
 }
 
 # Capital structure (SCE 2024 GRC)
-RATE_BASE = 30_000_000_000    # Total rate base ($)
+RATE_BASE = 41_427_528_000    # Total rate base ($)
 EQUITY_SHARE = 0.52           # Equity portion of capital structure
-AUTHORIZED_ROE = 0.1028       # Current authorized ROE (10.28%)
+AUTHORIZED_ROE = 0.1033       # Current authorized ROE (10.33%)
 
 # Residential share of total revenue
 RES_SHARE = RESIDENTIAL_REVENUE / TOTAL_REVENUE
 
 # Revenue components — absolute costs (from SCE revenue requirement filings)
 REVENUE_COMPONENTS = {
-    'wildfire': 800_000_000 * RES_SHARE,        # Wildfire fund recovery
-    'transmission': 1_500_000_000 * RES_SHARE,  # Transmission costs
-    'distribution': 3_500_000_000 * RES_SHARE,  # Distribution costs
+    'wildfire': 2_930_405_000 * RES_SHARE,        # Wildfire fund recovery
+    'transmission': 1_116_093_000 * RES_SHARE,   # Transmission costs
+    'distribution': 8_937_477_000 * RES_SHARE,   # Distribution costs
 }
 
 # Cost component SHARES of filed residential revenue (used in R_sample approach)

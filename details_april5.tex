@@ -262,9 +262,19 @@ F50\_WF1\_ROE1.0 & 50 & 1 & 1.0 & Combined: 50\% fixed + wildfire removal + ROE 
 \end{tabular}
 \end{table}
 
-\subsection{Utility Cost Shares}
+\subsection{Utility Data and Cost Shares}
 
-The cost component shares determine the magnitude of each policy lever:
+All utility financial parameters (revenue, customers, rate base, cost components, capital structure) are sourced from \texttt{utility\_data\_inputs.tex}, which draws on EIA Form 861, utility GRC filings, and CPUC data. The cost component shares that determine the magnitude of each policy lever are derived as:
+
+\begin{align}
+    \alpha_{\text{td}} &= \frac{C_{\text{transmission}} + C_{\text{distribution}}}{R_{\text{residential}}} \times \text{ResShare} \\
+    \alpha_{\text{wf}} &= \frac{C_{\text{wildfire}}}{R_{\text{residential}}} \times \text{ResShare} \\
+    \alpha_{\text{roe}} &= \frac{\text{RateBase} \times \text{EquityShare} \times 0.01}{R_{\text{residential}}} \times \text{ResShare}
+\end{align}
+
+where $\text{ResShare} = R_{\text{residential}} / R_{\text{total}}$ is the residential share of total utility revenue.
+
+The resulting shares (computed from \texttt{utility\_data\_inputs.tex}):
 
 \begin{table}[htbp]
 \centering
@@ -279,7 +289,7 @@ ROE per pp ($\alpha_{\text{roe}}$) & 1.1\% & 1.2\% & 1.7\% \\
 \end{tabular}
 \end{table}
 
-Note: PG\&E has the largest wildfire cost share (26.6\%), reflecting its disproportionate wildfire liability. SDG\&E has the highest ROE sensitivity per percentage point (1.7\%) due to its smaller revenue base relative to rate base.
+PG\&E has the largest wildfire cost share (26.6\%), reflecting its disproportionate wildfire liability. SDG\&E has the highest ROE sensitivity per percentage point (1.7\%) due to its smaller revenue base relative to rate base. See Table~1 of \texttt{utility\_data\_inputs.tex} for the underlying financial data.
 
 % =============================================================================
 % =============================================================================

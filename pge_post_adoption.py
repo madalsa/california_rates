@@ -543,7 +543,6 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles, rate_scenarios
             #     update_row.update(s4_bills)
             #     update_row['annual_kwh_s4'] = s4_load.sum()
             #     lp_failures += s4_lp_fail
-                lp_failures += s4_lp_fail
 
             results_update[bid] = update_row
             processed += 1

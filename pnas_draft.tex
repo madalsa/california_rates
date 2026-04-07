@@ -1,0 +1,188 @@
+% pnas_draft.tex — PNAS Research Article Draft
+% California IOU Rate Design Analysis
+% April 2026
+
+\documentclass[9pt,twocolumn,twoside]{pnas-new}
+
+\templatetype{pnasresearcharticle}
+
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+
+\title{Distributional Impacts of Electricity Rate Reform on California Households with Distributed Energy Resources}
+
+\author[a,1]{Author One}
+\author[a]{Author Two}
+
+\affil[a]{Department of Mechanical and Aerospace Engineering, University of California San Diego, La Jolla, CA 92093}
+
+\leadauthor{One}
+
+\significancestatement{California electricity rates have risen 50\% since 2019, intensifying debates over rate structure reform. We simulate the bill impacts of restructuring volumetric rates across three investor-owned utilities serving 11 million households. We find that shifting costs to fixed charges reduces bills for high-consumption households but raises them for low-consumption and low-income customers. Removing wildfire liabilities from rates provides the largest bill reductions. Households with rooftop solar and battery storage see diminished savings under fixed charge scenarios, altering adoption incentives. These findings inform pending regulatory proceedings on income-graduated fixed charges and wildfire cost allocation.}
+
+\authorcontributions{A.O. designed research, developed the computational pipeline, and wrote the paper. A.T. supervised the research and edited the paper.}
+
+\correspondingauthor{\textsuperscript{1}To whom correspondence should be addressed. E-mail: author@ucsd.edu}
+
+\keywords{electricity rates $|$ rate design $|$ distributed energy resources $|$ energy equity $|$ California}
+
+\begin{abstract}
+Rising electricity rates in California have prompted regulatory proposals to restructure how utilities collect revenue from residential customers. We evaluate the distributional bill impacts of rate reform across California's three investor-owned utilities---Pacific Gas \& Electric (PG\&E), Southern California Edison (SCE), and San Diego Gas \& Electric (SDG\&E)---serving approximately 11 million residential customers. Using building-level hourly load profiles from the NREL ResStock dataset, we simulate annual electricity bills under eight rate scenarios that vary three policy levers: the share of transmission and distribution costs allocated to fixed charges, the removal of wildfire liability costs, and reductions in the authorized return on equity. For each scenario, we model technology adoption across five customer types: non-adopters, electric vehicle owners, solar-plus-storage adopters, combined solar-EV-storage adopters, and fully electrified households. Battery dispatch is optimized using a linear program that minimizes annual electricity costs subject to physical constraints. We find that [RESULTS PLACEHOLDER]. These results inform ongoing California Public Utilities Commission proceedings on rate restructuring and distributed energy resource compensation.
+\end{abstract}
+
+\dates{This manuscript was compiled on \today}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{firststyle}
+\ifthenelse{\boolean{shortarticle}}{\ifthenelse{\boolean{singlecolumn}}{\abscontentformatted}{\abscontent}}{}
+
+% =============================================================================
+\section*{Introduction}
+% =============================================================================
+
+Electricity affordability has become a central concern for California households. Residential rates across the state's three investor-owned utilities (IOUs) have increased by approximately 50\% between 2019 and 2024, driven by infrastructure investments, wildfire mitigation costs, and rising capital expenditures \cite{borenstein2024}. The average residential rate in California now exceeds \$0.30/kWh, more than double the national average \cite{eia2024}. These rate increases have coincided with aggressive state policies promoting building electrification and electric vehicle adoption, creating a tension between decarbonization goals and household energy burdens \cite{fowlie2021}.
+
+Rate design---the structure through which utilities collect authorized revenue from customers---has emerged as a key policy lever in this debate. California's current residential rates are predominantly volumetric: customers pay per kilowatt-hour consumed, with time-of-use (TOU) rate structures that charge higher prices during peak demand periods. This volumetric structure means that as customers adopt rooftop solar, battery storage, and electric vehicles, the fixed costs of maintaining the grid are spread across fewer kilowatt-hours purchased by remaining customers, contributing to upward rate pressure \cite{borenstein2017}.
+
+The California Public Utilities Commission (CPUC) has considered several structural reforms. Assembly Bill 205 (2022) directed the CPUC to explore income-graduated fixed charges that would shift a portion of utility revenue collection from volumetric rates to flat monthly fees differentiated by household income \cite{ab205}. This proposal has generated significant debate: proponents argue that fixed charges better reflect the fixed nature of grid costs and reduce cross-subsidization by solar adopters, while opponents contend that fixed charges weaken price signals for conservation and disproportionately burden low-consumption households \cite{borenstein2021fixed}.
+
+Beyond rate structure, the magnitude of the revenue requirement itself is subject to reform. Wildfire liability costs, which have added billions of dollars to utility rate bases following catastrophic fires in 2017--2020, represent a significant share of current rates. PG\&E's wildfire-related costs alone account for approximately 27\% of residential revenue \cite{cpuc2024}. Separately, the authorized return on equity (ROE) that utilities earn on their invested capital affects the total revenue requirement. A reduction of one percentage point in ROE translates to approximately 1--2\% of residential revenue, depending on the utility's rate base and capital structure.
+
+In this paper, we evaluate the distributional impacts of rate reform across all three California IOUs. We design eight rate scenarios that independently vary three policy levers: (1) the share of transmission and distribution costs allocated to fixed charges (0\%, 50\%, or 100\%), (2) the removal of wildfire cost recovery from rates, and (3) a one percentage point reduction in the authorized return on equity. For each scenario, we compute building-level annual bills using hourly load profiles from the NREL ResStock dataset, which provides a statistically representative sample of residential buildings for each utility territory \cite{resstock2024}.
+
+We extend the analysis to account for distributed energy resource (DER) adoption. Using survey-derived adoption probabilities from the 2019 California Residential Appliance Saturation Study (RASS), we assign rooftop solar, battery storage, and electric vehicle charging to sample buildings \cite{rass2019}. For buildings with solar-plus-storage systems, we optimize battery dispatch using a linear program that minimizes annual electricity costs under California's Net Billing Tariff (NBT) export compensation schedule. This allows us to quantify how rate reform alters the economics of DER adoption and the distribution of costs between adopters and non-adopters.
+
+Our analysis makes three contributions. First, we provide the first comprehensive comparison of rate reform impacts across all three California IOUs, using consistent methodology and building-level granularity. Second, we quantify the interaction between rate structure reform and DER adoption incentives, showing how fixed charges compress solar-plus-storage bill savings. Third, we disaggregate impacts by income level, CARE enrollment status, climate zone, and technology adoption status, providing the distributional detail needed to inform equity-focused rate design.
+
+% =============================================================================
+\section*{Results}
+% =============================================================================
+
+\subsection*{Baseline bill validation.}
+We first validate the simulation by comparing aggregate sample revenue to utility-reported residential revenue. Under the benchmark scenario (F0\_WF0\_ROE0), which replicates the actual tariff structure, the designed rate scaling factor equals 1.0 for all three utilities, confirming that building-level designed bills match actual tariff bills [Table~1].
+
+[TABLE 1: Revenue validation across three IOUs. Columns: Utility, Sample buildings, Actual tariff mean bill, F0\_WF0\_ROE0 mean bill, Difference, R\_sample vs filed revenue]
+
+\subsection*{Bill impacts of rate restructuring.}
+[PLACEHOLDER: Results from the full pipeline runs. Key findings to report:
+\begin{itemize}
+    \item Bill changes under F50 and F100 by CARE status (winners/losers)
+    \item Wildfire removal bill reductions by utility (PGE largest at ~27\%)
+    \item ROE reduction impacts (~1--2\% across all utilities)
+    \item Combined scenario (F50\_WF1\_ROE1.0) total savings
+\end{itemize}
+]
+
+[FIGURE 1: Bill change distributions under F0\_WF0\_ROE0 vs F50\_WF0\_ROE0 for CARE and non-CARE customers, three-panel (one per utility)]
+
+\subsection*{Technology adoption and bill savings.}
+[PLACEHOLDER: Results for five customer types:
+\begin{itemize}
+    \item Non-adopter bill changes across scenarios
+    \item EV-only: additional annual cost from charging
+    \item PV+storage: bill savings and self-sufficiency ratios
+    \item PV+EV+storage: combined effects
+    \item Fully electrified: HP + PV + EV + storage
+\end{itemize}
+]
+
+[FIGURE 2: Bill savings by technology adoption scenario and rate design, showing how fixed charges compress PV+storage savings]
+
+\subsection*{Grid interactions and export value.}
+[PLACEHOLDER: Grid metrics results:
+\begin{itemize}
+    \item Grid import reduction for PV+storage households
+    \item Export volumes and monetized value (EEC)
+    \item Self-sufficiency ratios by climate zone
+    \item Effective export rate vs average EEC (LP arbitrage)
+\end{itemize}
+]
+
+[FIGURE 3: Self-sufficiency ratio distributions by climate zone for PV+storage adopters]
+
+\subsection*{Climate zone variation.}
+[PLACEHOLDER: Geographic analysis:
+\begin{itemize}
+    \item Bill levels by CEC climate zone
+    \item PV generation differences across zones
+    \item Interaction of climate and rate design
+\end{itemize}
+]
+
+[TABLE 2: Mean annual bills by climate zone under actual tariff and F50\_WF1\_ROE1.0 scenario]
+
+% =============================================================================
+\section*{Discussion}
+% =============================================================================
+
+[PLACEHOLDER: Discussion points to develop once results are finalized]
+
+\paragraph{Rate structure and equity.}
+The shift from volumetric to fixed charges creates clear winners and losers. Low-consumption households, which are disproportionately low-income and CARE-enrolled, see bill increases under fixed charge scenarios because the fixed fee exceeds their reduction in volumetric charges. High-consumption households benefit because the volumetric rate reduction more than offsets the fixed charge. This regressive dynamic is moderated by the CARE-differentiated fixed charge (\$6/month for CARE vs \$24.15/month for non-CARE), but not eliminated.
+
+\paragraph{Wildfire cost allocation.}
+Wildfire liability represents the single largest opportunity for bill reduction, particularly for PG\&E customers where it accounts for approximately 27\% of residential revenue. The question of who should bear wildfire costs---ratepayers, shareholders, or the state---is fundamentally a policy decision with significant distributional consequences. Our analysis quantifies the bill impact of removing these costs from rates but does not address the broader question of alternative funding mechanisms.
+
+\paragraph{DER adoption incentives.}
+Fixed charge scenarios reduce the volumetric rate, which directly compresses the bill savings available to PV-plus-storage adopters. Under F100\_WF0\_ROE0, where all T\&D costs are collected through fixed charges, the volumetric rate drops substantially, reducing the value of self-generated electricity and diminishing the economic case for rooftop solar. This creates a tension between rate fairness (reducing cross-subsidization) and clean energy adoption goals.
+
+\paragraph{Battery dispatch and export value.}
+Our LP-optimized battery dispatch achieves effective export rates substantially above the average EEC compensation rate, reflecting perfect-foresight arbitrage that times exports to high-value hours. Real-world battery controllers, which rely on day-ahead forecasts rather than perfect annual foresight, would achieve lower effective export rates. Our results thus represent an upper bound on battery-mediated export value.
+
+\paragraph{Limitations.}
+Several limitations warrant discussion. First, we use native (unscaled) ResStock load profiles for bill calculations, with RASS scaling factors reserved for population-level extrapolation. This means individual building bills reflect simulated rather than actual consumption patterns. Second, our technology adoption assignments are based on survey-derived probabilities rather than economic optimization; we do not model whether adoption is financially rational under each rate scenario. Third, we assume static adoption levels across rate scenarios, whereas in reality, rate structure changes would alter adoption incentives and equilibrium adoption rates. Fourth, the LP battery dispatch assumes perfect annual foresight of electricity prices, yielding optimistic savings estimates.
+
+% =============================================================================
+\section*{Materials and Methods}
+% =============================================================================
+
+\subsection*{Building load profiles.}
+We use hourly electricity consumption profiles from the NREL ResStock dataset \cite{resstock2024}, which simulates residential building energy use for a statistically representative sample of the U.S. housing stock. For each of California's three IOUs, we extract all buildings located in the utility's service territory based on Public Use Microdata Area (PUMA) assignments. This yields 22,722 buildings for PG\&E, 19,863 for SCE, and 4,317 for SDG\&E. Each building has an 8,760-hour electricity consumption profile (15-minute intervals aggregated to hourly) reflecting its physical characteristics, climate zone, and occupant behavior. We use native (unscaled) demand for all bill calculations; RASS scaling factors are stored for population-level extrapolation but not applied to load profiles.
+
+\subsection*{Rate design.}
+We design counterfactual rate scenarios by modifying the utility's revenue requirement through three policy levers. The revenue target under scenario $k$ is:
+\begin{equation}
+    R_{\text{target}}^{(k)} = R_{\text{sample}} - \mathbb{1}_{\text{wf}} \cdot R_{\text{sample}} \cdot \alpha_{\text{wf}} - R_{\text{sample}} \cdot \alpha_{\text{roe}} \cdot \Delta
+\end{equation}
+where $R_{\text{sample}}$ is the weighted sample revenue under the actual tariff, $\alpha_{\text{wf}}$ is the wildfire cost share, $\alpha_{\text{roe}}$ is the ROE share per percentage point, and $\Delta$ is the ROE reduction in percentage points. TOU volumetric rates are scaled proportionally: $\tilde{r}^p = s \cdot r^p$ where $s = R_{\text{vol}} / R_{\text{sample}}$. For the benchmark scenario (F0\_WF0\_ROE0), $s = 1.0$. The baseline credit and CARE discount are held constant across all scenarios (see SI Appendix for full formulation).
+
+\subsection*{Bill calculation.}
+The annual bill for building $i$ under scenario $k$ is:
+\begin{equation}
+    \text{Bill}_i^{(k)} = \left[ \sum_p Q_i^p \cdot \tilde{r}^p_{(k)} - BL(i) \right] \times (1 - d_i) + \text{FC}_i^{(k)}
+\end{equation}
+where $Q_i^p$ is consumption in TOU period $p$, $BL(i) = \sum_m b \cdot \min(Q_i^m, B_i^m)$ is the baseline credit applied to within-baseline consumption each month, $d_i$ is the CARE discount, and $\text{FC}_i^{(k)}$ is the annual fixed charge. Baseline allowances $B_i^m$ are PUMA-specific and season-differentiated. The baseline credit rate $b$ is constant across scenarios: \$0.096/kWh (PG\&E), \$0.10/kWh (SCE), \$0.110/kWh (SDG\&E).
+
+\subsection*{Technology adoption.}
+We assign rooftop solar, battery storage, electric vehicles, and heat pumps to sample buildings using adoption probabilities derived from the 2019 California Residential Appliance Saturation Study (RASS) \cite{rass2019}. Adoption scores are computed by income bracket, home type, and climate zone, with adjustments for tenure (renters at 15\% of owner probability for PV) and building type (large multifamily at 5\% probability). Target adoption rates are 17\% for PV and 12\% for EV, consistent with current California penetration estimates. All PV-adopted buildings receive co-located battery storage. Heat pump status is preserved from the ResStock baseline.
+
+\subsection*{Solar generation.}
+PV generation profiles are computed using pvlib \cite{pvlib2018} with Typical Meteorological Year (TMY) data from PVGIS for each CEC climate zone represented in the utility territory. PG\&E spans 11 climate zones, SCE 9 zones, and SDG\&E uses a single San Diego centroid. PV systems are sized to offset 90\% of native annual demand, clamped to [3, 15] kW. Each building's hourly generation is the per-kW climate zone profile multiplied by the building's system size.
+
+\subsection*{Battery dispatch optimization.}
+For buildings with PV-plus-storage, we solve a linear program (LP) to determine the optimal hourly battery charge/discharge schedule. The objective minimizes annual net electricity cost:
+\begin{equation}
+    \min \sum_{t=1}^{8760} \left( p_t \cdot g_t - q_t \cdot e_t \right)
+\end{equation}
+subject to energy balance ($g_t - e_t - c_t + d_t \cdot \eta = D_t - V_t$), state-of-charge dynamics ($s_t = s_{t-1} + c_t \cdot \eta - d_t$), and capacity bounds. Here $g_t$ and $e_t$ are grid import and export, $c_t$ and $d_t$ are battery charge and discharge, $p_t$ is the retail import rate, $q_t$ is the hourly export compensation (EEC) rate, and $\eta = \sqrt{0.90}$ is the one-way efficiency. The battery is modeled with 13.5 kWh capacity, 5 kW maximum power, and 90\% round-trip efficiency. Export is bounded by $V_t + P_{\max}$ to prevent grid-to-grid arbitrage. The LP is solved using HiGHS via scipy. We solve one LP per building per adoption scenario using the actual tariff rate array and reuse the dispatch profile for all eight rate scenarios, as TOU period boundaries are identical across scenarios (see SI Appendix).
+
+\subsection*{EV charging profile.}
+Daily vehicle miles traveled (VMT) are sampled from the empirical BEV distribution (vehicletrends.us). Energy consumption is computed at 3.0 mi/kWh wall-to-wheels efficiency. Charging occurs at a fixed 7.2 kW Level 2 rate starting at 10:00 PM daily, with duration proportional to daily energy needs ($\tau = E_{\text{daily}} / 7.2$ hours). This profile is added to the building's native demand as a fixed exogenous load; the LP does not optimize charging timing.
+
+\subsection*{Export compensation.}
+Grid exports are compensated at hourly avoided cost rates from the 2025 Energy Export Credit (EEC) schedule, sourced from CPUC-published data. Mean EEC rates are \$0.097/kWh (PG\&E), \$0.085/kWh (SCE), and \$0.078/kWh (SDG\&E), with significant hourly variation reflecting wholesale market conditions.
+
+\matmethods{All utility financial parameters are sourced from EIA Form 861 and utility General Rate Case filings (see \texttt{utility\_data\_inputs.tex} for values). Code and data are available at [repository URL].}
+
+\showmatmethods{}
+
+\acknow{[PLACEHOLDER]}
+
+\showacknow{}
+
+\bibliography{references}
+
+\end{document}

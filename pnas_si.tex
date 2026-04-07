@@ -1,0 +1,403 @@
+% pnas_si.tex — Supplementary Information
+% California IOU Rate Design Analysis
+% April 2026
+
+\documentclass[9pt]{article}
+\usepackage{amsmath, amssymb}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{longtable}
+
+\title{Supplementary Information:\\Distributional Impacts of Electricity Rate Reform on California Households with Distributed Energy Resources}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+\newpage
+
+% =============================================================================
+\section{Utility Financial Data}
+% =============================================================================
+
+Table~\ref{tab:utility_data} reports the financial and customer data used in the rate design calculations. All values are sourced from EIA Form 861 (bundled and unbundled) and utility General Rate Case (GRC) filings.
+
+\begin{table}[htbp]
+\centering
+\caption{Utility financial and customer data inputs.}
+\label{tab:utility_data}
+\begin{tabular}{l r r r}
+\toprule
+\textbf{Parameter} & \textbf{PG\&E} & \textbf{SCE} & \textbf{SDG\&E} \\
+\midrule
+\multicolumn{4}{l}{\textit{Customer \& Sales Data}} \\
+Residential revenue (\$B) & 8.24 & 7.75 & 1.56 \\
+Residential sales (GWh) & 25,987 & 27,414 & 4,810 \\
+Residential customers & 5,047,461 & 4,594,415 & 1,364,361 \\
+CARE customers & 1,371,555 & 1,353,981 & 305,902 \\
+\midrule
+\multicolumn{4}{l}{\textit{Revenue Requirement \& Rate Base (\$B)}} \\
+Rate base & 41.99 & 41.43 & 13.59 \\
+Total revenue requirement & 20.34 & 17.53 & 4.23 \\
+\midrule
+\multicolumn{4}{l}{\textit{Cost Components (\$B)}} \\
+Transmission & 2.66 & 1.12 & 0.685 \\
+Distribution & 8.74 & 8.94 & 1.72 \\
+Wildfire & 5.40 & 2.93 & 0.414 \\
+\midrule
+\multicolumn{4}{l}{\textit{Capital Structure}} \\
+Authorized ROE (\%) & 10.28 & 10.33 & 10.22 \\
+Equity share (\%) & 52 & 52 & 52 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =============================================================================
+\section{Rate Design Formulation}
+\label{sec:rate_design}
+% =============================================================================
+
+\subsection{Definitions}
+
+\begin{tabular}{ll}
+$i$ & Building index (ResStock sample) \\
+$p \in \mathcal{P}$ & TOU period (e.g., summer peak, winter offpeak) \\
+$m \in \{1, \ldots, 12\}$ & Month \\
+$w = 252.3$ & Uniform ResStock building weight \\
+$Q_i^p$ & Annual consumption of building $i$ in TOU period $p$ (kWh, native demand) \\
+$Q_i^m$ & Monthly consumption of building $i$ in month $m$ (kWh) \\
+$r^p$ & Actual tariff volumetric rate for period $p$ (\$/kWh) \\
+$b$ & Baseline credit rate (\$/kWh), constant across scenarios \\
+$B_i^m$ & Monthly baseline allowance for building $i$ in month $m$ (kWh) \\
+$d_i$ & CARE discount factor (0.35 PGE, 0.325 SCE, 0.37 SDGE; 0 non-CARE) \\
+$\text{sf}_i$ & RASS scaling factor (population extrapolation only) \\
+\end{tabular}
+
+\subsection{Actual Tariff Bill}
+
+\begin{equation}
+\text{Bill}_i^{\text{actual}} = \left[ \sum_p Q_i^p \cdot r^p - \sum_{m=1}^{12} b \cdot \min(Q_i^m, B_i^m) \right] \times (1 - d_i) + \text{FC}_i
+\end{equation}
+
+The baseline credit provides a per-kWh discount on consumption within the PUMA-specific monthly baseline allowance. The CARE discount applies to net volumetric charges after the baseline credit, not to fixed charges. Minimum bill provisions are excluded from the analysis to ensure consistency between actual and designed rate comparisons.
+
+\subsection{Sample Revenue}
+
+\begin{equation}
+R_{\text{sample}} = \sum_i \text{Bill}_i^{\text{actual}} \times w
+\end{equation}
+
+\subsection{Revenue Target}
+
+\begin{equation}
+R_{\text{target}}^{(k)} = R_{\text{sample}} - \mathbb{1}_{\text{wf}} \cdot R_{\text{sample}} \cdot \alpha_{\text{wf}} - R_{\text{sample}} \cdot \alpha_{\text{roe}} \cdot \Delta
+\end{equation}
+
+where:
+\begin{align}
+\alpha_{\text{wf}} &= \frac{C_{\text{wildfire}}}{R_{\text{residential}}} \times \text{ResShare} \\
+\alpha_{\text{td}} &= \frac{C_{\text{transmission}} + C_{\text{distribution}}}{R_{\text{residential}}} \times \text{ResShare} \\
+\alpha_{\text{roe}} &= \frac{\text{RateBase} \times \text{EquityShare} \times 0.01}{R_{\text{residential}}} \times \text{ResShare} \\
+\text{ResShare} &= R_{\text{residential}} / R_{\text{total}}
+\end{align}
+
+\begin{table}[htbp]
+\centering
+\caption{Cost component shares of residential revenue.}
+\begin{tabular}{l r r r}
+\toprule
+\textbf{Cost Share} & \textbf{PG\&E} & \textbf{SCE} & \textbf{SDG\&E} \\
+\midrule
+T\&D ($\alpha_{\text{td}}$) & 56.1\% & 55.9\% & 56.9\% \\
+Wildfire ($\alpha_{\text{wf}}$) & 26.6\% & 16.3\% & 9.8\% \\
+ROE per pp ($\alpha_{\text{roe}}$) & 1.1\% & 1.2\% & 1.7\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Fixed Charge Revenue}
+
+\begin{equation}
+R_{\text{fixed}} = R_{\text{sample}} \cdot \alpha_{\text{td}} \cdot \frac{F\%}{100}
+\end{equation}
+
+Monthly per-customer charges with CARE ratio $\gamma = 0.248$:
+\begin{align}
+\text{FC}_{\text{nonCARE}} &= \frac{R_{\text{fixed}}}{(N_{\text{nonCARE}} + \gamma \cdot N_{\text{CARE}}) \times 12} \\
+\text{FC}_{\text{CARE}} &= \gamma \cdot \text{FC}_{\text{nonCARE}}
+\end{align}
+
+\subsection{Volumetric Rate Scaling}
+
+\begin{equation}
+R_{\text{vol}} = R_{\text{target}} - R_{\text{fixed}}
+\end{equation}
+
+\begin{equation}
+\tilde{r}^p = s \cdot r^p \quad \text{where} \quad s = \frac{R_{\text{vol}}}{R_{\text{sample}}}
+\end{equation}
+
+For F0\_WF0\_ROE0: $s = R_{\text{sample}} / R_{\text{sample}} = 1.0$. Designed rates equal actual tariff rates.
+
+\subsection{Designed Bill}
+
+\begin{equation}
+\text{Bill}_i^{(k)} = \left[ \sum_p Q_i^p \cdot (s_k \cdot r^p) - \sum_{m=1}^{12} b \cdot \min(Q_i^m, B_i^m) \right] \times (1 - d_i) + \text{FC}_i^{(k)}
+\end{equation}
+
+The baseline credit $b$ is constant across all scenarios. It is a structural feature of the rate, not a policy lever.
+
+% =============================================================================
+\section{TOU Rate Structures}
+\label{sec:tou}
+% =============================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{TOU period definitions and actual tariff rates (\$/kWh).}
+\label{tab:tou_rates}
+\begin{tabular}{l l l r}
+\toprule
+\textbf{Utility} & \textbf{Period} & \textbf{Hours} & \textbf{Rate (\$/kWh)} \\
+\midrule
+\multicolumn{4}{l}{\textit{PG\&E E-TOU-C (4 periods)}} \\
+& Summer peak & Jun--Oct, 4--9 PM & 0.589 \\
+& Summer offpeak & Jun--Oct, all other & 0.466 \\
+& Winter peak & Nov--May, 4--9 PM & 0.465 \\
+& Winter offpeak & Nov--May, all other & 0.435 \\
+\midrule
+\multicolumn{4}{l}{\textit{SCE TOU-D-4-9 (5 periods)}} \\
+& Summer peak (wd/we) & Jun--Oct, 4--9 PM & 0.627 / 0.507 \\
+& Summer offpeak & Jun--Oct, all other & 0.387 \\
+& Winter peak & Nov--May, 4--9 PM & 0.557 \\
+& Winter midpeak & Nov--May, 9 PM--8 AM & 0.417 \\
+& Winter offpeak & Nov--May, 8 AM--4 PM & 0.377 \\
+\midrule
+\multicolumn{4}{l}{\textit{SDG\&E TOU-DR (6 periods)}} \\
+& Summer peak & Jun--Oct, 4--9 PM & 0.607 \\
+& Summer midpeak & Jun--Oct, 6 AM--4 PM, 9--10 PM & 0.527 \\
+& Summer offpeak & Jun--Oct, 10 PM--6 AM & 0.450 \\
+& Winter peak & Nov--May, 4--9 PM & 0.582 \\
+& Winter midpeak & Nov--May, 6 AM--4 PM, 9--10 PM & 0.519 \\
+& Winter offpeak & Nov--May, 10 PM--6 AM & 0.501 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Baseline credit and CARE discount by utility.}
+\begin{tabular}{l c c c}
+\toprule
+& \textbf{PG\&E} & \textbf{SCE} & \textbf{SDG\&E} \\
+\midrule
+Baseline credit (\$/kWh) & 0.09566 & 0.10000 & 0.11017 \\
+CARE discount (\%) & 35.0 & 32.5 & 37.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =============================================================================
+\section{Baseline Allowance}
+\label{sec:baseline}
+% =============================================================================
+
+Each building is assigned a daily baseline allowance based on its PUMA, differentiated by season:
+
+\begin{equation}
+B_i^m = \begin{cases}
+B_i^{\text{daily, summer}} \times D_m & \text{if } m \in \{6,7,8,9,10\} \\
+B_i^{\text{daily, winter}} \times D_m & \text{otherwise}
+\end{cases}
+\end{equation}
+
+where $D_m$ is the number of days in month $m$. Baseline allowances are sourced from the \texttt{baseline\_puma} sheet in each utility's rate data file.
+
+The annual baseline credit for building $i$ is:
+\begin{equation}
+BL(i) = \sum_{m=1}^{12} b \cdot \min(Q_i^m, B_i^m)
+\end{equation}
+
+For post-adoption scenarios with PV and storage, the credit is applied to monthly \textit{grid import} rather than total consumption:
+\begin{equation}
+BL_{\text{post}}(i) = \sum_{m=1}^{12} b \cdot \min(G_i^m, B_i^m)
+\end{equation}
+where $G_i^m = \sum_{t \in m} g_t$ is the monthly grid import from the LP dispatch.
+
+% =============================================================================
+\section{Technology Adoption Assignment}
+\label{sec:tech_adopt}
+% =============================================================================
+
+Technology adoption is assigned using probabilities derived from the 2019 California Residential Appliance Saturation Study (RASS). The assignment procedure is as follows:
+
+\begin{enumerate}
+\item \textbf{Compute adoption scores} by grouping ResStock buildings on income bracket, home type, and CEC climate zone. Survey-reported adoption rates for each group serve as base probabilities.
+
+\item \textbf{Apply adjustments}: renters receive 15\% of owner probability for PV (reflecting roof access constraints); large multifamily buildings (20+ units) receive 5\% of single-family probability; EV adoption for renters is 50\% of owners.
+
+\item \textbf{Calibrate to target rates}: scores are normalized so that weighted adoption matches target penetration: 17\% for PV, 12\% for EV.
+
+\item \textbf{Assign}: buildings are stochastically assigned technology based on calibrated probabilities (fixed random seed for reproducibility).
+\end{enumerate}
+
+Battery storage is assigned to all PV-adopted buildings (100\% co-adoption). Heat pump status is preserved from the ResStock baseline simulation.
+
+% =============================================================================
+\section{Solar PV Sizing and Generation}
+\label{sec:solar}
+% =============================================================================
+
+PV systems are sized to offset 90\% of each building's native annual demand:
+
+\begin{equation}
+C_i = \text{clip}\left(\frac{0.90 \times D_i^{\text{annual}}}{v^{\text{annual}}}, \; 3 \text{ kW}, \; 15 \text{ kW}\right)
+\end{equation}
+
+where $D_i^{\text{annual}}$ is native annual consumption and $v^{\text{annual}}$ is the annual generation per kW from the pvlib solar profile for the building's CEC climate zone.
+
+Solar profiles are generated using pvlib with CEC module and inverter databases, Typical Meteorological Year data from PVGIS, and south-facing panels tilted at latitude. PG\&E territory spans 11 CEC climate zones, SCE 9 zones (8 with PV-adopted buildings), and SDG\&E uses a single San Diego centroid.
+
+% =============================================================================
+\section{LP Battery Dispatch Formulation}
+\label{sec:lp}
+% =============================================================================
+
+\subsection{Decision Variables}
+
+Five variables per hour ($T = 8{,}760$), totaling 43,800:
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{l c l}
+\toprule
+\textbf{Variable} & \textbf{Bounds} & \textbf{Meaning} \\
+\midrule
+$g_t$ & $[0, \infty)$ & Grid import (kWh) \\
+$e_t$ & $[0, V_t + P_{\max}]$ & Grid export (kWh) \\
+$c_t$ & $[0, P_{\max}]$ & Battery charge (kWh) \\
+$d_t$ & $[0, P_{\max}]$ & Battery discharge (kWh) \\
+$s_t$ & $[0, E]$ & State of charge (kWh) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Battery parameters: $E = 13.5$ kWh capacity, $P_{\max} = 5.0$ kW, $\eta = \sqrt{0.90} \approx 0.949$ one-way efficiency, $s_0 = 0.5 E$.
+
+\subsection{Objective}
+
+\begin{equation}
+\min \sum_{t=1}^{T} \left( p_t \cdot g_t - q_t \cdot e_t \right)
+\end{equation}
+
+\subsection{Constraints}
+
+Energy balance:
+\begin{equation}
+g_t - e_t - c_t + d_t \cdot \eta = D_t - V_t \quad \forall \, t
+\end{equation}
+
+SOC dynamics:
+\begin{equation}
+s_t - s_{t-1} - c_t \cdot \eta + d_t = 0 \quad \forall \, t > 1
+\end{equation}
+
+Initial SOC:
+\begin{equation}
+s_1 - c_1 \cdot \eta + d_1 = 0.5 \cdot E
+\end{equation}
+
+The export bound $e_t \leq V_t + P_{\max}$ prevents grid-to-grid arbitrage: exports cannot exceed solar generation plus maximum battery discharge at each hour.
+
+\subsection{Dispatch Reuse Across Rate Scenarios}
+
+The LP is solved once per building per adoption scenario using the actual tariff rate array. The resulting dispatch profile is reused for all eight rate scenarios. This is valid because all scenarios share the same TOU period structure (peak hours 4--9 PM). Designed scenarios apply uniform scaling to all period rates, preserving the relative price signal that determines optimal charge/discharge timing. Only rate levels change, not the timing of peaks and offpeaks.
+
+Each building requires two LP solves: one for S2 (PV + storage, demand = native load) and one for S3 (PV + storage + EV, demand = native load + EV charging). Solved using HiGHS via scipy ($\sim$0.5 seconds per solve).
+
+% =============================================================================
+\section{EV Charging Profile}
+\label{sec:ev}
+% =============================================================================
+
+Daily vehicle miles traveled are sampled from the empirical BEV distribution (vehicletrends.us, mean $\approx$ 24 mi/day). Energy consumption is 3.0 mi/kWh (wall-to-wheels). Charging occurs at a fixed 7.2 kW Level 2 rate (240V $\times$ 30A) starting at 10:00 PM daily. Duration is proportional to daily energy needs:
+
+\begin{equation}
+\tau_i = \frac{\text{daily\_miles}_i / 3.0}{7.2} \quad \text{(hours)}
+\end{equation}
+
+Example: 24 mi/day $\rightarrow$ 8 kWh $\rightarrow$ 1.1 hours (10:00--11:07 PM). The profile is identical every day. EV charging is a fixed exogenous load not optimized by the LP.
+
+% =============================================================================
+\section{Grid Interaction Metrics}
+\label{sec:grid_metrics}
+% =============================================================================
+
+For each adoption scenario and building, we report:
+
+\begin{itemize}
+\item \textbf{Grid import} ($\sum_t g_t$): total electricity purchased from the grid (kWh/yr)
+\item \textbf{Grid export} ($\sum_t e_t$): total electricity sent to the grid (kWh/yr)
+\item \textbf{Export value} ($\sum_t e_t \cdot q_t$): monetized export revenue at hourly EEC rates (\$/yr)
+\item \textbf{Self-consumption} ($\sum_t V_t - \sum_t e_t$): solar generation consumed on-site (kWh/yr)
+\item \textbf{Self-sufficiency ratio}: self-consumption divided by native demand, measuring the fraction of consumption met by self-generation after battery optimization
+\end{itemize}
+
+% =============================================================================
+\section{ResStock Sample Validation}
+\label{sec:validation}
+% =============================================================================
+
+[PLACEHOLDER: Benchmarking results comparing simulated sample to actual utility data. Key comparisons:
+\begin{itemize}
+\item Mean consumption per customer (simulated vs EIA-reported)
+\item CARE enrollment share
+\item Climate zone distribution
+\item Income distribution
+\item BTM solar adjustment for consumption benchmarking
+\end{itemize}
+]
+
+% =============================================================================
+\section{Full Rate Scenario Matrix}
+\label{sec:scenarios}
+% =============================================================================
+
+The full scenario matrix consists of 40 combinations per utility (5 fixed charge levels $\times$ 2 wildfire options $\times$ 4 ROE reductions). Of these, 8 are selected for detailed analysis in the main text:
+
+\begin{table}[htbp]
+\centering
+\caption{Rate scenarios analyzed in the main text.}
+\begin{tabular}{l c c c l}
+\toprule
+\textbf{Scenario} & $F\%$ & $\mathbb{1}_{\text{wf}}$ & $\Delta$ (pp) & \textbf{Description} \\
+\midrule
+Actual tariff & --- & --- & --- & Status quo TOU rate \\
+Actual tariff-F & --- & --- & --- & Status quo with fixed charges \\
+F0\_WF0\_ROE0 & 0 & 0 & 0 & Benchmark (= actual tariff) \\
+F50\_WF0\_ROE0 & 50 & 0 & 0 & 50\% T\&D to fixed \\
+F100\_WF0\_ROE0 & 100 & 0 & 0 & 100\% T\&D to fixed \\
+F0\_WF1\_ROE0 & 0 & 1 & 0 & Remove wildfire from rates \\
+F0\_WF0\_ROE1.0 & 0 & 0 & 1.0 & Reduce ROE by 1 pp \\
+F50\_WF1\_ROE1.0 & 50 & 1 & 1.0 & Combined reform \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =============================================================================
+\section{Population Extrapolation}
+\label{sec:extrapolation}
+% =============================================================================
+
+All bills are computed on native (unscaled) ResStock demand. The RASS scaling factor $\text{sf}_i$ is stored for each building but not applied to load profiles. For population-level revenue estimates:
+
+\begin{equation}
+R_{\text{population}}^{(k)} = \sum_i \text{Bill}_i^{(k)} \times \text{sf}_i \times w
+\end{equation}
+
+This separates the physical model (load profiles, PV sizing, battery dispatch) from the statistical weighting (how many real households each sample building represents).
+
+\end{document}

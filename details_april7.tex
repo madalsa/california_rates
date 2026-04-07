@@ -1,0 +1,142 @@
+% details_april7.tex — Rate Design Lever Mechanics and Revenue Requirement Structure
+% California IOU Rate Analysis
+% Date: 2026-04-07
+
+\documentclass[11pt]{article}
+\usepackage{amsmath, amssymb}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+
+\title{Rate Design Lever Mechanics and Revenue Requirement Structure}
+\author{California IOU Rate Analysis}
+\date{April 7, 2026}
+
+\begin{document}
+\maketitle
+
+\section{Revenue Requirement Components}
+
+The 2024 authorized revenue requirements for California's three IOUs consist of the following components (Table 2.1, \$000):
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{l r r r}
+\toprule
+\textbf{Component} & \textbf{PG\&E} & \textbf{SCE} & \textbf{SDG\&E} \\
+\midrule
+Generation / Energy Procurement & 5,053,954 & 5,069,512 & 1,001,227 \\
+Purchased Power & 2,358,098 & 4,048,229 & 243,417 \\
+Utility Owned Generation Fuel & 592,031 & 268,102 & 599,983 \\
+General Rate Case & 2,103,825 & 753,182 & 157,828 \\
+Distribution (GRC) & 8,741,084 & 8,937,477 & 1,722,187 \\
+Transmission & 2,663,244 & 1,116,093 & 685,245 \\
+Demand Side Mgmt \& PPP & 812,954 & 1,038,436 & 608,973 \\
+Bonds and Fees & 752,674 & 595,351 & 84,674 \\
+Wildfire Costs & 5,404,304 & 2,930,405 & 413,873 \\
+\midrule
+\textbf{Total} & \textbf{20,341,236} & \textbf{17,530,066} & \textbf{4,233,072} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Important Nuance: ROE Is Embedded in Component Line Items}
+
+The authorized return on equity (ROE) is not a standalone line item in the revenue requirement. It is embedded within the General Rate Case, Distribution (GRC), and Transmission line items. The GRC process sets the utility's allowed revenue based on its rate base, capital structure (52\% equity / 48\% debt), and authorized ROE (10.22--10.33\%). The equity return on distribution assets is part of the Distribution (GRC) line. The equity return on transmission assets is part of the Transmission line.
+
+The total equity return for each utility is:
+\begin{equation}
+    \text{Equity Return} = \text{Rate Base} \times \text{Equity Share} \times \text{ROE}
+\end{equation}
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{l r r r}
+\toprule
+& \textbf{PG\&E} & \textbf{SCE} & \textbf{SDG\&E} \\
+\midrule
+Rate Base (\$B) & 41.99 & 41.43 & 13.59 \\
+Equity Share & 52\% & 52\% & 52\% \\
+Authorized ROE & 10.28\% & 10.33\% & 10.22\% \\
+Total Equity Return (\$B) & 2.24 & 2.23 & 0.72 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This equity return is distributed across the Distribution, Transmission, and General Rate Case line items in proportion to the assets in each category. It is not separately visible in the revenue requirement table.
+
+\section{Three Rate Design Levers and Their Mechanics}
+
+Our rate design tool uses three policy levers. It is critical to understand that these levers operate on different dimensions of the revenue requirement and do not double-count.
+
+\subsection{Lever 1: T\&D Cost Allocation to Fixed Charges}
+
+This lever changes \textit{how} T\&D revenue is collected, not \textit{how much} is collected.
+
+\begin{itemize}
+    \item Takes the Distribution (GRC) + Transmission line items as total T\&D costs.
+    \item Shifts a fraction ($F\%$) from volumetric rates to monthly fixed charges.
+    \item Total revenue is unchanged. This is purely a redistribution of the collection mechanism.
+    \item The T\&D line items include embedded ROE on distribution and transmission assets. When we shift T\&D to fixed charges, we are shifting the full bundle (O\&M + depreciation + return on capital + taxes) associated with those assets.
+\end{itemize}
+
+\subsection{Lever 2: Wildfire Cost Removal}
+
+This lever \textit{reduces} total revenue.
+
+\begin{itemize}
+    \item Removes the Wildfire Costs line item from the revenue requirement.
+    \item This is a standalone component with no overlap with T\&D or ROE.
+    \item The wildfire line item represents wildfire fund contributions, insurance, liability costs, and mitigation expenditures authorized in special proceedings outside the GRC.
+    \item The reduction is proportional: all volumetric rates decrease by the wildfire share of residential revenue.
+\end{itemize}
+
+\subsection{Lever 3: ROE Reduction}
+
+This lever \textit{reduces} total revenue by lowering the authorized return on equity.
+
+\begin{itemize}
+    \item Computed directly from Rate Base, Equity Share, and the reduction amount (in percentage points).
+    \item The impact per 1pp: Rate Base $\times$ Equity Share $\times$ 0.01 $\times$ Residential Share.
+    \item This reduction applies to the equity return embedded \textit{within} Distribution, Transmission, and GRC line items. It does not add a new component or remove an existing one. It reduces the total revenue requirement by lowering the return utilities earn on invested capital.
+    \item The ROE lever is orthogonal to the T\&D fixed charge lever: T\&D allocation changes where revenue is collected (volumetric vs fixed), while ROE reduction changes how much total revenue is collected.
+\end{itemize}
+
+\section{No Double Counting}
+
+The three levers operate on different dimensions:
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{l c c}
+\toprule
+\textbf{Lever} & \textbf{Changes total revenue?} & \textbf{Changes collection method?} \\
+\midrule
+T\&D to fixed charges & No & Yes \\
+Wildfire removal & Yes (reduces) & No \\
+ROE reduction & Yes (reduces) & No \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+When all three levers are applied simultaneously (e.g., F50\_WF1\_ROE1.0):
+\begin{enumerate}
+    \item ROE reduction lowers the revenue requirement (the equity return embedded in T\&D and GRC shrinks).
+    \item Wildfire removal further lowers the revenue requirement (standalone line item removed).
+    \item T\&D fixed charge allocation takes the remaining T\&D revenue (now slightly smaller due to ROE reduction) and shifts 50\% to fixed charges.
+\end{enumerate}
+
+The order of operations in the code reflects this:
+\begin{align}
+    R_{\text{target}} &= R_{\text{sample}} - R_{\text{sample}} \cdot \alpha_{\text{wf}} - R_{\text{sample}} \cdot \alpha_{\text{roe}} \cdot \Delta \\
+    R_{\text{fixed}} &= R_{\text{sample}} \cdot \alpha_{\text{td}} \cdot \frac{F\%}{100} \\
+    R_{\text{vol}} &= R_{\text{target}} - R_{\text{fixed}}
+\end{align}
+
+Note: $R_{\text{fixed}}$ is computed from $R_{\text{sample}}$ (the original T\&D share), not from $R_{\text{target}}$. This means the fixed charge amount does not change when wildfire or ROE levers are toggled. The fixed charge reflects the full T\&D cost including embedded ROE. Only the volumetric portion ($R_{\text{vol}}$) absorbs the revenue reductions from wildfire and ROE.
+
+\section{Implication for the Sankey Diagram}
+
+Because ROE is embedded within the revenue requirement line items (Distribution, Transmission, GRC), the Sankey diagram should show the actual component breakdown from the authorized revenue requirement table. The ROE lever should be represented as an annotation or overlay showing "1pp ROE reduction = \$X savings" rather than as a separate flow node. Showing ROE as a separate node alongside T\&D would misrepresent the structure, since the equity return is already counted within the T\&D and GRC flows.
+
+\end{document}

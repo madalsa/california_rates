@@ -58,6 +58,12 @@ WILDFIRE_SHARE = REVENUE_COMPONENTS['wildfire'] / RESIDENTIAL_REVENUE
 TD_SHARE = (REVENUE_COMPONENTS['transmission'] + REVENUE_COMPONENTS['distribution']) / RESIDENTIAL_REVENUE
 ROE_SHARE_PER_PP = (RATE_BASE * EQUITY_SHARE * 0.01 * RES_SHARE) / RESIDENTIAL_REVENUE
 
+# T&D overlap factors (from Table 2.2 Rate Base Components)
+# β_wf: share of wildfire costs that are T&D-related
+# β_roe: T&D rate base / total rate base (ROE earned on T&D assets)
+TD_RATEBASE_SHARE = (25_347_030 + 11_600_356) / 41_987_991  # 88.0% for PGE
+WF_TD_SHARE = 0.90  # ~90% of wildfire spending is T&D-related
+
 # Current PGE E-TOU-C baseline rate structure ($/kWh)
 # 4 periods: summer peak/offpeak, winter peak/offpeak (no midpeak)
 BASELINE_TOU_RATES = {
@@ -132,27 +138,35 @@ def design_rate(fixed_pct_td=0, remove_wildfire=False, roe_reduction=0,
     n_care = sample_n_care if sample_n_care is not None else CUSTOMERS['care']
     n_noncare = sample_n_noncare if sample_n_noncare is not None else CUSTOMERS['non_care']
 
-    # --- Step 1: Revenue target = R_sample minus policy adjustments (as shares) ---
-    r_target = r_sample
-    if remove_wildfire:
-        r_target -= r_sample * WILDFIRE_SHARE
-    if roe_reduction > 0:
-        r_target -= r_sample * ROE_SHARE_PER_PP * roe_reduction
+    # --- Step 1: Revenue target ---
+    # Remove wildfire and ROE costs from revenue requirement
+    wf_removed = r_sample * WILDFIRE_SHARE if remove_wildfire else 0.0
+    roe_removed = RATE_BASE * EQUITY_SHARE * (roe_reduction / 100) / TOTAL_REVENUE * r_sample
+    r_target = r_sample - wf_removed - roe_removed
 
-    # --- Step 2: Fixed charge revenue = share of T&D costs ---
-    r_fixed = r_sample * TD_SHARE * (fixed_pct_td / 100)
+    # --- Step 2: Adjust T&D share for active levers ---
+    # Wildfire and ROE are largely embedded in T&D. When removed, the T&D
+    # cost base shrinks, so fixed charges should reflect the reduced T&D.
+    alpha_td_adj = TD_SHARE
+    if remove_wildfire:
+        alpha_td_adj -= WILDFIRE_SHARE * WF_TD_SHARE
+    if roe_reduction > 0:
+        roe_share_removed = RATE_BASE * EQUITY_SHARE * (roe_reduction / 100) / TOTAL_REVENUE
+        alpha_td_adj -= roe_share_removed * TD_RATEBASE_SHARE
+
+    # --- Step 3: Fixed charge revenue from adjusted T&D ---
+    r_fixed = r_target * alpha_td_adj * (fixed_pct_td / 100)
 
     # Per-customer fixed charges (using sample counts)
     total_weighted_customers = n_noncare + care_fixed_ratio * n_care
     fixed_non_care = r_fixed / total_weighted_customers / 12  # monthly
     fixed_care = fixed_non_care * care_fixed_ratio
 
-    # --- Step 3: Volumetric rates (TOU) ---
+    # --- Step 4: Volumetric rates (TOU) ---
     r_vol = r_target - r_fixed
 
-    # Scale TOU rates proportionally against R_sample. Baseline credits are
-    # handled in bill calculation (constant, same as actual tariff).
-    # For F0_WF0_ROE0: r_vol = r_sample, so s = 1.0.
+    # Scale TOU rates proportionally against R_sample.
+    # For F0_WF0_ROE0: r_target = r_sample, r_fixed = 0, so s = 1.0.
     scaling = r_vol / r_sample
     new_tou_rates = {k: v * scaling for k, v in BASELINE_TOU_RATES.items()}
 

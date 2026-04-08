@@ -105,7 +105,7 @@ SCE_CZ_COORDINATES = {
 
 DEFAULT_PV_SIZE_KW = 7.0          # Fallback
 PV_OFFSET_TARGET = 0.90           # 90% of native annual demand
-PV_MIN_SIZE_KW = 3.0              # Floor
+PV_MIN_SIZE_KW = 4.0              # Floor
 PV_MAX_SIZE_KW = 15.0             # Cap (larger to reflect CA median sizes)
 SCE_ANNUAL_KWH_PER_KW = 1700.0   # Default; updated at runtime from pvlib
 

@@ -1,0 +1,292 @@
+% details_april8.tex — Combined Rate Design Method
+% California IOU Rate Analysis
+% Date: 2026-04-08
+
+\documentclass[11pt]{article}
+\usepackage{amsmath, amssymb}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+
+\title{Combined Rate Design Method}
+\author{California IOU Rate Analysis}
+\date{April 8, 2026}
+
+\begin{document}
+\maketitle
+
+\section{Overview}
+
+We design counterfactual electricity rate scenarios by modifying the utility's residential revenue requirement through three policy levers. Each lever operates on a different dimension of the revenue requirement. When levers are combined, we account for the overlap between cost components to avoid overstating or understating the resulting rates and fixed charges.
+
+\section{Inputs}
+
+\subsection{Revenue Requirement}
+
+The total authorized revenue requirement $R_{\text{total}}$ is set through the utility's General Rate Case (GRC) and supplementary proceedings. We use 2024 authorized values:
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{l r r r}
+\toprule
+& \textbf{PG\&E} & \textbf{SCE} & \textbf{SDG\&E} \\
+\midrule
+Total revenue requirement (\$B) & 20.34 & 17.53 & 4.23 \\
+Residential revenue (\$B) & 8.24 & 7.75 & 1.56 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Sample Revenue}
+
+We compute the weighted sample revenue $R_{\text{sample}}$ from the ResStock building sample under the actual tariff:
+
+\begin{equation}
+R_{\text{sample}} = \sum_i \text{Bill}_i^{\text{actual}} \times w
+\end{equation}
+
+where $w = 252.3$ is the uniform ResStock building weight. This serves as the baseline against which all policy adjustments are applied.
+
+\subsection{Cost Component Shares}
+
+Each policy lever targets a specific cost component. We express these as shares of residential revenue:
+
+\begin{equation}
+\alpha_{\text{wf}} = \frac{C_{\text{wildfire}} \times \text{ResShare}}{R_{\text{residential}}}
+\end{equation}
+
+\begin{equation}
+\alpha_{\text{td}} = \frac{(C_{\text{transmission}} + C_{\text{distribution}}) \times \text{ResShare}}{R_{\text{residential}}}
+\end{equation}
+
+where $\text{ResShare} = R_{\text{residential}} / R_{\text{total}}$.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{l r r r}
+\toprule
+\textbf{Share} & \textbf{PG\&E} & \textbf{SCE} & \textbf{SDG\&E} \\
+\midrule
+T\&D ($\alpha_{\text{td}}$) & 56.0\% & 55.9\% & 56.9\% \\
+Wildfire ($\alpha_{\text{wf}}$) & 26.5\% & 16.7\% & 9.8\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Capital Structure and ROE}
+
+The authorized return on equity (ROE) is earned on the equity portion of the rate base. The revenue impact of a $\Delta$ percentage point ROE reduction is:
+
+\begin{equation}
+\text{ROE removed} = \frac{\text{RateBase} \times \text{EquityShare} \times (\Delta / 100)}{R_{\text{total}}} \times R_{\text{sample}}
+\end{equation}
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{l r r r}
+\toprule
+& \textbf{PG\&E} & \textbf{SCE} & \textbf{SDG\&E} \\
+\midrule
+Rate base (\$B) & 41.99 & 41.43 & 13.59 \\
+Equity share (\%) & 52 & 52 & 52 \\
+Authorized ROE (\%) & 10.28 & 10.33 & 10.22 \\
+Impact per 1pp (\$M residential) & 88 & 95 & 26 \\
+Impact per 1pp (\% of res revenue) & 1.07 & 1.23 & 1.67 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Three Policy Levers}
+
+\subsection{Lever 1: T\&D Cost Allocation to Fixed Charges ($F\%$)}
+
+Shifts $F\%$ of transmission and distribution costs from volumetric rates to monthly fixed charges. Total revenue is unchanged. This is a redistribution of the collection mechanism.
+
+\subsection{Lever 2: Wildfire Cost Removal ($\mathbb{1}_{\text{wf}}$)}
+
+Removes wildfire cost recovery from the revenue requirement. Total revenue decreases by $R_{\text{sample}} \times \alpha_{\text{wf}}$.
+
+\subsection{Lever 3: ROE Reduction ($\Delta$ pp)}
+
+Reduces the authorized return on equity by $\Delta$ percentage points. Total revenue decreases by $\text{RateBase} \times \text{EquityShare} \times (\Delta/100) / R_{\text{total}} \times R_{\text{sample}}$.
+
+\section{Combined Rate Design: Accounting for Overlap}
+
+\subsection{The Overlap Problem}
+
+The T\&D, wildfire, and ROE components are not mutually exclusive in the revenue requirement. Specifically:
+
+\begin{itemize}
+\item Approximately 90\% of wildfire spending is T\&D-related (distribution line hardening, undergrounding, vegetation management on transmission corridors). We denote this fraction $\beta_{\text{wf}} = 0.90$.
+
+\item The ROE is earned on the rate base, which is predominantly T\&D assets. The T\&D share of the rate base is:
+\end{itemize}
+
+\begin{table}[htbp]
+\centering
+\caption{Rate base composition (from Table 2.2, \$000).}
+\begin{tabular}{l r r r}
+\toprule
+\textbf{Category} & \textbf{PG\&E} & \textbf{SCE} & \textbf{SDG\&E} \\
+\midrule
+Generation & 5,040,605 & 2,277,457 & 541,077 \\
+Distribution & 25,347,030 & 31,720,775 & 7,646,617 \\
+Transmission & 11,600,356 & 7,429,296 & 5,402,844 \\
+\midrule
+Total & 41,987,991 & 41,427,528 & 13,590,538 \\
+\midrule
+T\&D / Total ($\beta_{\text{roe}}$) & 88.0\% & 94.5\% & 96.0\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+When wildfire costs are removed or ROE is reduced, the T\&D cost base shrinks. If we then allocate a percentage of T\&D to fixed charges, we should use the reduced T\&D, not the original.
+
+\subsection{Step 1: Revenue Target}
+
+\begin{equation}
+\boxed{R_{\text{target}} = R_{\text{sample}} - \underbrace{R_{\text{sample}} \cdot \alpha_{\text{wf}} \cdot \mathbb{1}_{\text{wf}}}_{\text{wildfire removed}} - \underbrace{\frac{\text{RateBase} \times \text{EquityShare} \times (\Delta/100)}{R_{\text{total}}} \times R_{\text{sample}}}_{\text{ROE removed}}}
+\end{equation}
+
+For the benchmark scenario F0\_WF0\_ROE0: $R_{\text{target}} = R_{\text{sample}}$.
+
+\subsection{Step 2: Adjusted T\&D Share}
+
+When wildfire or ROE levers are active, the effective T\&D share decreases:
+
+\begin{equation}
+\boxed{\alpha_{\text{td}}^{\text{adj}} = \alpha_{\text{td}} - \alpha_{\text{wf}} \cdot \mathbb{1}_{\text{wf}} \cdot \beta_{\text{wf}} - \frac{\text{RateBase} \times \text{EquityShare} \times (\Delta/100)}{R_{\text{total}}} \cdot \beta_{\text{roe}}}
+\end{equation}
+
+where:
+\begin{itemize}
+\item $\beta_{\text{wf}} = 0.90$: fraction of wildfire costs that are T\&D-related
+\item $\beta_{\text{roe}}$: T\&D share of rate base (PG\&E 88.0\%, SCE 94.5\%, SDG\&E 96.0\%)
+\end{itemize}
+
+For scenarios without wildfire removal or ROE reduction: $\alpha_{\text{td}}^{\text{adj}} = \alpha_{\text{td}}$ (no adjustment).
+
+\subsection{Step 3: Fixed Charge Revenue}
+
+Fixed charges are computed from the reduced revenue target and the adjusted T\&D share:
+
+\begin{equation}
+\boxed{R_{\text{fixed}} = R_{\text{target}} \times \alpha_{\text{td}}^{\text{adj}} \times \frac{F\%}{100}}
+\end{equation}
+
+Per-customer monthly charges, with CARE ratio $\gamma = 0.248$:
+
+\begin{align}
+\text{FC}_{\text{nonCARE}} &= \frac{R_{\text{fixed}}}{(N_{\text{nonCARE}} + \gamma \cdot N_{\text{CARE}}) \times 12} \\
+\text{FC}_{\text{CARE}} &= \gamma \cdot \text{FC}_{\text{nonCARE}}
+\end{align}
+
+For $F\% = 0$: $R_{\text{fixed}} = 0$ and no fixed charges, regardless of other levers.
+
+\subsection{Step 4: Volumetric Rate Scaling}
+
+The remaining revenue is collected through volumetric TOU rates:
+
+\begin{equation}
+R_{\text{vol}} = R_{\text{target}} - R_{\text{fixed}}
+\end{equation}
+
+\begin{equation}
+\boxed{s = \frac{R_{\text{vol}}}{R_{\text{sample}}}}
+\end{equation}
+
+Designed TOU rates: $\tilde{r}^p = s \times r^p$ for each period $p$.
+
+\subsection{Step 5: Bill Calculation}
+
+\begin{equation}
+\text{Bill}_i^{(k)} = \left[\sum_p Q_i^p \cdot (s_k \cdot r^p) - BL(i)\right] \times (1 - d_i) + \text{FC}_i^{(k)}
+\end{equation}
+
+where $BL(i)$ is the constant baseline credit and $d_i$ is the CARE discount.
+
+\section{Verification}
+
+\subsection{Benchmark: F0\_WF0\_ROE0}
+
+No levers active: $R_{\text{target}} = R_{\text{sample}}$, $\alpha_{\text{td}}^{\text{adj}} = \alpha_{\text{td}}$, $R_{\text{fixed}} = 0$, $s = 1.0$. Designed bills equal actual tariff bills. $\checkmark$
+
+\subsection{Standalone F50\_WF0\_ROE0}
+
+No wildfire or ROE: $\alpha_{\text{td}}^{\text{adj}} = \alpha_{\text{td}}$, $R_{\text{target}} = R_{\text{sample}}$.
+
+$R_{\text{fixed}} = R_{\text{sample}} \times \alpha_{\text{td}} \times 0.50$. Same as before. $\checkmark$
+
+\subsection{Combined F50\_WF1\_ROE1.0}
+
+All three levers active. Example for PG\&E:
+
+\begin{align}
+R_{\text{target}} &= R_{\text{sample}} \times (1 - 0.265 - 0.0107) = R_{\text{sample}} \times 0.724 \\
+\alpha_{\text{td}}^{\text{adj}} &= 0.560 - (0.265 \times 0.90) - (0.0107 \times 0.88) \\
+    &= 0.560 - 0.239 - 0.009 = 0.312 \\
+R_{\text{fixed}} &= R_{\text{target}} \times 0.312 \times 0.50 = R_{\text{sample}} \times 0.724 \times 0.156 \\
+    &= R_{\text{sample}} \times 0.113 \\
+R_{\text{vol}} &= R_{\text{sample}} \times 0.724 - R_{\text{sample}} \times 0.113 = R_{\text{sample}} \times 0.611 \\
+s &= 0.611
+\end{align}
+
+Compare to old method (no adjustment):
+\begin{align}
+R_{\text{fixed, old}} &= R_{\text{sample}} \times 0.560 \times 0.50 = R_{\text{sample}} \times 0.280 \\
+s_{\text{old}} &= (R_{\text{sample}} \times 0.724 - R_{\text{sample}} \times 0.280) / R_{\text{sample}} = 0.444
+\end{align}
+
+The old method over-collected through fixed charges ($R_{\text{sample}} \times 0.280$ vs $0.113$) and under-collected through volumetric rates ($s = 0.444$ vs $0.611$). The new method correctly reflects that removing wildfire and reducing ROE shrinks the T\&D cost base from which fixed charges are drawn.
+
+\section{Summary of Rate Scenarios}
+
+\begin{table}[htbp]
+\centering
+\caption{Eight rate scenarios evaluated per utility.}
+\begin{tabular}{l c c c l}
+\toprule
+\textbf{Scenario} & $F\%$ & $\mathbb{1}_{\text{wf}}$ & $\Delta$ & \textbf{Description} \\
+\midrule
+Actual tariff & --- & --- & --- & Status quo TOU rate \\
+Actual tariff-F & --- & --- & --- & Status quo with fixed charges \\
+F0\_WF0\_ROE0 & 0 & 0 & 0 & Benchmark (= actual tariff) \\
+F50\_WF0\_ROE0 & 50 & 0 & 0 & 50\% T\&D to fixed charges \\
+F100\_WF0\_ROE0 & 100 & 0 & 0 & 100\% T\&D to fixed charges \\
+F0\_WF1\_ROE0 & 0 & 1 & 0 & Remove wildfire from rates \\
+F0\_WF0\_ROE1.0 & 0 & 0 & 1.0 & Reduce ROE by 1pp \\
+F50\_WF1\_ROE1.0 & 50 & 1 & 1.0 & Combined reform \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The combined scenario (F50\_WF1\_ROE1.0) is the only scenario where the T\&D adjustment matters. All standalone scenarios produce identical results to the unadjusted method because either $F\% = 0$ (so $R_{\text{fixed}} = 0$) or no wildfire/ROE levers are active (so $\alpha_{\text{td}}^{\text{adj}} = \alpha_{\text{td}}$).
+
+\section{Lever Interaction: Not Double Counting}
+
+The three levers operate on different dimensions:
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{l c c}
+\toprule
+\textbf{Lever} & \textbf{Changes total revenue?} & \textbf{Changes collection method?} \\
+\midrule
+T\&D to fixed charges & No & Yes \\
+Wildfire removal & Yes (reduces) & No \\
+ROE reduction & Yes (reduces) & No \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The T\&D lever redistributes; wildfire and ROE levers reduce. When combined:
+
+\begin{enumerate}
+\item Wildfire removal and ROE reduction lower the revenue target.
+\item These reductions shrink the effective T\&D cost base (because wildfire is 90\% T\&D and ROE is 88--96\% on T\&D assets).
+\item The fixed charge allocation applies to the reduced T\&D base and reduced revenue.
+\item The remaining revenue is collected volumetrically.
+\end{enumerate}
+
+The order matters: reduce first, then redistribute. Fixed charges reflect the post-reduction T\&D costs, not the original.
+
+\end{document}

@@ -297,7 +297,7 @@ def stage6_post_adoption_bills(bills_df, tech_df, solar_profiles,
             if is_care and rc_info['care_discount'] > 0:
                 imp_cost *= (1 - rc_info['care_discount'])
 
-            rc_fixed = rc_info['base_svc_daily'] * 365
+            rc_fixed = 0.0  # base service charge excluded for consistency
             if rc_info['has_fixed']:
                 rc_fixed += rc_info['fc_monthly'].get(_current_income, 0.0) * 12
             bill = max(imp_cost - exp_credit, 0) + rc_fixed

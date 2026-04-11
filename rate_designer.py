@@ -183,8 +183,11 @@ def design_rate(fixed_pct_td=0, remove_wildfire=False, roe_reduction=0,
     # --- Step 4: Volumetric rates (TOU) ---
     r_vol = r_target - r_fixed
 
-    # For F0_WF0_ROE0: r_target = r_sample, r_fixed = 0, so s = 1.0.
-    scaling = r_vol / r_sample
+    # Scale accounting for constant baseline credit.
+    # s = (R_vol + BL_total) / (R_sample + BL_total)
+    # For F0_WF0_ROE0: s = (R_sample + BL) / (R_sample + BL) = 1.0
+    _bl = bl_total if bl_total is not None else 0.0
+    scaling = (r_vol + _bl) / (r_sample + _bl)
     new_tou_rates = {k: v * scaling for k, v in BASELINE_TOU_RATES.items()}
 
     # Weighted average volumetric rate (for verification)

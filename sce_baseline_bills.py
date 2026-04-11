@@ -106,9 +106,8 @@ def calculate_actual_sce_bill(hourly_load, rate_code, puma_str, income, is_care,
     if is_care and care_discount > 0:
         energy_after_credit *= (1 - care_discount)
 
-    # Fixed charges
-    base_svc = safe_float(wd.get('base_service_charge_per_day', 0))
-    annual_base_fixed = base_svc * 365
+    # Fixed charges (base service charge excluded for consistency across IOUs)
+    annual_base_fixed = 0.0
 
     monthly_fixed = 0.0
     has_fixed = wd.get('Fixed', '') == 'Yes'

@@ -1,0 +1,49 @@
+% pnas_results_draft.tex — Results Section Draft
+% Based on pipeline output data, April 2026
+
+\documentclass[11pt]{article}
+\usepackage{amsmath}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+
+\begin{document}
+
+\section*{Results}
+
+\subsection*{Revenue requirement and rate design levers.}
+
+California's three investor-owned utilities have a combined authorized revenue requirement of \$42.1 billion, of which residential customers pay approximately \$17.5 billion (41\% for PG\&E, 44\% for SCE, 37\% for SDG\&E) (Fig.~1). Transmission and distribution (T\&D) costs account for 56--57\% of residential revenue across all three utilities. Wildfire costs vary substantially: PG\&E's wildfire liability represents 27\% of its residential revenue, compared to 17\% for SCE and 10\% for SDG\&E. The authorized return on equity, earned on rate bases of \$42--\$41 billion for PG\&E and SCE and \$14 billion for SDG\&E, accounts for approximately \$2.2 billion per utility for the two larger IOUs and \$0.7 billion for SDG\&E.
+
+\subsection*{Revenue neutrality and scenario validation.}
+
+We validate our rate design tool by confirming that the benchmark scenario (F0\_WF0\_ROE0) replicates actual tariff bills. The designed rate scaling factor equals 1.0 for all three utilities, and the mean per-building bill difference between the benchmark and the actual tariff is less than \$0.10 for PG\&E and SDG\&E (Fig.~2a). The revenue-neutral fixed charge scenarios (CPUC Fixed Charge and 50\% Fixed Charge) collect the same total revenue as the reference TOU rate, redistributing costs from volumetric to fixed charges without changing the total. Cost-reduction scenarios reduce revenue proportionally: wildfire removal lowers revenue by 27\% for PG\&E, 17\% for SCE, and 10\% for SDG\&E, matching the wildfire cost shares in each utility's revenue requirement.
+
+\subsection*{Bill impacts for non-adopters.}
+
+Non-adopters, who comprise 74\% of the sample (16,332 in PG\&E, 13,298 in SCE, 3,195 in SDG\&E), see modest bill changes under revenue-neutral scenarios and large reductions under cost-removal scenarios (Fig.~3, top row). Under the CPUC's income-graduated fixed charge, mean CARE bills decrease by \$161 for PG\&E and \$107 for SCE, while non-CARE bills decrease by \$183 and \$105 respectively. The 50\% fixed charge scenario reduces CARE bills by \$212 (PG\&E) and \$227 (SCE) but increases non-CARE bills by \$50 (PG\&E), reflecting the redistribution from high-consumption to low-consumption households.
+
+Wildfire removal produces the largest bill reductions: \$819/yr for PG\&E (27\% reduction), \$482/yr for SCE (17\%), and \$321/yr for SDG\&E (10\%). ROE reduction of one percentage point saves \$34--\$55/yr (1--2\%). The combined scenario (50\% fixed charges, wildfire removal, and ROE reduction) reduces bills by 28--32\% relative to the reference rate.
+
+\subsection*{CARE revenue burden.}
+
+CARE customers contribute 12.5--14.9\% of total revenue under current rates (Fig.~2b). Fixed charge scenarios shift the revenue burden away from CARE households: under 50\% fixed charges, the CARE share drops from 14.9\% to 13.1\% for PG\&E and from 12.6\% to 11.0\% for SCE. This reduction reflects the lower CARE fixed charge (\$6/month vs \$24.15/month for non-CARE). Cost-removal scenarios (wildfire, ROE) preserve the CARE share at approximately its reference level, as the percentage reductions apply uniformly across income groups.
+
+\subsection*{EV adopters face higher bills.}
+
+Households with electric vehicles but no solar (2,107 in PG\&E, 1,690 in SCE, 391 in SDG\&E) pay \$4,100--\$4,600/yr, approximately \$1,200--\$1,300 more than non-adopters under the reference rate (Fig.~3, top right). This reflects the additional charging load of approximately 2,900 kWh/yr (mean 24 miles/day at 3 mi/kWh). All rate reform scenarios reduce EV bills in absolute terms, but the additional cost from charging persists across all scenarios. CARE EV households see larger percentage reductions under wildfire removal and combined scenarios.
+
+\subsection*{PV-plus-storage adopters achieve near-zero bills.}
+
+Households with rooftop solar and battery storage (3,182 in PG\&E, 2,601 in SCE, 606 in SDG\&E) reduce their bills by 90--95\% under the reference rate, from approximately \$3,300--\$3,900/yr to \$160--\$384/yr (Fig.~3, bottom left). This reflects PV systems sized at 90\% of native demand (mean 4--5 kW) paired with 13.5 kWh batteries that optimize self-consumption and export timing via LP dispatch. Self-sufficiency ratios average 62\% for PG\&E, 77\% for SDG\&E, with grid exports of 3,000--4,100 kWh/yr.
+
+Under 50\% fixed charges, PV-plus-storage savings compress by \$800--\$870/yr (Fig.~4, PV+Storage row). Non-CARE PV households see bill increases of \$600--\$800 relative to the reference rate because the fixed charge (\$88--\$92/month) exceeds their minimal volumetric charges. This is the central cost-shift tension: fixed charges ensure PV adopters contribute to grid costs, but reduce the economic incentive for solar adoption.
+
+\subsection*{Combined PV, EV, and storage.}
+
+Households with all three technologies (529 in PG\&E, 496 in SCE, 125 in SDG\&E) save 73--83\% on their bills under the reference rate, with average bills of \$591--\$1,065/yr (Fig.~3, bottom right). The savings are smaller than PV-only because EV charging adds load that solar and battery cannot fully offset. Self-sufficiency ratios are 58--69\%, lower than PV-only households. Under fixed charge scenarios, these households also see compressed savings, but the effect is moderated by their higher grid import (4,500--5,700 kWh/yr) which generates more volumetric revenue.
+
+\subsection*{Climate zone variation.}
+
+Bill impacts vary by climate zone within PG\&E territory (Fig.~5). Inland/hot climate zones (CEC zones 11--14) have higher baseline consumption and larger absolute bill changes under all scenarios. Under 50\% fixed charges, non-CARE households in inland/hot zones see bill increases of approximately \$200--\$400/yr, while coastal/mild households see smaller changes. Wildfire removal benefits are proportional to consumption and roughly uniform in percentage terms across climate zones. For PV-plus-storage adopters, inland/hot zones show larger fixed charge impacts due to higher baseline bills, but also higher self-sufficiency ratios due to greater solar resource.
+
+\end{document}

@@ -171,6 +171,11 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
     from corrected_bill_calc import load_excel_data
     rates_df, baseline_df = load_excel_data(EXCEL_FILE)
 
+    # Filter out buildings whose PUMA has no baseline allowance entry
+    valid_pumas = set(baseline_df['puma'].unique())
+    metadata = {k: v for k, v in metadata.items() if v['puma_str'] in valid_pumas}
+    print(f"  Buildings with valid baseline PUMA: {len(metadata)}")
+
     print(f"  Actual SCE rates: {', '.join(ACTUAL_SCE_RATES.keys())}")
 
     results = []

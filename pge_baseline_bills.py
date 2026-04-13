@@ -179,6 +179,13 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
         parquet_files = parquet_files[:n_buildings]
         print(f"  TEST MODE: processing {n_buildings} buildings")
 
+    # Filter out buildings whose PUMA has no baseline allowance entry
+    from corrected_bill_calc import load_excel_data as _load_bl
+    _, baseline_df_check = _load_bl(EXCEL_FILE)
+    valid_pumas = set(baseline_df_check['puma'].unique())
+    metadata = {k: v for k, v in metadata.items() if v['puma_str'] in valid_pumas}
+    print(f"  Buildings with valid baseline PUMA: {len(metadata)}")
+
     print(f"  Actual PGE rates: {', '.join(ACTUAL_PGE_RATES.keys())}")
 
     # --- Pass 1: Compute actual tariff bills + TOU consumption ---

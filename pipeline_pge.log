@@ -1,0 +1,20 @@
+================================================================================
+PGE RATE ANALYSIS PIPELINE
+Started: 2026-04-13 13:56:06
+Mode: FULL
+Starting stage: 1
+================================================================================
+
+================================================================================
+STAGE 2: COMPUTE BASELINE BILLS
+================================================================================
+  PGE buildings in metadata: 22722
+  Parquet files found: 22722
+  Buildings with valid baseline PUMA: 22150
+  Actual PGE rates: E-TOU-C, E-TOU-C-F
+  500/22722 | 403s elapsed | ~17924s remaining
+  1000/22722 | 857s elapsed | ~18621s remaining
+  1500/22722 | 1310s elapsed | ~18537s remaining
+  2000/22722 | 1756s elapsed | ~18198s remaining
+  2500/22722 | 2161s elapsed | ~17482s remaining
+  3000/22722 | 2568s elapsed | ~16879s remaining

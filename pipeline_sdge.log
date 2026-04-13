@@ -1,0 +1,299 @@
+================================================================================
+SDGE RATE ANALYSIS PIPELINE
+Started: 2026-04-10 21:58:05
+Mode: FULL
+Starting stage: 1
+================================================================================
+
+================================================================================
+STAGE 2: COMPUTE BASELINE BILLS
+================================================================================
+  SDGE buildings in metadata: 5222
+  Parquet files found: 4317
+  Actual SDGE rates: TOU-DR, TOU-DR-F
+  500/4317 | 400s elapsed | ~3057s remaining
+  1000/4317 | 811s elapsed | ~2691s remaining
+  1500/4317 | 1202s elapsed | ~2256s remaining
+  2000/4317 | 1614s elapsed | ~1870s remaining
+  2500/4317 | 2012s elapsed | ~1463s remaining
+  3000/4317 | 2408s elapsed | ~1057s remaining
+  3500/4317 | 2959s elapsed | ~691s remaining
+  4000/4317 | 3324s elapsed | ~263s remaining
+
+  Completed: 4317 buildings in 3592.3s
+  Errors/skipped: 0
+
+  R_sample (R_0) from TOU-DR bills:
+    Valid TOU-DR bills: 4317/4317
+    Sample weighted baseline revenue (R_0): $3.5754B
+    Mean TOU-DR bill: $3,283/yr
+    Sample customers: 278,791 CARE, 810,387 non-CARE
+
+  Computing BL_total and R_gross_vol (baseline credit rate: $0.11017/kWh)...
+    Gross volumetric revenue (with CARE, no BL credits): $4.0195B
+    BL_total (aggregate baseline credits): $0.4441B
+    Baseline credit + fixed charge gap: $0.4441B
+================================================================================
+SDGE RETAIL RATE DESIGNER — Sample-Based Revenue Neutrality
+================================================================================
+
+R_sample (weighted TOU-DR revenue): $3.5754B
+R_gross_vol (gross volumetric w/ CARE, no BL credits): $4.0195B
+  Baseline credit + fixed gap: $0.4441B
+BL_total (aggregate baseline credits): $0.4441B
+Sample customers: 278,791 CARE, 810,387 non-CARE
+
+Cost shares from GRC filing:
+  Wildfire:  9.78%
+  T&D:       56.87%
+  ROE/pp:    1.67%
+
+ResStock TOU consumption weights:
+  summer_peak         : 14.38%
+  summer_midpeak      : 20.64%
+  summer_offpeak      : 12.91%
+  winter_peak         : 14.18%
+  winter_midpeak      : 22.82%
+  winter_offpeak      : 15.06%
+
+Generated 40 rate scenarios
+  Fixed charge levels: [0, 25, 50, 75, 100]
+  Wildfire options: [False, True]
+  ROE reductions: [0, 0.5, 1.0, 1.5] pp
+
+================================================================================
+REVENUE NEUTRALITY CHECK
+================================================================================
+
+Baseline scenarios (same R_target = R_sample = $3.5754B):
+  F0_WF0_ROE0    : scaling=1.0000  FC_nonCARE=$0.00/mo  Vol avg=$0.5295
+  F25_WF0_ROE0   : scaling=0.8735  FC_nonCARE=$45.95/mo  Vol avg=$0.4626
+  F50_WF0_ROE0   : scaling=0.7471  FC_nonCARE=$91.90/mo  Vol avg=$0.3956
+  F75_WF0_ROE0   : scaling=0.6206  FC_nonCARE=$137.85/mo  Vol avg=$0.3286
+  F100_WF0_ROE0  : scaling=0.4941  FC_nonCARE=$183.80/mo  Vol avg=$0.2617
+
+F0_WF0_ROE0 scaling = 1.0000 (expected 0.8895; <1.0 accounts for TOU-DR baseline credits)
+
+Policy effects on revenue target:
+  F0_WF0_ROE0         : $3.5754B  (-0.00% vs baseline)
+  F0_WF0_ROE0.5       : $3.5456B  (+0.83% vs baseline)
+  F0_WF0_ROE1.0       : $3.5157B  (+1.67% vs baseline)
+  F0_WF0_ROE1.5       : $3.4859B  (+2.50% vs baseline)
+  F0_WF1_ROE0         : $3.2258B  (+9.78% vs baseline)
+  F0_WF1_ROE0.5       : $3.1960B  (+10.61% vs baseline)
+  F0_WF1_ROE1.0       : $3.1661B  (+11.45% vs baseline)
+  F0_WF1_ROE1.5       : $3.1363B  (+12.28% vs baseline)
+
+Saved to: rate_scenarios_sdge_fresh.csv
+
+  Designed rate scenarios: 6 (F0_WF0_ROE0, F0_WF0_ROE1.0, F0_WF1_ROE0, F50_WF0_ROE0, F50_WF1_ROE1.0, F100_WF0_ROE0)
+
+  Computing bills directly from designed rates:
+  CARE volumetric discount for designed scenarios: 37.00%
+    F0_WF0_ROE0: scaling=1.0000, FC_nonCARE=$0.00/mo, mean bill=$3,283/yr
+    F0_WF0_ROE1.0: scaling=0.9851, FC_nonCARE=$0.00/mo, mean bill=$3,228/yr
+    F0_WF1_ROE0: scaling=0.9130, FC_nonCARE=$0.00/mo, mean bill=$2,962/yr
+    F50_WF0_ROE0: scaling=0.7471, FC_nonCARE=$91.90/mo, mean bill=$3,283/yr
+    F50_WF1_ROE1.0: scaling=0.7152, FC_nonCARE=$66.50/mo, mean bill=$2,907/yr
+    F100_WF0_ROE0: scaling=0.4941, FC_nonCARE=$183.80/mo, mean bill=$3,283/yr
+
+  Saved to: baseline_bills_sdge_fresh.csv
+
+  Revenue check (sample mean annual bill):
+    tou_dr_bill: $3,283/yr avg
+    tou_dr_f_bill: $3,165/yr avg
+    F0_WF0_ROE0_bill: $3,283/yr avg
+    F0_WF0_ROE1.0_bill: $3,228/yr avg
+    F0_WF1_ROE0_bill: $2,962/yr avg
+    F50_WF0_ROE0_bill: $3,283/yr avg
+    F50_WF1_ROE1.0_bill: $2,907/yr avg
+    F100_WF0_ROE0_bill: $3,283/yr avg
+
+================================================================================
+STAGE 3: TECHNOLOGY ADOPTION ASSIGNMENTS
+================================================================================
+  Buildings with bills: 4317
+  Using survey-based adoption probabilities
+
+  Adoption rates (weighted):
+    assigned_pv: 16.9% (731 buildings)
+    assigned_battery: 16.9% (731 buildings)
+    assigned_ev: 12.0% (516 buildings)
+    assigned_hp: 8.2% (356 buildings)
+  Saved to: tech_assignments_sdge.csv
+
+================================================================================
+STAGE 4: GENERATE SOLAR PROFILES (pvlib)
+================================================================================
+  PV-adopted buildings: 731
+  Location: lat=32.9, lon=-117.1
+  Solar sizing: 90% offset target, 4.0-15.0 kW range
+  Retrieved TMY data from PVGIS
+  Per-kW annual generation: 1,936 kWh/kW (22.1% CF)
+  Example sizes at 90% offset: 5000 kWh/yr -> 4.0 kW, 10000 kWh/yr -> 4.6 kW, 20000 kWh/yr -> 9.3 kW
+
+================================================================================
+STAGE 6: POST-ADOPTION BILLS
+================================================================================
+  Battery dispatch: LP (scipy/HiGHS)
+  Buildings with tech adoption: 1122
+  Loaded EEC rates from eec_hourly_2025_wide.csv (sdge_total)
+  EV VMT: mean=24.2 mi/day
+  Built rate arrays for 6 designed scenarios
+  Loaded TOU-DR: bl_credit=0.1102
+  Loaded TOU-DR-F: bl_credit=0.0969
+  Upgrade 11 data found in ./Upgrade11_SDGE
+  100/1122 | 112s
+  200/1122 | 242s
+  300/1122 | 350s
+  400/1122 | 456s
+  500/1122 | 572s
+  600/1122 | 680s
+  700/1122 | 791s
+  800/1122 | 920s
+  900/1122 | 1026s
+  1000/1122 | 1142s
+  1100/1122 | 1261s
+
+  Processed 1122 buildings in 1283.4s
+  PV sizing (90% offset):
+    Mean: 4.9 kW | Median: 4.0 kW
+  Saved to: post_adoption_bills_sdge.csv
+
+================================================================================
+STAGE 7: DISTRIBUTIONAL ANALYSIS
+================================================================================
+
+--- Revenue Neutrality Check ---
+  Filed residential revenue: $1.5600B
+  Total customers: 1,364,361
+
+  Sample: 4317 buildings
+
+  Rate                         Mean Bill    Pop Revenue  vs TOU-DR   vs Filed
+  -----------------------------------------------------------------------
+  TOU-DR                    $     3,283 $      4.4787B          —   +187.10%
+  TOU-DR-F                  $     3,165 $      4.3178B     -3.59%   +176.78%
+  F0_WF0_ROE0               $     3,283 $      4.4788B     +0.00%   +187.10%
+  F50_WF0_ROE0              $     3,283 $      4.4788B     +0.00%   +187.10%
+  F100_WF0_ROE0             $     3,283 $      4.4788B     +0.00%   +187.10%
+  F0_WF1_ROE0               $     2,962 $      4.0411B     -9.77%   +159.04%
+  F0_WF0_ROE1.0             $     3,228 $      4.4040B     -1.67%   +182.31%
+  F50_WF1_ROE1.0            $     2,907 $      3.9661B    -11.44%   +154.24%
+
+--- Mean Annual Bill by CARE Status ---
+
+  tou_dr_bill:
+        CARE: mean=$1,759  median=$1,534  (n=1105)
+    non-CARE: mean=$3,807  median=$3,301  (n=3212)
+
+  tou_dr_f_bill:
+        CARE: mean=$1,789  median=$1,568  (n=1105)
+    non-CARE: mean=$3,638  median=$3,193  (n=3212)
+
+  F0_WF0_ROE0_bill:
+        CARE: mean=$1,759  median=$1,534  (n=1105)
+    non-CARE: mean=$3,807  median=$3,301  (n=3212)
+
+  F0_WF0_ROE1.0_bill:
+        CARE: mean=$1,729  median=$1,506  (n=1105)
+    non-CARE: mean=$3,744  median=$3,244  (n=3212)
+
+  F0_WF1_ROE0_bill:
+        CARE: mean=$1,583  median=$1,374  (n=1105)
+    non-CARE: mean=$3,436  median=$2,970  (n=3212)
+
+  F50_WF0_ROE0_bill:
+        CARE: mean=$1,688  median=$1,507  (n=1105)
+    non-CARE: mean=$3,831  median=$3,444  (n=3212)
+
+  F50_WF1_ROE1.0_bill:
+        CARE: mean=$1,501  median=$1,327  (n=1105)
+    non-CARE: mean=$3,391  median=$3,019  (n=3212)
+
+  F100_WF0_ROE0_bill:
+        CARE: mean=$1,617  median=$1,482  (n=1105)
+    non-CARE: mean=$3,856  median=$3,591  (n=3212)
+
+--- Bill Change from tou_dr_bill by CARE Status ---
+
+  tou_dr_f_bill vs tou_dr_bill:
+        CARE: mean=$+30  median=$+35  winners=139/1105
+    non-CARE: mean=$-169  median=$-108  winners=2176/3212
+
+  F0_WF0_ROE0_bill vs tou_dr_bill:
+        CARE: mean=$+0  median=$+0  winners=28/1105
+    non-CARE: mean=$+0  median=$+0  winners=118/3212
+
+  F0_WF0_ROE1.0_bill vs tou_dr_bill:
+        CARE: mean=$-30  median=$-27  winners=1105/1105
+    non-CARE: mean=$-63  median=$-56  winners=3212/3212
+
+  F0_WF1_ROE0_bill vs tou_dr_bill:
+        CARE: mean=$-176  median=$-160  winners=1105/1105
+    non-CARE: mean=$-371  median=$-329  winners=3212/3212
+
+  F50_WF0_ROE0_bill vs tou_dr_bill:
+        CARE: mean=$-71  median=$-25  winners=594/1105
+    non-CARE: mean=$+25  median=$+145  winners=1305/3212
+
+  F50_WF1_ROE1.0_bill vs tou_dr_bill:
+        CARE: mean=$-258  median=$-205  winners=869/1105
+    non-CARE: mean=$-416  median=$-280  winners=2233/3212
+
+  F100_WF0_ROE0_bill vs tou_dr_bill:
+        CARE: mean=$-142  median=$-50  winners=594/1105
+    non-CARE: mean=$+49  median=$+291  winners=1305/3212
+
+--- Tech Adoption Bill Impact ---
+
+  S1: EV only (n=516):
+    F0_WF0_ROE0              : savings $-1,204/yr  median $-1,060/yr
+    F0_WF0_ROE1.0            : savings $-1,185/yr  median $-1,045/yr
+    F0_WF1_ROE0              : savings $-1,095/yr  median $-963/yr
+    F50_WF0_ROE0             : savings $-888/yr  median $-778/yr
+    F50_WF1_ROE1.0           : savings $-848/yr  median $-744/yr
+    F100_WF0_ROE0            : savings $-572/yr  median $-497/yr
+    tou_dr                   : savings $-1,204/yr  median $-1,061/yr
+    tou_dr_f                 : savings $-1,067/yr  median $-953/yr
+           low (n=152): savings $-903/yr
+        medium (n=170): savings $-1,319/yr
+          high (n=194): savings $-1,338/yr
+
+  S2: PV + storage (n=731):
+    F0_WF0_ROE0              : savings $+3,519/yr  median $+3,383/yr
+    F0_WF0_ROE1.0            : savings $+3,469/yr  median $+3,335/yr
+    F0_WF1_ROE0              : savings $+3,224/yr  median $+3,103/yr
+    F50_WF0_ROE0             : savings $+2,650/yr  median $+2,475/yr
+    F50_WF1_ROE1.0           : savings $+2,536/yr  median $+2,349/yr
+    F100_WF0_ROE0            : savings $+1,693/yr  median $+1,485/yr
+    tou_dr                   : savings $+3,519/yr  median $+3,383/yr
+    tou_dr_f                 : savings $+3,197/yr  median $+3,095/yr
+           low (n=165): savings $+2,084/yr
+        medium (n=253): savings $+3,189/yr
+          high (n=313): savings $+4,541/yr
+
+  S3: PV + storage + EV (n=125):
+    F0_WF0_ROE0              : savings $+2,904/yr  median $+2,628/yr
+    F0_WF0_ROE1.0            : savings $+2,867/yr  median $+2,582/yr
+    F0_WF1_ROE0              : savings $+2,689/yr  median $+2,433/yr
+    F50_WF0_ROE0             : savings $+2,267/yr  median $+2,120/yr
+    F50_WF1_ROE1.0           : savings $+2,184/yr  median $+2,059/yr
+    F100_WF0_ROE0            : savings $+1,570/yr  median $+1,493/yr
+    tou_dr                   : savings $+2,904/yr  median $+2,628/yr
+    tou_dr_f                 : savings $+2,683/yr  median $+2,446/yr
+           low (n=34): savings $+1,824/yr
+        medium (n=46): savings $+2,315/yr
+          high (n=45): savings $+4,322/yr
+
+  PV Sizing:
+    s2: mean=4.9 kW  median=4.0 kW  [4.0, 13.4]
+    s3: mean=5.1 kW  median=4.0 kW  [4.0, 13.4]
+
+  Summary saved to: pipeline_summary_sdge.csv
+
+================================================================================
+PIPELINE COMPLETE
+Total time: 8247.9s (137.5 min)
+Finished: 2026-04-11 00:15:32
+================================================================================

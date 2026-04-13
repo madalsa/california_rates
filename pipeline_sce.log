@@ -1,0 +1,22 @@
+================================================================================
+SCE RATE ANALYSIS PIPELINE
+Started: 2026-04-13 13:56:06
+Mode: FULL
+Starting stage: 2
+PV sizing: 90% native demand offset
+Battery dispatch: LP only (native demand)
+================================================================================
+
+Loaded 40 rate scenarios from rate_scenarios_sce_fresh.csv
+
+================================================================================
+STAGE 2: COMPUTE BASELINE BILLS
+================================================================================
+  SCE buildings in metadata: 19863
+  Parquet files found: 19863
+  Buildings with valid baseline PUMA: 18085
+  Actual SCE rates: TOU-D-4-9, TOU-D-4-9-F
+  500/19863 | 354s elapsed | ~13704s remaining
+  1000/19863 | 748s elapsed | ~14108s remaining
+  1500/19863 | 1111s elapsed | ~13604s remaining
+  2500/19863 | 1936s elapsed | ~13445s remaining

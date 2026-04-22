@@ -257,11 +257,16 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
     print(f"  Errors/skipped: {errors}")
 
     # --- Compute R_0 (sample-weighted TOU-D-4-9 revenue) ---
+    # Restrict customer counts, R_gross_vol, and BL_total to buildings with
+    # valid actual-tariff bills. Otherwise FC per customer is calibrated
+    # against a larger sample than the one used for revenue evaluation,
+    # leaving a fixed-charge shortfall proportional to Fixed_Pct_TD.
     V = df_bills['tou_d_4_9_bill'].values
     valid = ~np.isnan(V)
+    df_valid = df_bills[valid].reset_index(drop=True)
     R_0 = np.nansum(V * BUILDING_WEIGHT)
-    sample_n_care = int((df_bills['is_care'] == True).sum() * BUILDING_WEIGHT)
-    sample_n_noncare = int((df_bills['is_care'] == False).sum() * BUILDING_WEIGHT)
+    sample_n_care = int((df_valid['is_care'] == True).sum() * BUILDING_WEIGHT)
+    sample_n_noncare = int((df_valid['is_care'] == False).sum() * BUILDING_WEIGHT)
 
     print(f"\n  R_sample (R_0) from TOU-D-4-9 bills:")
     print(f"    Valid bills: {valid.sum()}/{len(V)}")
@@ -287,7 +292,7 @@ def stage2_compute_baseline_bills(rate_scenarios_df=None, n_buildings=None):
 
     r_gross_vol = 0.0
     bl_total = 0.0
-    for _, bldg_row in df_bills.iterrows():
+    for _, bldg_row in df_valid.iterrows():
         bid = bldg_row['building_id']
         if bid not in tou_consumption:
             continue

@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+.env
+
+# Heavy local outputs
+data/*.parquet
+data/*.feather
+data/cache/
+
+# Per-user notebooks
+notebooks/scratch_*.ipynb

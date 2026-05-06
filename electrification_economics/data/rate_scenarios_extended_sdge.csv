@@ -1,0 +1,48 @@
+scenario_id,rate_type,source_scenario,fixed_monthly_dollars,demand_charge_per_kw_mo,peak_window,summer_peak,summer_midpeak,summer_offpeak,winter_peak,winter_midpeak,winter_offpeak,ev_super_offpeak,ev_on_peak,export_regime,notes
+F0_WF0_ROE0,designed_tou,F0_WF0_ROE0,0.0,0.0,,0.6,0.527,0.45,0.5816,0.519,0.5008,,,nbt_hourly,"Existing designed scenario, unchanged"
+F0_WF0_ROE0.5,designed_tou,F0_WF0_ROE0.5,0.0,0.0,,0.5955,0.5231,0.4467,0.5772,0.5151,0.4971,,,nbt_hourly,"Existing designed scenario, unchanged"
+F0_WF0_ROE1.0,designed_tou,F0_WF0_ROE1.0,0.0,0.0,,0.5911,0.5192,0.4433,0.5729,0.5113,0.4934,,,nbt_hourly,"Existing designed scenario, unchanged"
+F0_WF0_ROE1.5,designed_tou,F0_WF0_ROE1.5,0.0,0.0,,0.5866,0.5153,0.44,0.5686,0.5074,0.4897,,,nbt_hourly,"Existing designed scenario, unchanged"
+F0_WF1_ROE0,designed_tou,F0_WF1_ROE0,0.0,0.0,,0.5478,0.4812,0.4109,0.531,0.4739,0.4573,,,nbt_hourly,"Existing designed scenario, unchanged"
+F0_WF1_ROE0.5,designed_tou,F0_WF1_ROE0.5,0.0,0.0,,0.5434,0.4773,0.4075,0.5267,0.47,0.4536,,,nbt_hourly,"Existing designed scenario, unchanged"
+F0_WF1_ROE1.0,designed_tou,F0_WF1_ROE1.0,0.0,0.0,,0.5389,0.4733,0.4042,0.5223,0.4661,0.4498,,,nbt_hourly,"Existing designed scenario, unchanged"
+F0_WF1_ROE1.5,designed_tou,F0_WF1_ROE1.5,0.0,0.0,,0.5345,0.4694,0.4008,0.518,0.4623,0.4461,,,nbt_hourly,"Existing designed scenario, unchanged"
+F25_WF0_ROE0,designed_tou,F25_WF0_ROE0,4248.97,0.0,,0.5241,0.4604,0.3931,0.508,0.4534,0.4375,,,nbt_hourly,"Existing designed scenario, unchanged"
+F25_WF0_ROE0.5,designed_tou,F25_WF0_ROE0.5,4119.44,0.0,,0.5214,0.4579,0.391,0.5053,0.451,0.4352,,,nbt_hourly,"Existing designed scenario, unchanged"
+F25_WF0_ROE1.0,designed_tou,F25_WF0_ROE1.0,3992.48,0.0,,0.5186,0.4555,0.3889,0.5026,0.4486,0.4329,,,nbt_hourly,"Existing designed scenario, unchanged"
+F25_WF0_ROE1.5,designed_tou,F25_WF0_ROE1.5,3868.06,0.0,,0.5158,0.453,0.3868,0.4999,0.4461,0.4305,,,nbt_hourly,"Existing designed scenario, unchanged"
+F25_WF1_ROE0,designed_tou,F25_WF1_ROE0,2923.58,0.0,,0.4899,0.4303,0.3675,0.4749,0.4238,0.409,,,nbt_hourly,"Existing designed scenario, unchanged"
+F25_WF1_ROE0.5,designed_tou,F25_WF1_ROE0.5,2821.89,0.0,,0.487,0.4277,0.3652,0.472,0.4212,0.4065,,,nbt_hourly,"Existing designed scenario, unchanged"
+F25_WF1_ROE1.0,designed_tou,F25_WF1_ROE1.0,2722.47,0.0,,0.484,0.4251,0.363,0.4691,0.4187,0.404,,,nbt_hourly,"Existing designed scenario, unchanged"
+F25_WF1_ROE1.5,designed_tou,F25_WF1_ROE1.5,2625.31,0.0,,0.481,0.4225,0.3608,0.4662,0.4161,0.4015,,,nbt_hourly,"Existing designed scenario, unchanged"
+F50_WF0_ROE0,designed_tou,F50_WF0_ROE0,8497.94,0.0,,0.4482,0.3937,0.3362,0.4345,0.3877,0.3742,,,nbt_hourly,"Existing designed scenario, unchanged"
+F50_WF0_ROE0.5,designed_tou,F50_WF0_ROE0.5,8238.89,0.0,,0.4472,0.3928,0.3354,0.4334,0.3868,0.3733,,,nbt_hourly,"Existing designed scenario, unchanged"
+F50_WF0_ROE1.0,designed_tou,F50_WF0_ROE1.0,7984.97,0.0,,0.4461,0.3918,0.3345,0.4323,0.3858,0.3723,,,nbt_hourly,"Existing designed scenario, unchanged"
+F50_WF0_ROE1.5,designed_tou,F50_WF0_ROE1.5,7736.13,0.0,,0.4449,0.3908,0.3337,0.4312,0.3849,0.3714,,,nbt_hourly,"Existing designed scenario, unchanged"
+F50_WF1_ROE0,designed_tou,F50_WF1_ROE0,5847.17,0.0,,0.4321,0.3795,0.3241,0.4188,0.3737,0.3607,,,nbt_hourly,"Existing designed scenario, unchanged"
+F50_WF1_ROE0.5,designed_tou,F50_WF1_ROE0.5,5643.78,0.0,,0.4306,0.3782,0.323,0.4174,0.3725,0.3594,,,nbt_hourly,"Existing designed scenario, unchanged"
+F50_WF1_ROE1.0,designed_tou,F50_WF1_ROE1.0,5444.95,0.0,,0.4291,0.3769,0.3218,0.4159,0.3712,0.3582,,,nbt_hourly,"Existing designed scenario, unchanged"
+F50_WF1_ROE1.5,designed_tou,F50_WF1_ROE1.5,5250.63,0.0,,0.4276,0.3755,0.3207,0.4144,0.3698,0.3569,,,nbt_hourly,"Existing designed scenario, unchanged"
+F75_WF0_ROE0,designed_tou,F75_WF0_ROE0,12746.9,0.0,,0.3724,0.3271,0.2793,0.3609,0.3221,0.3108,,,nbt_hourly,"Existing designed scenario, unchanged"
+F75_WF0_ROE0.5,designed_tou,F75_WF0_ROE0.5,12358.33,0.0,,0.373,0.3276,0.2797,0.3615,0.3226,0.3113,,,nbt_hourly,"Existing designed scenario, unchanged"
+F75_WF0_ROE1.0,designed_tou,F75_WF0_ROE1.0,11977.44,0.0,,0.3736,0.3281,0.2802,0.3621,0.3231,0.3118,,,nbt_hourly,"Existing designed scenario, unchanged"
+F75_WF0_ROE1.5,designed_tou,F75_WF0_ROE1.5,11604.19,0.0,,0.3741,0.3286,0.2806,0.3626,0.3236,0.3123,,,nbt_hourly,"Existing designed scenario, unchanged"
+F75_WF1_ROE0,designed_tou,F75_WF1_ROE0,8770.76,0.0,,0.3742,0.3287,0.2807,0.3627,0.3237,0.3124,,,nbt_hourly,"Existing designed scenario, unchanged"
+F75_WF1_ROE0.5,designed_tou,F75_WF1_ROE0.5,8465.67,0.0,,0.3742,0.3287,0.2807,0.3627,0.3237,0.3124,,,nbt_hourly,"Existing designed scenario, unchanged"
+F75_WF1_ROE1.0,designed_tou,F75_WF1_ROE1.0,8167.42,0.0,,0.3742,0.3287,0.2806,0.3627,0.3237,0.3124,,,nbt_hourly,"Existing designed scenario, unchanged"
+F75_WF1_ROE1.5,designed_tou,F75_WF1_ROE1.5,7875.94,0.0,,0.3741,0.3286,0.2806,0.3626,0.3236,0.3123,,,nbt_hourly,"Existing designed scenario, unchanged"
+F100_WF0_ROE0,designed_tou,F100_WF0_ROE0,16995.87,0.0,,0.2965,0.2604,0.2224,0.2874,0.2564,0.2475,,,nbt_hourly,"Existing designed scenario, unchanged"
+F100_WF0_ROE0.5,designed_tou,F100_WF0_ROE0.5,16477.77,0.0,,0.2988,0.2624,0.2241,0.2896,0.2585,0.2494,,,nbt_hourly,"Existing designed scenario, unchanged"
+F100_WF0_ROE1.0,designed_tou,F100_WF0_ROE1.0,15969.93,0.0,,0.301,0.2644,0.2258,0.2918,0.2604,0.2513,,,nbt_hourly,"Existing designed scenario, unchanged"
+F100_WF0_ROE1.5,designed_tou,F100_WF0_ROE1.5,15472.25,0.0,,0.3032,0.2663,0.2274,0.2939,0.2623,0.2531,,,nbt_hourly,"Existing designed scenario, unchanged"
+F100_WF1_ROE0,designed_tou,F100_WF1_ROE0,11694.34,0.0,,0.3163,0.2779,0.2373,0.3066,0.2736,0.2641,,,nbt_hourly,"Existing designed scenario, unchanged"
+F100_WF1_ROE0.5,designed_tou,F100_WF1_ROE0.5,11287.56,0.0,,0.3178,0.2792,0.2384,0.3081,0.2749,0.2653,,,nbt_hourly,"Existing designed scenario, unchanged"
+F100_WF1_ROE1.0,designed_tou,F100_WF1_ROE1.0,10889.9,0.0,,0.3193,0.2804,0.2395,0.3095,0.2762,0.2665,,,nbt_hourly,"Existing designed scenario, unchanged"
+F100_WF1_ROE1.5,designed_tou,F100_WF1_ROE1.5,10501.25,0.0,,0.3207,0.2816,0.2405,0.3108,0.2774,0.2677,,,nbt_hourly,"Existing designed scenario, unchanged"
+DC_5,demand_charge,F0_WF0_ROE0,0.0,5.0,monthly_max,0.5299210710124078,0.46544734070589827,0.3974408032593059,0.5136701581680274,0.4583817264257328,0.44230745393835647,,,nbt_hourly,DC = $5.0/kW-mo; volumetric scaled x0.883 for revenue neutrality
+DC_15,demand_charge,F0_WF0_ROE0,0.0,15.0,monthly_max,0.38976321303722355,0.3423420221176947,0.2923224097779177,0.37781047450408206,0.3371451792771984,0.3253223618150693,,,nbt_hourly,DC = $15.0/kW-mo; volumetric scaled x0.650 for revenue neutrality
+EV_TOU,ev_submetered_tou,PGE_EV2A_proxy,0.0,0.0,16:00-21:00,0.55,0.36,0.18,0.49,0.34,0.18,0.18,0.55,nbt_hourly,EV submetered tariff. Applies to EV load only; rest of household billed on base rate.
+EXPORT_NBT_HOURLY,export_overlay,any,,,,,,,,,,,,nbt_hourly,Default for new interconnections (post 4/15/2023)
+EXPORT_NEM2_RETAIL,export_overlay,any,,,,,,,,,,,,nem2_retail,Grandfathered NEM 2.0 customers - full retail
+EXPORT_FLAT_5C,export_overlay,any,,,,,,,,,,,,flat_5c,Counterfactual: NBT lowered to $0.05/kWh flat
+EXPORT_FLAT_15C,export_overlay,any,,,,,,,,,,,,flat_15c,Counterfactual: NBT raised to $0.15/kWh flat

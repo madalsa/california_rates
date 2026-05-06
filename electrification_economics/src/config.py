@@ -49,6 +49,34 @@ RASS_SURVEY = CR_ROOT / "Final19_SW_CleanedSurvey.csv"
 PUMA_UTILITY = CR_ROOT / "puma_utility_data.csv"
 
 # -----------------------------------------------------------------------------
+# Population scoping for the paper
+# -----------------------------------------------------------------------------
+# Include only IOU customers where NPV is a meaningful question.
+# Exclude:
+#   - POU territories (LADWP, SMUD, IID, etc.) - handled upstream by
+#     PUMA-utility mapping; only PGE / SCE / SDGE carried through pipeline.
+#   - EBD-eligible households (<=80% AMI in CEC priority climate zones).
+#     They receive turnkey free retrofit; payback / NPV not applicable.
+#     They are reported as a population share in summary stats but
+#     excluded from the optimization population.
+#
+# CEC EBD priority climate zones - TODO: verify against current CEC list.
+# Initial list based on DAC overlap and high-heat / poor-AQ CZs.
+EBD_PRIORITY_CEC_CZS = {8, 9, 10, 13, 14, 15}
+
+# Income-tier threshold: <=80% AMI defined by HUD-published county income
+# limits; in ResStock metadata typically encoded as `income_tier_pct_ami`
+# or two-income variant.
+EBD_AMI_THRESHOLD = 0.80
+
+INCLUDED_UTILITIES = ("pge", "sce", "sdge")
+
+
+def is_ebd_eligible(cec_cz: int, ami_pct: float) -> bool:
+    """True if household is excluded from the analysis as EBD-eligible."""
+    return (cec_cz in EBD_PRIORITY_CEC_CZS) and (ami_pct <= EBD_AMI_THRESHOLD)
+
+# -----------------------------------------------------------------------------
 # Financial framework
 # -----------------------------------------------------------------------------
 # CPUC E3 ACC and DER cost-effectiveness work uses 3-5% real for customer

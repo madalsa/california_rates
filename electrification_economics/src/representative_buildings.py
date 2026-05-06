@@ -65,6 +65,9 @@ def load_metadata() -> pd.DataFrame:
     """Load metadata + annual results, attach utility, return slim frame."""
     df = pd.read_parquet(
         config.CR_ROOT / "CA_baseline_tmy_metadata_and_annual_results.parquet")
+    # Promote ResStock bldg_id (the metadata index) into a column so it
+    # survives the puma merge below.
+    df = df.reset_index()  # creates column named after index ("bldg_id")
 
     # PUMA: take the second token of "in.county_and_puma" (e.g. "G06003729")
     puma_full = df["in.county_and_puma"].str.split(", ").str[1]
@@ -80,7 +83,7 @@ def load_metadata() -> pd.DataFrame:
 
     # Slim columns we need
     keep = [
-        "bldg_id" if "bldg_id" in df.columns else df.columns[0],  # placeholder
+        "bldg_id",
         "weight",
         "puma_full", "utility", "utility_type",
         "in.cec_climate_zone",
@@ -96,11 +99,7 @@ def load_metadata() -> pd.DataFrame:
         "out.electricity.winter.peak.kw",
     ]
     keep = [c for c in keep if c in df.columns]
-    out = df[keep].copy()
-    # If bldg_id not present, use index
-    if "bldg_id" not in out.columns:
-        out["bldg_id"] = df.index.astype("int64")
-    return out
+    return df[keep].copy()
 
 
 def apply_scope_filter(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:

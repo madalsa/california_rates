@@ -112,7 +112,8 @@ CAPEX = {
 # CC4A rebates vary by air district; see assumptions_sources.md.
 EV_SCENARIOS = {
     "new_new":            {"premium": CAPEX["ev_premium"], "rebate": 0},
-    "scrap_replace_cc4a": {"premium": CAPEX["ev_premium"], "rebate": 12000,
+    "scrap_replace_cc4a": {"premium": CAPEX["ev_premium"],
+                           "rebate_by_district": "CC4A_BY_DISTRICT",
                            "salvage": 0,
                            "income_eligible": True},
     "new_ev_dcap":        {"premium": CAPEX["ev_premium"], "rebate": 7500,
@@ -160,19 +161,67 @@ INCENTIVES_2026 = {
 
     # TECH Clean California (active, but funding-limited; verify per project).
     # Source: TECH Single Family Incentives tracker.
+    # HP space: $1,000/system, $2,000/home cap. HPWH: range below.
     "tech_hpwh_market":      2700,   # midpoint of $1,100-$4,300
     "tech_hpwh_equity":      4600,   # midpoint of $3,500-$5,700
-    "tech_hp_space_market":  1250,
-    "tech_hp_space_equity":  3750,
+    "tech_hp_space_market":  1000,
+    "tech_hp_space_equity":  3500,
+    "tech_hp_space_home_cap": 2000,
 
-    # SGIP residential battery (CPUC). Step varies; check selfgenca.com.
+    # SGIP — battery storage. Step varies; check selfgenca.com.
     # General Market mid-step ~$200/kWh. Equity ~$850/kWh.
     # Equity Resiliency ~$1,050/kWh. Cap 30 kWh GM, 80 kWh ER.
-    "sgip_general_per_kwh":   200,
-    "sgip_equity_per_kwh":    850,
-    "sgip_eq_resilience_per_kwh": 1050,
-    "sgip_general_cap_kwh":   30,
-    "sgip_eq_resilience_cap_kwh": 80,
+    "sgip_battery_general_per_kwh":   200,
+    "sgip_battery_equity_per_kwh":    850,
+    "sgip_battery_eq_resilience_per_kwh": 1050,
+    "sgip_battery_general_cap_kwh":   30,
+    "sgip_battery_eq_resilience_cap_kwh": 80,
+
+    # SGIP-HPWH (CPUC, separate from battery program). Stacks w/ TECH.
+    # Source: CPUC SGIP, $84.7M authorized.
+    "sgip_hpwh_standard":    3800,
+    "sgip_hpwh_low_income":  4885,
+    "sgip_hpwh_low_gwp_adder": 1500,
+
+    # HOMES (federal IRA, CEC-administered). Performance-based whole-home
+    # retrofit; OBBB did NOT repeal HOMES. Stacks w/ TECH.
+    # Up to $8,000 for >=35% modeled savings, low-income.
+    # Source: CEC IRA rebates page.
+    "homes_max_low_income":  8000,
+    "homes_max_market":      4000,
+
+    # Equitable Building Decarbonization (EBD) Direct Install — CEC.
+    # Launched April 2026; turnkey free (HP + HPWH + panel + induction)
+    # for <80% AMI in priority CZs. Mutually exclusive with TECH/HEAR.
+    # Budget: $432M (cut from $922M).
+    "ebd_direct_install":    True,   # eligibility flag; replaces capex
+
+    # Golden State Rebates — instant retail rebate, stacks. Through 12/31/26.
+    "golden_state_hpwh":     300,
+    "golden_state_smart_thermostat": 85,
+
+    # Regional Energy Networks (RENs) — stack w/ TECH.
+    # BayREN Home+: $250 elec-replace / $400 fuel-substitution (HPWH).
+    # 3C-REN (SLO/SB/Ventura): $5,000 contractor incentive for SF HPWH.
+    # SoCalREN: multifamily only.
+    "bayren_hpwh_fuel_sub":  400,
+    "bayren_hpwh_elec_replace": 250,
+    "ren_3c_hpwh_sf":        5000,
+
+    # Publicly Owned Utility (POU) rebates — for customers NOT served by
+    # PGE / SCE / SDGE / SoCalGas (so generally not in our pipeline).
+    # LADWP: up to $2,500/ton HP space (eff. 11/1/2025).
+    # SMUD: $3,000 gas->elec HP / $4,000 gas->elec HPWH (Feb 2026 boost).
+    "ladwp_hp_per_ton":      2500,
+    "smud_hp_gas_to_elec":   3000,
+    "smud_hpwh_gas_to_elec": 4000,
+
+    # Income-qualified turnkey programs — replace capex, mutually
+    # exclusive with TECH/HEAR.
+    # ESA (CPUC IOU, <=200% FPL): free HP/HPWH where existing unsafe.
+    # LIWP (CSD): DAC + low-income, free.
+    "esa_eligible":          False,  # set True per building income tier
+    "liwp_eligible":         False,
 
     # CA EV: CVRP closed Nov 2023. DCAP and Clean Cars 4 All only.
     # Both are income-restricted (DCAP <=300% FPL; CC4A varies by air
@@ -180,7 +229,27 @@ INCENTIVES_2026 = {
     "dcap_new_ev_max":      7500,    # +$4,500 if DAC -> $12,000 total
     "dcap_dac_bonus":       4500,
     "dcap_l2_charger":      2000,
-    "ccfa_max":            12000,    # scrap-and-replace; varies by district
+}
+
+# Clean Cars 4 All — parameterized by air district.
+# Each district has its own income-tier schedule. Use the
+# upper-bound rebate by tier for each district. Verify per project at
+# https://ww2.arb.ca.gov/our-work/programs/clean-cars-4-all
+CC4A_BY_DISTRICT = {
+    # Bay Area Air Quality Management District
+    "BAAQMD":  {"new_ev_max": 9500,  "used_ev_max": 7500,  "evse": 2000,
+                "income_cap_pct_fpl": 400},
+    # South Coast (LA / Orange / Riverside / SB)
+    "SCAQMD":  {"new_ev_max": 12000, "used_ev_max": 9500,  "evse": 2000,
+                "income_cap_pct_fpl": 400},
+    # San Joaquin Valley
+    "SJVAPCD": {"new_ev_max": 9500,  "used_ev_max": 7500,  "evse": 2000,
+                "income_cap_pct_fpl": 400},
+    # Sacramento Metro
+    "SMAQMD":  {"new_ev_max": 9500,  "used_ev_max": 7500,  "evse": 2000,
+                "income_cap_pct_fpl": 400},
+    # San Diego — runs DCAP only, no CC4A
+    "SDAPCD":  None,
 }
 
 # Counterfactual: incentives as they stood in 2024 (pre-OBBB). Use this

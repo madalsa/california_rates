@@ -38,21 +38,54 @@ These changed materially from 2024 and reshape the paper's framing:
 
 ## Incentives (2026, status flagged)
 
+### Federal (post-OBBB)
+
 | Program | Status | Value | Source |
 |---|---|---|---|
-| Section 25D PV ITC | **REPEALED for post-12/31/2025 installs** | 0% (was 30%) | [IRS OBBB FAQ](https://www.irs.gov/newsroom/faqs-for-modification-of-sections-25c-25d-25e-30c-30d-45l-45w-and-179d-under-public-law-119-21-139-stat-72-july-4-2025-commonly-known-as-the-one-big-beautiful-bill-obbb) |
+| Section 25D PV ITC | **REPEALED post-12/31/2025** | 0% (was 30%) | [IRS OBBB FAQ](https://www.irs.gov/newsroom/faqs-for-modification-of-sections-25c-25d-25e-30c-30d-45l-45w-and-179d-under-public-law-119-21-139-stat-72-july-4-2025-commonly-known-as-the-one-big-beautiful-bill-obbb) |
 | Section 25D battery | **REPEALED 1/1/2026** | $0 | same |
 | Section 25C HP/HPWH/panel | **EXPIRED 12/31/2025** | $0 | same |
 | Section 30D EV | **REPEALED post-9/30/2025** | $0 (was $7,500) | same |
 | Section 30C EVSE | Sunsets 6/30/2026 | 30% / $1,000 cap | same |
-| CA HEAR (HEEHRA) single-fam | **Waitlisted 2/24/2026** | up to $14K (income-tiered) | [TECH tracker](https://techcleanca.com/incentives/heehrarebates/) |
-| TECH Clean CA HPWH | Active, funding-limited | $1.1-4.3K market / $3.5-5.7K equity | [TECH SF tracker](https://techcleanca.com/incentives/single-family-incentives/) |
-| TECH Clean CA HVAC HP | Active, funding-limited | $1-1.5K market / $3.5-4K equity | same |
+| HOMES (federal IRA, CEC-run) | **Active** (NOT repealed) | up to $8K low-income / $4K market, performance-based | [CEC IRA](https://www.energy.ca.gov/programs-and-topics/programs/inflation-reduction-act-residential-energy-rebate-programs) |
+| HEAR/HEEHRA single-family | **Waitlisted 2/24/2026** | up to $14K | [TECH tracker](https://techcleanca.com/incentives/heehrarebates/) |
+
+### California heat-pump stack (active, stackable unless noted)
+
+| Program | HP Space | HPWH | Eligibility | Stacks? | Source |
+|---|---|---|---|---|---|
+| TECH Clean CA market | $1,000/sys, $2,000/home cap | $1,100-$4,300 | IOU customer | n/a | [TECH SF](https://techcleanca.com/incentives/single-family-incentives/) |
+| TECH Clean CA equity | $3,500-$4,000 | $3,500-$5,700 | <80% AMI / CARE-FERA | n/a | same |
+| SGIP-HPWH (CPUC) | — | $3,800 std / $4,885 LI; +$1,500 low-GWP | IOU electric+gas | **Yes** | [CPUC SGIP](https://www.cpuc.ca.gov/sgip) |
+| Golden State Rebates | $50-$120 thermostat | $300 instant | any IOU residential | **Yes** | [GSR](https://goldenstaterebates.com/goldenstaterebates/rebates/heat-pump-water-heaters/) |
+| BayREN Home+ | varies | $250 elec-replace / $400 fuel-sub | 9 Bay Area counties | **Yes** | [BayREN](https://www.bayren.org/news/bay-area-regional-energy-network-announces-rebate-adjustments) |
+| 3C-REN (SLO/SB/Ventura) | — | $5,000 SF contractor incentive | tri-county | **Yes** | [3C-REN](https://www.3c-ren.org/frequently-asked-questions/) |
+| LADWP rebate (POU) | up to $2,500/ton | varies | LADWP electric | **Yes** (POU not in TECH) | [LADWP](https://www.ladwp.com/residential-services/assistance-programs/consumer-rebate-program) |
+| SMUD (POU) | $3,000 gas→elec / $1,000 elec→elec | $4,000 gas→elec / $1,000 elec→elec | SMUD electric | **Yes** | [SMUD](https://www.smud.org/Corporate/About-us/News-and-Media/2026/2026/SMUD-boosts-rebates-for-heat-pumps) |
+| EBD Direct Install (CEC) | turnkey free | turnkey free | <80% AMI, priority CZs | **Replaces** TECH | [CEC EBD](https://www.energy.ca.gov/programs-and-topics/programs/equitable-building-decarbonization-program/ebd-statewide-direct) |
+| ESA (CPUC IOU) | free where unsafe | free where unsafe | <=200% FPL or categorical | **Replaces** TECH | [CPUC ESA](https://www.cpuc.ca.gov/consumer-support/financial-assistance-savings-and-discounts/energy-savings-assistance) |
+| LIWP (CSD) | free | limited | DAC + low-income | **Replaces** | [CSD LIWP](https://www.csd.ca.gov/Shared%20Documents/LIWP-Fact-Sheet.pdf) |
+
+**Stacking rule used in model:** TECH + SGIP-HPWH + Golden State Rebates + REN + (POU rebate if applicable) for IOU/POU customers. For income-qualified <80% AMI in priority CZs, use EBD Direct Install (turnkey, replaces stack). For <=200% FPL with unsafe equipment, use ESA (turnkey, replaces stack).
+
+### CA solar / battery
+
+| Program | Status | Value | Source |
+|---|---|---|---|
 | SGIP storage General Market | Active | ~$200/kWh, 30 kWh cap | [SGIP metrics](https://www.selfgenca.com/home/program_metrics/) |
 | SGIP storage Equity | Active | ~$850/kWh | same |
 | SGIP storage Equity Resiliency | Active | ~$1,050/kWh, 80 kWh cap | same |
-| DCAP new ZEV | Active, ≤300% FPL | $7,500 base + $4,500 DAC | [CARB DCAP](https://ww2.arb.ca.gov/our-work/programs/driving-clean-assistance-program/about) |
-| Clean Cars 4 All | Active, scrap-and-replace | up to $12,000 | varies by air district |
+
+### CA EV rebates
+
+| Program | Status | Value | Source |
+|---|---|---|---|
+| DCAP new ZEV | Active, ≤300% FPL | $7,500 + $4,500 DAC = up to $12,000 | [CARB DCAP](https://ww2.arb.ca.gov/our-work/programs/driving-clean-assistance-program/about) |
+| Clean Cars 4 All — BAAQMD | Active | new $9,500 / used $7,500 / EVSE $2,000 | [CARB CC4A](https://ww2.arb.ca.gov/our-work/programs/clean-cars-4-all) |
+| Clean Cars 4 All — SCAQMD | Active | new $12,000 / used $9,500 / EVSE $2,000 | same |
+| Clean Cars 4 All — SJVAPCD | Active | new $9,500 / used $7,500 / EVSE $2,000 | same |
+| Clean Cars 4 All — SMAQMD | Active | new $9,500 / used $7,500 / EVSE $2,000 | same |
+| Clean Cars 4 All — SDAPCD | not run | n/a (DCAP only) | same |
 
 ## Fuel prices (CA, 2026)
 

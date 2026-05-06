@@ -9,5 +9,9 @@ data/*.parquet
 data/*.feather
 data/cache/
 
+# Keep canonical small artifacts (override above)
+!data/representative_buildings.parquet
+!data/population_excluded_summary.csv
+
 # Per-user notebooks
 notebooks/scratch_*.ipynb

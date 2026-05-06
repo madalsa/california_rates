@@ -1,0 +1,8 @@
+step,rows,weighted_pop
+total_metadata_rows,57394,14480600.2532841
+after_iou_only,30185,7615724.965072665
+after_drop_pou,30185,7615724.965072665
+after_owner_only,15711,3963911.0460909936
+after_drop_unknown_income,15711,3963911.0460909936
+excluded_ebd_eligible,2352,593413.4542935534
+kept_for_analysis,13359,3370497.5917974403

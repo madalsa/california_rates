@@ -53,6 +53,25 @@ electrification_economics/
   tests/                       # unit tests for NPV / payback / sizing
 ```
 
+## Read / write contract with parent `california_rates/`
+
+EE is strictly **read-only** with respect to anything outside its own
+`data/` folder. Specifically:
+
+- **Reads** parent files (`CA_baseline_*.parquet`, `rate_scenarios_*.csv`,
+  `tou_weights_*.csv`, `eec_hourly_2025.csv`, `Baseline_<u>/*.parquet`,
+  etc.) via `pd.read_parquet` / `pd.read_csv` — never mutated.
+- **Writes** only to `electrification_economics/data/`. A guard in
+  `config.assert_safe_out_dir()` refuses any `--out-dir` argument that
+  resolves outside that folder, so a typo can't overwrite parent outputs
+  or a symlinked shared-storage `Baseline_*/` alias.
+- Parent modules (`<utility>_battery_lp`, `<utility>_solar`, ...) are
+  imported only from `sizing_optimizer_hourly.py` and only their
+  function definitions are used — their `__main__` blocks are not
+  executed.
+
+`tests/test_safety_guards.py` enforces these properties.
+
 ## Status
 
 Scaffold only. See each `src/*.py` for design notes and TODOs.

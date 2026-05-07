@@ -232,6 +232,8 @@ def main():
         config.DATA_DIR / "population_excluded_summary.csv"))
     args = ap.parse_args()
 
+    config.assert_safe_out_dir(Path(args.out).parent)
+    config.assert_safe_out_dir(Path(args.summary_out).parent)
     config.DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     print("Loading metadata + annual results ...")

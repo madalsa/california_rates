@@ -378,3 +378,24 @@ def gas_price(utility: str) -> float:
     key = {"pge": "pge", "sce": "socalgas", "sdge": "sdge"}.get(
         utility.lower(), "default")
     return NG_THERM_PRICE[key]
+
+
+def assert_safe_out_dir(path) -> Path:
+    """Refuse to write outside the EE data folder.
+
+    Protects the parent california_rates pipeline outputs from accidental
+    overwrite when this module is run from `california_rates/` (which it
+    must be, for parent imports to work in sizing_optimizer_hourly.py).
+    Any --out-dir argument that escapes EE_ROOT/data raises ValueError.
+    """
+    resolved = Path(path).resolve()
+    expected = (EE_ROOT / "data").resolve()
+    try:
+        resolved.relative_to(expected)
+    except ValueError as exc:
+        raise ValueError(
+            f"Refusing to write outside electrification_economics/data/. "
+            f"Got: {resolved}\n"
+            f"This guard exists to prevent accidental overwrite of the "
+            f"parent california_rates pipeline outputs.") from exc
+    return resolved

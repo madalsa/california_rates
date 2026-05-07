@@ -196,7 +196,7 @@ def main():
     ap.add_argument("--out-dir", default=str(config.DATA_DIR))
     args = ap.parse_args()
 
-    out_dir = Path(args.out_dir)
+    out_dir = config.assert_safe_out_dir(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     bldgs = pd.read_parquet(out_dir / "representative_buildings.parquet")

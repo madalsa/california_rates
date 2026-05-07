@@ -175,7 +175,7 @@ def main():
     ap.add_argument("--out-dir", default=str(config.DATA_DIR))
     args = ap.parse_args()
 
-    out_dir = Path(args.out_dir)
+    out_dir = config.assert_safe_out_dir(args.out_dir)
     bldgs = pd.read_parquet(out_dir / "representative_buildings.parquet")
 
     # Annual gas figures live in metadata - re-merge if not present

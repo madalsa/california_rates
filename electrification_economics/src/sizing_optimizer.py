@@ -1,6 +1,10 @@
 """Optimize PV kW and battery kWh for NPV per (building, rate, utility).
 
 APPROXIMATE TOU-AGGREGATE MODEL (no hourly dispatch required).
+This is the v1 sweep — runs anywhere, covers all 2,541 medoids x 47 rates
+x full sizing grid. For high-fidelity hourly LP refinement on selected
+archetypes, see sizing_optimizer_hourly.py (requires Baseline_<u>/
+parquets, runs on user's machine).
 
 For a high-fidelity check on representative archetypes, the parent repo
 modules (`<utility>_battery_lp.py`, `<utility>_post_adoption.py`) can be

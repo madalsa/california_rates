@@ -39,7 +39,9 @@ electrification_economics/
     config.py                  # paths, constants, links to california_rates outputs
     representative_buildings.py# stratified sampling + clustering -> medoids + weights
     rate_designer_extended.py  # expand from 8 to ~15-20 rate designs
-    sizing_optimizer.py        # PV+battery NPV optimization (grid / LP)
+    sizing_optimizer.py        # v1: TOU-aggregate sizing (runs anywhere)
+    sizing_optimizer_hourly.py # v2: hourly LP refinement, runs on user's
+                               #     machine; needs Baseline_<u>/ parquets
     vmt_sensitivity.py         # VMT and gasoline-price sweep for EV economics
     upgrade11_economics.py     # heat pump bundle: Upgrade 11 load delta + capex + rebates
     payback_npv.py             # capex, incentives, financing, NPV, payback

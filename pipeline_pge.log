@@ -1,9 +1,11 @@
 ================================================================================
 PGE RATE ANALYSIS PIPELINE
-Started: 2026-04-13 13:56:06
+Started: 2026-04-24 11:37:14
 Mode: FULL
-Starting stage: 1
+Starting stage: 2
 ================================================================================
+
+Loaded existing rate scenarios from rate_scenarios_pge_fresh.csv
 
 ================================================================================
 STAGE 2: COMPUTE BASELINE BILLS
@@ -12,9 +14,294 @@ STAGE 2: COMPUTE BASELINE BILLS
   Parquet files found: 22722
   Buildings with valid baseline PUMA: 22150
   Actual PGE rates: E-TOU-C, E-TOU-C-F
-  500/22722 | 403s elapsed | ~17924s remaining
-  1000/22722 | 857s elapsed | ~18621s remaining
-  1500/22722 | 1310s elapsed | ~18537s remaining
-  2000/22722 | 1756s elapsed | ~18198s remaining
-  2500/22722 | 2161s elapsed | ~17482s remaining
-  3000/22722 | 2568s elapsed | ~16879s remaining
+  500/22722 | 396s elapsed | ~17616s remaining
+  1000/22722 | 828s elapsed | ~17983s remaining
+  1500/22722 | 1277s elapsed | ~18062s remaining
+  2000/22722 | 1717s elapsed | ~17786s remaining
+  2500/22722 | 2153s elapsed | ~17416s remaining
+  3000/22722 | 2561s elapsed | ~16837s remaining
+  3500/22722 | 2988s elapsed | ~16412s remaining
+  4000/22722 | 3391s elapsed | ~15870s remaining
+  4500/22722 | 3841s elapsed | ~15554s remaining
+  5000/22722 | 4262s elapsed | ~15105s remaining
+  5500/22722 | 4739s elapsed | ~14839s remaining
+  6000/22722 | 5188s elapsed | ~14459s remaining
+  6500/22722 | 5615s elapsed | ~14014s remaining
+  7000/22722 | 6042s elapsed | ~13570s remaining
+  7500/22722 | 6445s elapsed | ~13082s remaining
+  8000/22722 | 6860s elapsed | ~12623s remaining
+  8500/22722 | 7262s elapsed | ~12151s remaining
+  9000/22722 | 7675s elapsed | ~11701s remaining
+  9500/22722 | 8090s elapsed | ~11260s remaining
+  10000/22722 | 8537s elapsed | ~10861s remaining
+  10500/22722 | 8996s elapsed | ~10471s remaining
+  11000/22722 | 9439s elapsed | ~10058s remaining
+  11500/22722 | 9864s elapsed | ~9625s remaining
+  12000/22722 | 10289s elapsed | ~9193s remaining
+  12500/22722 | 10694s elapsed | ~8745s remaining
+  13000/22722 | 11138s elapsed | ~8330s remaining
+  13500/22722 | 11600s elapsed | ~7924s remaining
+  14000/22722 | 12017s elapsed | ~7487s remaining
+  14500/22722 | 12450s elapsed | ~7060s remaining
+  15000/22722 | 12876s elapsed | ~6629s remaining
+  15500/22722 | 13327s elapsed | ~6210s remaining
+  16000/22722 | 13729s elapsed | ~5768s remaining
+  16500/22722 | 14156s elapsed | ~5338s remaining
+  17000/22722 | 14599s elapsed | ~4914s remaining
+  17500/22722 | 15047s elapsed | ~4490s remaining
+  18000/22722 | 15463s elapsed | ~4056s remaining
+  18500/22722 | 15914s elapsed | ~3632s remaining
+  19000/22722 | 16340s elapsed | ~3201s remaining
+  19500/22722 | 16757s elapsed | ~2769s remaining
+  20000/22722 | 17186s elapsed | ~2339s remaining
+  20500/22722 | 17609s elapsed | ~1909s remaining
+  21000/22722 | 18002s elapsed | ~1476s remaining
+  21500/22722 | 18405s elapsed | ~1046s remaining
+  22000/22722 | 18806s elapsed | ~617s remaining
+  22500/22722 | 19215s elapsed | ~190s remaining
+
+  Completed: 22150 buildings in 19404.0s
+  Errors/skipped: 572
+
+  R_sample (R_0) from E-TOU-C bills:
+    Valid E-TOU-C bills: 22150/22150
+    Sample weighted baseline revenue (R_0): $17.2381B
+    Mean E-TOU-C bill: $3,085/yr
+    Sample customers: 1,534,236 CARE, 4,054,208 non-CARE
+    Gross volumetric revenue (with CARE, no BL credits): $18.8399B
+    Baseline credit + fixed charge gap: $1.6018B
+    BL_total (aggregate baseline credits): $1.6018B
+
+  Designed rate scenarios: 6 (F0_WF0_ROE0, F0_WF0_ROE1.0, F0_WF1_ROE0, F50_WF0_ROE0, F50_WF1_ROE1.0, F100_WF0_ROE0)
+
+  Computing bills directly from designed rates:
+  CARE volumetric discount for designed scenarios: 35.00%
+  Baseline credit for designed scenarios: $0.09566/kWh
+    F0_WF0_ROE0: scaling=1.0000, FC_nonCARE=$0.00/mo, mean bill=$3,085/yr
+    F0_WF0_ROE1.0: scaling=0.9902, FC_nonCARE=$0.00/mo, mean bill=$3,051/yr
+    F0_WF1_ROE0: scaling=0.7569, FC_nonCARE=$0.00/mo, mean bill=$2,265/yr
+    F50_WF0_ROE0: scaling=0.7435, FC_nonCARE=$90.76/mo, mean bill=$3,084/yr
+    F50_WF1_ROE1.0: scaling=0.6438, FC_nonCARE=$36.56/mo, mean bill=$2,232/yr
+    F100_WF0_ROE0: scaling=0.4870, FC_nonCARE=$181.53/mo, mean bill=$3,084/yr
+
+  Saved to: baseline_bills_pge_fresh.csv
+
+  Revenue check (sample mean annual bill):
+    e_tou_c_bill: $3,085/yr avg
+    e_tou_c_f_bill: $2,880/yr avg
+    F0_WF0_ROE0_bill: $3,085/yr avg
+    F0_WF0_ROE1.0_bill: $3,051/yr avg
+    F0_WF1_ROE0_bill: $2,265/yr avg
+    F50_WF0_ROE0_bill: $3,084/yr avg
+    F50_WF1_ROE1.0_bill: $2,232/yr avg
+    F100_WF0_ROE0_bill: $3,084/yr avg
+
+================================================================================
+STAGE 3: TECHNOLOGY ADOPTION ASSIGNMENTS
+================================================================================
+  Buildings with bills: 22150
+  Using survey-based adoption probabilities
+
+  Adoption rates (weighted):
+    assigned_pv: 17.0% (3765 buildings)
+    assigned_battery: 17.0% (3765 buildings)
+    assigned_ev: 11.9% (2625 buildings)
+    assigned_hp: 7.1% (1572 buildings)
+  Saved to: tech_assignments_pge.csv
+
+================================================================================
+STAGE 4: GENERATE SOLAR PROFILES (pvlib, per CEC climate zone)
+================================================================================
+  PV-adopted buildings: 3765
+  CEC climate zones with PV: [np.int64(1), np.int64(2), np.int64(3), np.int64(4), np.int64(5), np.int64(6), np.int64(11), np.int64(12), np.int64(13), np.int64(16)]
+  CZ 1 (Arcata): lat=41.4, lon=-124.1
+    -> 1,758 kWh/kW/yr (20.1% CF)
+  CZ 2 (Redding): lat=40.48, lon=-122.3
+    -> 1,796 kWh/kW/yr (20.5% CF)
+  CZ 3 (San Francisco): lat=37.75, lon=-122.4
+    -> 1,860 kWh/kW/yr (21.2% CF)
+  CZ 4 (Sunnyvale): lat=37.4, lon=-122.1
+    -> 1,830 kWh/kW/yr (20.9% CF)
+  CZ 5 (Livermore): lat=37.77, lon=-122.0
+    -> 1,785 kWh/kW/yr (20.4% CF)
+  CZ 6 (Visalia): lat=36.3, lon=-119.3
+    -> 1,895 kWh/kW/yr (21.6% CF)
+  CZ 11 (Bakersfield): lat=35.4, lon=-119.05
+    -> 1,863 kWh/kW/yr (21.3% CF)
+  CZ 12 (Sacramento): lat=38.55, lon=-121.5
+    -> 1,868 kWh/kW/yr (21.3% CF)
+  CZ 13 (Modesto): lat=37.72, lon=-121.05
+    -> 1,850 kWh/kW/yr (21.1% CF)
+  CZ 16 (Paradise): lat=39.8, lon=-121.6
+    -> 1,767 kWh/kW/yr (20.2% CF)
+
+  Average annual generation: 1,827 kWh/kW across 10 zones
+
+================================================================================
+STAGE 6: POST-ADOPTION BILLS
+================================================================================
+  Buildings with tech adoption: 5848
+  Loaded EEC rates from eec_hourly_2025_wide.csv (pge_total)
+  EV daily VMT: mean=24.7 mi, median=22.6 mi
+  PGE buildings in metadata: 22722
+  Built rate arrays for 6 designed scenarios
+  Loaded E-TOU-C: baseline_credit=0.0957, has_fixed=True
+  Loaded E-TOU-C-F: baseline_credit=0.0814, has_fixed=True
+  CARE discount for designed scenarios: 35.00%
+  Upgrade 11 data found in ./Upgrade11_PGE
+  Battery dispatch: LP (scipy/HiGHS)
+  500/5848 | 567s
+  1000/5848 | 1143s
+  1500/5848 | 1742s
+  2000/5848 | 2318s
+  2500/5848 | 2886s
+  3000/5848 | 3465s
+  3500/5848 | 4062s
+  4000/5848 | 4651s
+  4500/5848 | 5232s
+  5000/5848 | 5776s
+  5500/5848 | 6306s
+
+  Processed 5848 buildings in 6694.4s
+  PV sizing (90% offset target):
+    Mean: 5.1 kW | Median: 4.0 kW
+    Range: 4.0--15.0 kW
+  Saved to: post_adoption_bills_pge.csv
+
+================================================================================
+STAGE 7: DISTRIBUTIONAL ANALYSIS
+================================================================================
+
+--- Revenue Neutrality Check (population-level) ---
+  EIA/PGE filed residential revenue: $8.2400B
+  Total residential customers: 5,047,461
+
+  Sample size: 22150 buildings (each represents ~228 households)
+
+  Rate                         Mean Bill    Pop Revenue vs E-TOU-C   vs Filed
+  -----------------------------------------------------------------------
+  Actual E-TOU-C            $     3,085 $     15.5694B        ---    +88.95%
+  Actual E-TOU-C-F          $     2,880 $     14.5373B     -6.63%    +76.42%
+  F0_WF0_ROE0               $     3,085 $     15.5689B     -0.00%    +88.94%
+  F50_WF0_ROE0              $     3,084 $     15.5667B     -0.02%    +88.92%
+  F100_WF0_ROE0             $     3,084 $     15.5670B     -0.02%    +88.92%
+  F0_WF1_ROE0               $     2,265 $     11.4331B    -26.57%    +38.75%
+  F0_WF0_ROE1.0             $     3,051 $     15.4009B     -1.08%    +86.90%
+  F50_WF1_ROE1.0            $     2,232 $     11.2657B    -27.64%    +36.72%
+
+--- Mean Annual Bill by CARE Status ---
+
+  e_tou_c_bill:
+        CARE: mean=$1,656  median=$1,425  (n=6081)
+    non-CARE: mean=$3,625  median=$3,038  (n=16069)
+
+  e_tou_c_f_bill:
+        CARE: mean=$1,496  median=$1,298  (n=6081)
+    non-CARE: mean=$3,404  median=$2,902  (n=16069)
+
+  F0_WF0_ROE0_bill:
+        CARE: mean=$1,656  median=$1,425  (n=6081)
+    non-CARE: mean=$3,625  median=$3,037  (n=16069)
+
+  F0_WF0_ROE1.0_bill:
+        CARE: mean=$1,638  median=$1,409  (n=6081)
+    non-CARE: mean=$3,586  median=$3,003  (n=16069)
+
+  F0_WF1_ROE0_bill:
+        CARE: mean=$1,206  median=$1,025  (n=6081)
+    non-CARE: mean=$2,666  median=$2,217  (n=16069)
+
+  F50_WF0_ROE0_bill:
+        CARE: mean=$1,451  median=$1,273  (n=6081)
+    non-CARE: mean=$3,702  median=$3,262  (n=16069)
+
+  F50_WF1_ROE1.0_bill:
+        CARE: mean=$1,105  median=$946  (n=6081)
+    non-CARE: mean=$2,658  median=$2,275  (n=16069)
+
+  F100_WF0_ROE0_bill:
+        CARE: mean=$1,246  median=$1,122  (n=6081)
+    non-CARE: mean=$3,780  median=$3,487  (n=16069)
+
+--- Bill Change from e_tou_c_bill by CARE Status ---
+
+  e_tou_c_f_bill vs e_tou_c_bill:
+        CARE: mean=$-161  median=$-129  winners=5430/6081
+    non-CARE: mean=$-221  median=$-136  winners=11302/16069
+
+  F0_WF0_ROE0_bill vs e_tou_c_bill:
+        CARE: mean=$-0  median=$-0  winners=6080/6081
+    non-CARE: mean=$-0  median=$-0  winners=16066/16069
+
+  F0_WF0_ROE1.0_bill vs e_tou_c_bill:
+        CARE: mean=$-18  median=$-16  winners=6081/6081
+    non-CARE: mean=$-39  median=$-33  winners=16067/16069
+
+  F0_WF1_ROE0_bill vs e_tou_c_bill:
+        CARE: mean=$-451  median=$-400  winners=6081/6081
+    non-CARE: mean=$-959  median=$-820  winners=16067/16069
+
+  F50_WF0_ROE0_bill vs e_tou_c_bill:
+        CARE: mean=$-205  median=$-152  winners=4620/6081
+    non-CARE: mean=$+77  median=$+224  winners=5656/16069
+
+  F50_WF1_ROE1.0_bill vs e_tou_c_bill:
+        CARE: mean=$-551  median=$-477  winners=5805/6081
+    non-CARE: mean=$-967  median=$-763  winners=14943/16069
+
+  F100_WF0_ROE0_bill vs e_tou_c_bill:
+        CARE: mean=$-411  median=$-303  winners=4620/6081
+    non-CARE: mean=$+155  median=$+448  winners=5654/16069
+
+--- Tech Adoption Bill Impact by Scenario ---
+
+  S1: EV only (n=2625):
+    F0_WF0_ROE0              : mean savings $-1,203/yr  median $-1,080/yr
+    F0_WF0_ROE1.0            : mean savings $-1,191/yr  median $-1,069/yr
+    F0_WF1_ROE0              : mean savings $-906/yr  median $-813/yr
+    F50_WF0_ROE0             : mean savings $-890/yr  median $-797/yr
+    F50_WF1_ROE1.0           : mean savings $-768/yr  median $-688/yr
+    F100_WF0_ROE0            : mean savings $-576/yr  median $-516/yr
+    e_tou_c                  : mean savings $-1,203/yr  median $-1,080/yr
+    e_tou_c_f                : mean savings $-1,023/yr  median $-918/yr
+           low (n=698): mean savings $-832/yr
+        medium (n=849): mean savings $-1,335/yr
+          high (n=1078): mean savings $-1,340/yr
+
+  S2: PV + storage (n=3765):
+    F0_WF0_ROE0              : mean savings $+3,370/yr  median $+2,915/yr
+    F0_WF0_ROE1.0            : mean savings $+3,340/yr  median $+2,884/yr
+    F0_WF1_ROE0              : mean savings $+2,564/yr  median $+2,125/yr
+    F50_WF0_ROE0             : mean savings $+2,516/yr  median $+2,081/yr
+    F50_WF1_ROE1.0           : mean savings $+2,151/yr  median $+1,759/yr
+    F100_WF0_ROE0            : mean savings $+1,563/yr  median $+1,256/yr
+    e_tou_c                  : mean savings $+3,370/yr  median $+2,915/yr
+    e_tou_c_f                : mean savings $+2,956/yr  median $+2,497/yr
+           low (n=1029): mean savings $+1,844/yr
+        medium (n=1204): mean savings $+3,289/yr
+          high (n=1532): mean savings $+4,458/yr
+
+  S3: PV + storage + EV (n=542):
+    F0_WF0_ROE0              : mean savings $+2,975/yr  median $+2,506/yr
+    F0_WF0_ROE1.0            : mean savings $+2,956/yr  median $+2,488/yr
+    F0_WF1_ROE0              : mean savings $+2,446/yr  median $+1,995/yr
+    F50_WF0_ROE0             : mean savings $+2,412/yr  median $+1,955/yr
+    F50_WF1_ROE1.0           : mean savings $+2,135/yr  median $+1,695/yr
+    F100_WF0_ROE0            : mean savings $+1,595/yr  median $+1,259/yr
+    e_tou_c                  : mean savings $+2,975/yr  median $+2,506/yr
+    e_tou_c_f                : mean savings $+2,709/yr  median $+2,276/yr
+           low (n=125): mean savings $+1,712/yr
+        medium (n=182): mean savings $+2,800/yr
+          high (n=235): mean savings $+3,783/yr
+
+  PV System Sizing by Scenario:
+    s2: mean=5.1 kW  median=4.0 kW  range=[4.0, 15.0]
+    s3: mean=5.1 kW  median=4.0 kW  range=[4.0, 15.0]
+
+  Summary saved to: pipeline_summary_pge.csv
+
+================================================================================
+PIPELINE COMPLETE
+Total time: 26188.1s (436.5 min)
+Finished: 2026-04-24 18:53:42
+================================================================================

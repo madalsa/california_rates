@@ -1,6 +1,10 @@
 ================================================================================
 PGE RATE ANALYSIS PIPELINE
+<<<<<<< Updated upstream
 Started: 2026-04-24 11:37:14
+=======
+Started: 2026-05-07 02:42:14
+>>>>>>> Stashed changes
 Mode: FULL
 Starting stage: 2
 ================================================================================
@@ -14,6 +18,7 @@ STAGE 2: COMPUTE BASELINE BILLS
   Parquet files found: 22722
   Buildings with valid baseline PUMA: 22150
   Actual PGE rates: E-TOU-C, E-TOU-C-F
+<<<<<<< Updated upstream
   500/22722 | 396s elapsed | ~17616s remaining
   1000/22722 | 828s elapsed | ~17983s remaining
   1500/22722 | 1277s elapsed | ~18062s remaining
@@ -61,6 +66,55 @@ STAGE 2: COMPUTE BASELINE BILLS
   22500/22722 | 19215s elapsed | ~190s remaining
 
   Completed: 22150 buildings in 19404.0s
+=======
+  500/22722 | 14s elapsed | ~627s remaining
+  1000/22722 | 26s elapsed | ~572s remaining
+  1500/22722 | 44s elapsed | ~618s remaining
+  2000/22722 | 57s elapsed | ~590s remaining
+  2500/22722 | 70s elapsed | ~564s remaining
+  3000/22722 | 82s elapsed | ~541s remaining
+  3500/22722 | 94s elapsed | ~519s remaining
+  4000/22722 | 107s elapsed | ~502s remaining
+  4500/22722 | 119s elapsed | ~483s remaining
+  5000/22722 | 131s elapsed | ~466s remaining
+  5500/22722 | 144s elapsed | ~450s remaining
+  6000/22722 | 156s elapsed | ~434s remaining
+  6500/22722 | 168s elapsed | ~419s remaining
+  7000/22722 | 180s elapsed | ~404s remaining
+  7500/22722 | 192s elapsed | ~390s remaining
+  8000/22722 | 204s elapsed | ~375s remaining
+  8500/22722 | 216s elapsed | ~362s remaining
+  9000/22722 | 229s elapsed | ~348s remaining
+  9500/22722 | 240s elapsed | ~335s remaining
+  10000/22722 | 252s elapsed | ~321s remaining
+  10500/22722 | 265s elapsed | ~308s remaining
+  11000/22722 | 277s elapsed | ~295s remaining
+  11500/22722 | 289s elapsed | ~282s remaining
+  12000/22722 | 301s elapsed | ~269s remaining
+  12500/22722 | 313s elapsed | ~256s remaining
+  13000/22722 | 325s elapsed | ~243s remaining
+  13500/22722 | 337s elapsed | ~230s remaining
+  14000/22722 | 349s elapsed | ~218s remaining
+  14500/22722 | 361s elapsed | ~205s remaining
+  15000/22722 | 373s elapsed | ~192s remaining
+  15500/22722 | 385s elapsed | ~180s remaining
+  16000/22722 | 397s elapsed | ~167s remaining
+  16500/22722 | 410s elapsed | ~154s remaining
+  17000/22722 | 421s elapsed | ~142s remaining
+  17500/22722 | 434s elapsed | ~129s remaining
+  18000/22722 | 446s elapsed | ~117s remaining
+  18500/22722 | 458s elapsed | ~105s remaining
+  19000/22722 | 470s elapsed | ~92s remaining
+  19500/22722 | 482s elapsed | ~80s remaining
+  20000/22722 | 493s elapsed | ~67s remaining
+  20500/22722 | 504s elapsed | ~55s remaining
+  21000/22722 | 515s elapsed | ~42s remaining
+  21500/22722 | 526s elapsed | ~30s remaining
+  22000/22722 | 537s elapsed | ~18s remaining
+  22500/22722 | 549s elapsed | ~5s remaining
+
+  Completed: 22150 buildings in 553.8s
+>>>>>>> Stashed changes
   Errors/skipped: 572
 
   R_sample (R_0) from E-TOU-C bills:
@@ -71,6 +125,59 @@ STAGE 2: COMPUTE BASELINE BILLS
     Gross volumetric revenue (with CARE, no BL credits): $18.8399B
     Baseline credit + fixed charge gap: $1.6018B
     BL_total (aggregate baseline credits): $1.6018B
+<<<<<<< Updated upstream
+=======
+================================================================================
+PGE RETAIL RATE DESIGNER — Sample-Based Revenue Neutrality
+================================================================================
+
+R_sample (weighted E-TOU-C revenue): $17.2381B
+R_gross_vol (gross volumetric w/ CARE, no BL credits): $18.8399B
+  Baseline credit + fixed gap: $1.6018B
+BL_total (aggregate baseline credits): $1.6018B
+Sample customers: 1,534,236 CARE, 4,054,208 non-CARE
+
+Cost shares from GRC filing:
+  Wildfire:  26.57%
+  T&D:       56.07%
+  ROE/pp:    1.07%
+
+ResStock TOU consumption weights:
+  summer_peak         : 13.85%
+  summer_offpeak      : 30.18%
+  winter_peak         : 12.63%
+  winter_offpeak      : 43.34%
+
+Generated 40 rate scenarios
+  Fixed charge levels: [0, 25, 50, 75, 100]
+  Wildfire options: [False, True]
+  ROE reductions: [0, 0.5, 1.0, 1.5] pp
+
+================================================================================
+REVENUE NEUTRALITY CHECK
+================================================================================
+
+Baseline scenarios (same R_target = R_sample = $17.2381B):
+  F0_WF0_ROE0    : scaling=1.0000  FC_nonCARE=$0.00/mo  Vol avg=$0.4694
+  F25_WF0_ROE0   : scaling=0.8718  FC_nonCARE=$45.40/mo  Vol avg=$0.4092
+  F50_WF0_ROE0   : scaling=0.7435  FC_nonCARE=$90.80/mo  Vol avg=$0.3490
+  F75_WF0_ROE0   : scaling=0.6153  FC_nonCARE=$136.21/mo  Vol avg=$0.2888
+  F100_WF0_ROE0  : scaling=0.4870  FC_nonCARE=$181.61/mo  Vol avg=$0.2286
+
+F0_WF0_ROE0 scaling = 1.0000 (expected 0.9150; <1.0 accounts for E-TOU-C baseline credits)
+
+Policy effects on revenue target:
+  F0_WF0_ROE0         : $17.2381B  (-0.00% vs baseline)
+  F0_WF0_ROE0.5       : $17.1456B  (+0.54% vs baseline)
+  F0_WF0_ROE1.0       : $17.0531B  (+1.07% vs baseline)
+  F0_WF0_ROE1.5       : $16.9606B  (+1.61% vs baseline)
+  F0_WF1_ROE0         : $12.6582B  (+26.57% vs baseline)
+  F0_WF1_ROE0.5       : $12.5657B  (+27.10% vs baseline)
+  F0_WF1_ROE1.0       : $12.4732B  (+27.64% vs baseline)
+  F0_WF1_ROE1.5       : $12.3807B  (+28.18% vs baseline)
+
+Saved to: rate_scenarios_pge_fresh.csv
+>>>>>>> Stashed changes
 
   Designed rate scenarios: 6 (F0_WF0_ROE0, F0_WF0_ROE1.0, F0_WF1_ROE0, F50_WF0_ROE0, F50_WF1_ROE1.0, F100_WF0_ROE0)
 
@@ -80,9 +187,15 @@ STAGE 2: COMPUTE BASELINE BILLS
     F0_WF0_ROE0: scaling=1.0000, FC_nonCARE=$0.00/mo, mean bill=$3,085/yr
     F0_WF0_ROE1.0: scaling=0.9902, FC_nonCARE=$0.00/mo, mean bill=$3,051/yr
     F0_WF1_ROE0: scaling=0.7569, FC_nonCARE=$0.00/mo, mean bill=$2,265/yr
+<<<<<<< Updated upstream
     F50_WF0_ROE0: scaling=0.7435, FC_nonCARE=$90.76/mo, mean bill=$3,084/yr
     F50_WF1_ROE1.0: scaling=0.6438, FC_nonCARE=$36.56/mo, mean bill=$2,232/yr
     F100_WF0_ROE0: scaling=0.4870, FC_nonCARE=$181.53/mo, mean bill=$3,084/yr
+=======
+    F50_WF0_ROE0: scaling=0.7435, FC_nonCARE=$90.80/mo, mean bill=$3,084/yr
+    F50_WF1_ROE1.0: scaling=0.6438, FC_nonCARE=$36.58/mo, mean bill=$2,232/yr
+    F100_WF0_ROE0: scaling=0.4870, FC_nonCARE=$181.61/mo, mean bill=$3,085/yr
+>>>>>>> Stashed changes
 
   Saved to: baseline_bills_pge_fresh.csv
 
@@ -94,7 +207,11 @@ STAGE 2: COMPUTE BASELINE BILLS
     F0_WF1_ROE0_bill: $2,265/yr avg
     F50_WF0_ROE0_bill: $3,084/yr avg
     F50_WF1_ROE1.0_bill: $2,232/yr avg
+<<<<<<< Updated upstream
     F100_WF0_ROE0_bill: $3,084/yr avg
+=======
+    F100_WF0_ROE0_bill: $3,085/yr avg
+>>>>>>> Stashed changes
 
 ================================================================================
 STAGE 3: TECHNOLOGY ADOPTION ASSIGNMENTS
@@ -150,6 +267,7 @@ STAGE 6: POST-ADOPTION BILLS
   CARE discount for designed scenarios: 35.00%
   Upgrade 11 data found in ./Upgrade11_PGE
   Battery dispatch: LP (scipy/HiGHS)
+<<<<<<< Updated upstream
   500/5848 | 567s
   1000/5848 | 1143s
   1500/5848 | 1742s
@@ -163,6 +281,21 @@ STAGE 6: POST-ADOPTION BILLS
   5500/5848 | 6306s
 
   Processed 5848 buildings in 6694.4s
+=======
+  500/5848 | 186s
+  1000/5848 | 397s
+  1500/5848 | 616s
+  2000/5848 | 819s
+  2500/5848 | 1025s
+  3000/5848 | 1243s
+  3500/5848 | 1437s
+  4000/5848 | 1628s
+  4500/5848 | 1840s
+  5000/5848 | 2042s
+  5500/5848 | 2229s
+
+  Processed 5848 buildings in 2376.3s
+>>>>>>> Stashed changes
   PV sizing (90% offset target):
     Mean: 5.1 kW | Median: 4.0 kW
     Range: 4.0--15.0 kW
@@ -183,11 +316,19 @@ STAGE 7: DISTRIBUTIONAL ANALYSIS
   Actual E-TOU-C            $     3,085 $     15.5694B        ---    +88.95%
   Actual E-TOU-C-F          $     2,880 $     14.5373B     -6.63%    +76.42%
   F0_WF0_ROE0               $     3,085 $     15.5689B     -0.00%    +88.94%
+<<<<<<< Updated upstream
   F50_WF0_ROE0              $     3,084 $     15.5667B     -0.02%    +88.92%
   F100_WF0_ROE0             $     3,084 $     15.5670B     -0.02%    +88.92%
   F0_WF1_ROE0               $     2,265 $     11.4331B    -26.57%    +38.75%
   F0_WF0_ROE1.0             $     3,051 $     15.4009B     -1.08%    +86.90%
   F50_WF1_ROE1.0            $     2,232 $     11.2657B    -27.64%    +36.72%
+=======
+  F50_WF0_ROE0              $     3,084 $     15.5686B     -0.00%    +88.94%
+  F100_WF0_ROE0             $     3,085 $     15.5709B     +0.01%    +88.97%
+  F0_WF1_ROE0               $     2,265 $     11.4331B    -26.57%    +38.75%
+  F0_WF0_ROE1.0             $     3,051 $     15.4009B     -1.08%    +86.90%
+  F50_WF1_ROE1.0            $     2,232 $     11.2665B    -27.64%    +36.73%
+>>>>>>> Stashed changes
 
 --- Mean Annual Bill by CARE Status ---
 
@@ -213,6 +354,7 @@ STAGE 7: DISTRIBUTIONAL ANALYSIS
 
   F50_WF0_ROE0_bill:
         CARE: mean=$1,451  median=$1,273  (n=6081)
+<<<<<<< Updated upstream
     non-CARE: mean=$3,702  median=$3,262  (n=16069)
 
   F50_WF1_ROE1.0_bill:
@@ -222,6 +364,17 @@ STAGE 7: DISTRIBUTIONAL ANALYSIS
   F100_WF0_ROE0_bill:
         CARE: mean=$1,246  median=$1,122  (n=6081)
     non-CARE: mean=$3,780  median=$3,487  (n=16069)
+=======
+    non-CARE: mean=$3,703  median=$3,262  (n=16069)
+
+  F50_WF1_ROE1.0_bill:
+        CARE: mean=$1,105  median=$946  (n=6081)
+    non-CARE: mean=$2,659  median=$2,275  (n=16069)
+
+  F100_WF0_ROE0_bill:
+        CARE: mean=$1,246  median=$1,122  (n=6081)
+    non-CARE: mean=$3,781  median=$3,488  (n=16069)
+>>>>>>> Stashed changes
 
 --- Bill Change from e_tou_c_bill by CARE Status ---
 
@@ -242,6 +395,7 @@ STAGE 7: DISTRIBUTIONAL ANALYSIS
     non-CARE: mean=$-959  median=$-820  winners=16067/16069
 
   F50_WF0_ROE0_bill vs e_tou_c_bill:
+<<<<<<< Updated upstream
         CARE: mean=$-205  median=$-152  winners=4620/6081
     non-CARE: mean=$+77  median=$+224  winners=5656/16069
 
@@ -252,6 +406,18 @@ STAGE 7: DISTRIBUTIONAL ANALYSIS
   F100_WF0_ROE0_bill vs e_tou_c_bill:
         CARE: mean=$-411  median=$-303  winners=4620/6081
     non-CARE: mean=$+155  median=$+448  winners=5654/16069
+=======
+        CARE: mean=$-205  median=$-151  winners=4620/6081
+    non-CARE: mean=$+77  median=$+224  winners=5653/16069
+
+  F50_WF1_ROE1.0_bill vs e_tou_c_bill:
+        CARE: mean=$-551  median=$-477  winners=5805/6081
+    non-CARE: mean=$-966  median=$-763  winners=14939/16069
+
+  F100_WF0_ROE0_bill vs e_tou_c_bill:
+        CARE: mean=$-410  median=$-303  winners=4617/6081
+    non-CARE: mean=$+156  median=$+449  winners=5650/16069
+>>>>>>> Stashed changes
 
 --- Tech Adoption Bill Impact by Scenario ---
 
@@ -302,6 +468,11 @@ STAGE 7: DISTRIBUTIONAL ANALYSIS
 
 ================================================================================
 PIPELINE COMPLETE
+<<<<<<< Updated upstream
 Total time: 26188.1s (436.5 min)
 Finished: 2026-04-24 18:53:42
+=======
+Total time: 3022.6s (50.4 min)
+Finished: 2026-05-07 03:32:37
+>>>>>>> Stashed changes
 ================================================================================

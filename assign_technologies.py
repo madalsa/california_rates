@@ -236,32 +236,18 @@ def run_assignment(
     # === PV Assignment ===
     print(f"\nAssigning PV (target: {pv_target_rate*100:.0f}%)...")
 
-    # Compute survey adoption rates by covariate groups
-    # Use inc_bin × home_type × cz for fine-grained scoring
+    # Survey-derived adoption rates by income × home_type × CZ
+    # (no tenure conditioning, no hand-coded overlays)
     pv_groupby = ['inc_bin', 'home_type_bin', 'cz']
     pv_rates = compute_survey_adoption_rates(sv, 'PV', pv_groupby)
-
-    # Also compute coarser rates as fallback
     pv_rates_coarse = compute_survey_adoption_rates(sv, 'PV', ['inc_bin', 'home_type_bin'])
-
-    # Score buildings - try fine-grained first, fill with coarse
     pv_scores_fine = score_buildings(meta, pv_rates, pv_groupby, fallback_rate=None)
     pv_scores_coarse = score_buildings(meta, pv_rates_coarse, ['inc_bin', 'home_type_bin'], fallback_rate=None)
-
-    # Use fine scores where available, coarse otherwise
     pv_scores = np.where(np.isnan(pv_scores_fine) | (pv_scores_fine == 0),
                          pv_scores_coarse, pv_scores_fine)
 
     # Soften PV scores to avoid extreme concentration
     pv_scores = np.sqrt(np.maximum(pv_scores, 0))
-
-    # Additional adjustments: renters much less likely to have PV
-    renter_mask = meta['own_bin'] == 0
-    pv_scores[renter_mask] *= 0.15  # renters very unlikely to have rooftop PV
-
-    # MF already penalized in survey rates, but add extra for large MF
-    large_mf_mask = meta['in.geometry_building_type_acs'].isin(['50 or more Unit', '20 to 49 Unit'])
-    pv_scores[large_mf_mask] *= 0.05  # very few large MF have individual PV
 
     # Assign PV
     meta['assigned_pv'] = assign_technology(pv_scores, weights, pv_target_rate, seed=seed)
@@ -286,19 +272,13 @@ def run_assignment(
     ev_groupby = ['inc_bin', 'home_type_bin', 'cz']
     ev_rates = compute_survey_adoption_rates(sv, 'EV', ev_groupby)
     ev_rates_coarse = compute_survey_adoption_rates(sv, 'EV', ['inc_bin', 'home_type_bin'])
-
     ev_scores_fine = score_buildings(meta, ev_rates, ev_groupby, fallback_rate=None)
     ev_scores_coarse = score_buildings(meta, ev_rates_coarse, ['inc_bin', 'home_type_bin'], fallback_rate=None)
-
     ev_scores = np.where(np.isnan(ev_scores_fine) | (ev_scores_fine == 0),
                          ev_scores_coarse, ev_scores_fine)
 
     # Soften the EV scores to avoid extreme concentration
-    # Use sqrt to compress the range while preserving ordering
     ev_scores = np.sqrt(np.maximum(ev_scores, 0))
-
-    # Renters can have EVs but somewhat less likely
-    ev_scores[renter_mask] *= 0.5
 
     # Assign EV
     meta['assigned_ev'] = assign_technology(ev_scores, weights, ev_target_rate, seed=seed+1)

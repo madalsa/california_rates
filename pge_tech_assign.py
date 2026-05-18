@@ -37,7 +37,7 @@ def stage3_tech_assignments(bills_df):
         from assign_technologies import (
             prepare_survey, compute_survey_adoption_rates,
             score_buildings, assign_technology,
-            map_income_bracket, income_to_bin, resstock_home_type, resstock_tenure
+            map_income_bracket, income_to_bin, resstock_home_type, resstock_tenure,
         )
 
         pge_meta['income_numeric'] = pge_meta['in.income'].apply(map_income_bracket)
@@ -57,7 +57,8 @@ def stage3_tech_assignments(bills_df):
             print("  Using survey-based adoption probabilities")
             sv = prepare_survey(survey_path)
 
-            # PV assignment
+            # Survey-derived adoption rates by income × home_type × CZ.
+            # No tenure conditioning, no hand-coded scalars.
             pv_groupby = ['inc_bin', 'home_type_bin', 'cz']
             pv_rates = compute_survey_adoption_rates(sv, 'PV', pv_groupby)
             pv_rates_coarse = compute_survey_adoption_rates(sv, 'PV', ['inc_bin', 'home_type_bin'])
@@ -66,15 +67,8 @@ def stage3_tech_assignments(bills_df):
             pv_scores = np.where(np.isnan(pv_scores_fine) | (pv_scores_fine == 0),
                                  pv_scores_coarse, pv_scores_fine)
             pv_scores = np.sqrt(np.maximum(pv_scores, 0))
-            renter_mask = pge_meta['own_bin'] == 0
-            pv_scores[renter_mask] *= 0.15
-            large_mf = pge_meta['in.geometry_building_type_acs'].isin(
-                ['50 or more Unit', '20 to 49 Unit'])
-            pv_scores[large_mf.values] *= 0.05
-
             pge_meta['assigned_pv'] = assign_technology(pv_scores, weights, 0.17, seed=42)
 
-            # EV assignment
             ev_groupby = ['inc_bin', 'home_type_bin', 'cz']
             ev_rates = compute_survey_adoption_rates(sv, 'EV', ev_groupby)
             ev_rates_coarse = compute_survey_adoption_rates(sv, 'EV', ['inc_bin', 'home_type_bin'])
@@ -83,8 +77,6 @@ def stage3_tech_assignments(bills_df):
             ev_scores = np.where(np.isnan(ev_scores_fine) | (ev_scores_fine == 0),
                                  ev_scores_coarse, ev_scores_fine)
             ev_scores = np.sqrt(np.maximum(ev_scores, 0))
-            ev_scores[renter_mask] *= 0.5
-
             pge_meta['assigned_ev'] = assign_technology(ev_scores, weights, 0.12, seed=43)
         else:
             print("  Survey data not found — using simplified adoption")

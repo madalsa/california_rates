@@ -24,9 +24,9 @@ def make_figure():
             ha='center', fontsize=9.5, style='italic', color='#666666')
 
     # ----- 4 step boxes -----
-    box_w, box_h = 22, 56
+    box_w, box_h = 17, 56
     y_box = 6
-    xs = [2, 27, 52, 77]
+    xs = [4, 28, 52, 76]
     colors = ['#3B6FB6', '#4F9D5C', '#D97A2C', '#7B4FA8']
     titles = ['1. Inputs & benchmarking',
               '2. Rate designer',
@@ -121,16 +121,16 @@ def make_figure():
             yi_top = body_top - i * sub_h
             yi_bot = yi_top - sub_h + 0.4
             # subtle sub-box
-            sub_box = FancyBboxPatch((x + 0.7, yi_bot), box_w - 1.4, sub_h - 0.6,
-                                     boxstyle="round,pad=0.15,rounding_size=0.4",
+            sub_box = FancyBboxPatch((x + 0.5, yi_bot), box_w - 1.0, sub_h - 0.6,
+                                     boxstyle="round,pad=0.12,rounding_size=0.35",
                                      linewidth=0.6, edgecolor=c, facecolor='#FAFAFA')
             ax.add_patch(sub_box)
             # sub-stage label
-            ax.text(x + 1.2, yi_top - 0.7, label,
-                    fontsize=8.0, fontweight='bold', va='top', ha='left', color=c)
+            ax.text(x + 0.9, yi_top - 0.6, label,
+                    fontsize=7.4, fontweight='bold', va='top', ha='left', color=c)
             # detail
-            ax.text(x + 1.2, yi_top - 2.2, detail,
-                    fontsize=6.8, va='top', ha='left', color='#222222', linespacing=1.15)
+            ax.text(x + 0.9, yi_top - 1.9, detail,
+                    fontsize=6.4, va='top', ha='left', color='#222222', linespacing=1.12)
 
     # ----- Arrows between boxes -----
     y_arrow = y_box + box_h/2

@@ -1,13 +1,17 @@
 ================================================================================
 SCE RATE ANALYSIS PIPELINE
-Started: 2026-04-13 13:56:06
+<<<<<<< Updated upstream
+Started: 2026-04-24 11:37:14
+=======
+Started: 2026-05-07 02:42:14
+>>>>>>> Stashed changes
 Mode: FULL
 Starting stage: 2
 PV sizing: 90% native demand offset
 Battery dispatch: LP only (native demand)
 ================================================================================
 
-Loaded 40 rate scenarios from rate_scenarios_sce_fresh.csv
+  Rate scenarios not found — will generate in Stage 2 after computing R_sample
 
 ================================================================================
 STAGE 2: COMPUTE BASELINE BILLS
@@ -16,7 +20,488 @@ STAGE 2: COMPUTE BASELINE BILLS
   Parquet files found: 19863
   Buildings with valid baseline PUMA: 18085
   Actual SCE rates: TOU-D-4-9, TOU-D-4-9-F
-  500/19863 | 354s elapsed | ~13704s remaining
-  1000/19863 | 748s elapsed | ~14108s remaining
-  1500/19863 | 1111s elapsed | ~13604s remaining
-  2500/19863 | 1936s elapsed | ~13445s remaining
+<<<<<<< Updated upstream
+  500/19863 | 389s elapsed | ~15053s remaining
+  1000/19863 | 792s elapsed | ~14945s remaining
+  1500/19863 | 1166s elapsed | ~14279s remaining
+  2500/19863 | 2040s elapsed | ~14168s remaining
+  3500/19863 | 2921s elapsed | ~13654s remaining
+  4000/19863 | 3301s elapsed | ~13090s remaining
+  4500/19863 | 3689s elapsed | ~12595s remaining
+  5000/19863 | 4087s elapsed | ~12148s remaining
+  5500/19863 | 4504s elapsed | ~11763s remaining
+  6000/19863 | 4908s elapsed | ~11341s remaining
+  6500/19863 | 5343s elapsed | ~10985s remaining
+  7000/19863 | 5740s elapsed | ~10548s remaining
+  7500/19863 | 6112s elapsed | ~10075s remaining
+  8000/19863 | 6513s elapsed | ~9658s remaining
+  8500/19863 | 6899s elapsed | ~9223s remaining
+  9500/19863 | 7683s elapsed | ~8381s remaining
+  10500/19863 | 8481s elapsed | ~7563s remaining
+  11000/19863 | 8887s elapsed | ~7160s remaining
+  11500/19863 | 9328s elapsed | ~6783s remaining
+  12000/19863 | 9764s elapsed | ~6398s remaining
+  12500/19863 | 10170s elapsed | ~5991s remaining
+  13000/19863 | 10613s elapsed | ~5603s remaining
+  13500/19863 | 11021s elapsed | ~5195s remaining
+  14000/19863 | 11448s elapsed | ~4794s remaining
+  14500/19863 | 11864s elapsed | ~4388s remaining
+  15000/19863 | 12257s elapsed | ~3974s remaining
+  15500/19863 | 12656s elapsed | ~3562s remaining
+  16000/19863 | 13050s elapsed | ~3151s remaining
+  16500/19863 | 13423s elapsed | ~2736s remaining
+  17000/19863 | 13835s elapsed | ~2330s remaining
+  17500/19863 | 14228s elapsed | ~1921s remaining
+  18500/19863 | 15042s elapsed | ~1108s remaining
+  19000/19863 | 15437s elapsed | ~701s remaining
+  19500/19863 | 15842s elapsed | ~295s remaining
+
+  Completed: 18085 buildings in 16112.0s
+=======
+  500/19863 | 13s elapsed | ~521s remaining
+  1000/19863 | 25s elapsed | ~474s remaining
+  1500/19863 | 40s elapsed | ~492s remaining
+  2500/19863 | 66s elapsed | ~462s remaining
+  3500/19863 | 91s elapsed | ~425s remaining
+  4000/19863 | 103s elapsed | ~409s remaining
+  4500/19863 | 115s elapsed | ~391s remaining
+  5000/19863 | 126s elapsed | ~375s remaining
+  5500/19863 | 138s elapsed | ~362s remaining
+  6000/19863 | 150s elapsed | ~346s remaining
+  6500/19863 | 162s elapsed | ~332s remaining
+  7000/19863 | 173s elapsed | ~318s remaining
+  7500/19863 | 185s elapsed | ~305s remaining
+  8000/19863 | 197s elapsed | ~292s remaining
+  8500/19863 | 208s elapsed | ~279s remaining
+  9500/19863 | 232s elapsed | ~253s remaining
+  10500/19863 | 255s elapsed | ~228s remaining
+  11000/19863 | 267s elapsed | ~215s remaining
+  11500/19863 | 278s elapsed | ~202s remaining
+  12000/19863 | 290s elapsed | ~190s remaining
+  12500/19863 | 302s elapsed | ~178s remaining
+  13000/19863 | 314s elapsed | ~166s remaining
+  13500/19863 | 325s elapsed | ~153s remaining
+  14000/19863 | 337s elapsed | ~141s remaining
+  14500/19863 | 349s elapsed | ~129s remaining
+  15000/19863 | 360s elapsed | ~117s remaining
+  15500/19863 | 372s elapsed | ~105s remaining
+  16000/19863 | 384s elapsed | ~93s remaining
+  16500/19863 | 395s elapsed | ~81s remaining
+  17000/19863 | 407s elapsed | ~69s remaining
+  17500/19863 | 419s elapsed | ~57s remaining
+  18500/19863 | 442s elapsed | ~33s remaining
+  19000/19863 | 453s elapsed | ~21s remaining
+  19500/19863 | 465s elapsed | ~9s remaining
+
+  Completed: 18085 buildings in 473.3s
+>>>>>>> Stashed changes
+  Errors/skipped: 1778
+
+  R_sample (R_0) from TOU-D-4-9 bills:
+    Valid bills: 18085/18085
+    Sample weighted baseline revenue (R_0): $13.1693B
+    Mean bill: $2,886/yr
+    Gross volumetric revenue: $15.0046B
+    Aggregate baseline credits (BL_total): $1.8333B
+<<<<<<< Updated upstream
+=======
+================================================================================
+SCE RETAIL RATE DESIGNER — Sample-Based Revenue Neutrality
+================================================================================
+
+R_sample (weighted TOU-D-4-9 revenue): $13.1693B
+R_gross_vol (gross volumetric w/ CARE, no BL credits): $15.0046B
+  BL_total (aggregate baseline credits): $1.8333B
+  Baseline credit + fixed gap: $1.8352B
+Sample customers: 1,065,462 CARE, 3,497,382 non-CARE
+
+Cost shares from GRC filing:
+  Wildfire:  16.72%
+  T&D:       57.35%
+  ROE/pp:    1.23%
+
+ResStock TOU consumption weights:
+  summer_peak         : 15.69%
+  summer_offpeak      : 34.05%
+  winter_peak         : 13.59%
+  winter_midpeak      : 20.29%
+  winter_offpeak      : 16.38%
+
+Generated 40 rate scenarios
+  Fixed charge levels: [0, 25, 50, 75, 100]
+  Wildfire options: [False, True]
+  ROE reductions: [0, 0.5, 1.0, 1.5] pp
+
+================================================================================
+REVENUE NEUTRALITY CHECK
+================================================================================
+
+Baseline scenarios (same R_target = R_sample = $13.1693B):
+  F0_WF0_ROE0    : scaling=1.0000  FC_nonCARE=$0.00/mo  Vol avg=$0.4468
+  F25_WF0_ROE0   : scaling=0.8741  FC_nonCARE=$41.83/mo  Vol avg=$0.3906
+  F50_WF0_ROE0   : scaling=0.7483  FC_nonCARE=$83.66/mo  Vol avg=$0.3344
+  F75_WF0_ROE0   : scaling=0.6224  FC_nonCARE=$125.49/mo  Vol avg=$0.2781
+  F100_WF0_ROE0  : scaling=0.4966  FC_nonCARE=$167.32/mo  Vol avg=$0.2219
+
+F0_WF0_ROE0 scaling = 1.0000 (expected 0.9999; should be ~1.0 with BL credits in designed bills)
+
+Policy effects on revenue target:
+  F0_WF0_ROE0         : $13.1693B  (+0.00% vs baseline)
+  F0_WF0_ROE0.5       : $13.0884B  (+0.61% vs baseline)
+  F0_WF0_ROE1.0       : $13.0075B  (+1.23% vs baseline)
+  F0_WF0_ROE1.5       : $12.9266B  (+1.84% vs baseline)
+  F0_WF1_ROE0         : $10.9679B  (+16.72% vs baseline)
+  F0_WF1_ROE0.5       : $10.8869B  (+17.33% vs baseline)
+  F0_WF1_ROE1.0       : $10.8060B  (+17.95% vs baseline)
+  F0_WF1_ROE1.5       : $10.7251B  (+18.56% vs baseline)
+
+Saved to: rate_scenarios_sce_fresh.csv
+>>>>>>> Stashed changes
+
+  Designed scenarios: 6 (F0_WF0_ROE0, F0_WF0_ROE1.0, F0_WF1_ROE0, F50_WF0_ROE0, F50_WF1_ROE1.0, F100_WF0_ROE0)
+  CARE volumetric discount: 32.50%
+    F0_WF0_ROE0: mean bill=$2,887/yr
+    F0_WF0_ROE1.0: mean bill=$2,851/yr
+    F0_WF1_ROE0: mean bill=$2,404/yr
+<<<<<<< Updated upstream
+    F50_WF0_ROE0: mean bill=$2,815/yr
+    F50_WF1_ROE1.0: mean bill=$2,326/yr
+    F100_WF0_ROE0: mean bill=$2,743/yr
+=======
+    F50_WF0_ROE0: mean bill=$2,886/yr
+    F50_WF1_ROE1.0: mean bill=$2,369/yr
+    F100_WF0_ROE0: mean bill=$2,886/yr
+>>>>>>> Stashed changes
+
+  Saved to: baseline_bills_sce_fresh.csv
+
+================================================================================
+STAGE 3: TECHNOLOGY ADOPTION ASSIGNMENTS
+================================================================================
+  Buildings with bills: 18085
+  Using survey-based adoption probabilities
+
+  Adoption rates (weighted):
+    assigned_pv: 17.1% (3085 buildings)
+    assigned_battery: 17.1% (3085 buildings)
+    assigned_ev: 11.9% (2149 buildings)
+    assigned_hp: 5.3% (960 buildings)
+  Saved to: tech_assignments_sce.csv
+
+================================================================================
+STAGE 4: GENERATE SOLAR PROFILES (pvlib, per CEC climate zone)
+================================================================================
+  PV-adopted buildings: 3085
+  CEC climate zones with PV: [np.int64(6), np.int64(8), np.int64(9), np.int64(10), np.int64(13), np.int64(14), np.int64(15), np.int64(16)]
+  CZ 6 (Long Beach): lat=33.77, lon=-118.19
+    → 1,909 kWh/kW/yr (21.8% CF)
+  CZ 8 (Downtown LA): lat=34.05, lon=-118.25
+    → 1,990 kWh/kW/yr (22.7% CF)
+  CZ 9 (LA Basin): lat=34.05, lon=-118.25
+    → 1,990 kWh/kW/yr (22.7% CF)
+  CZ 10 (Riverside): lat=33.95, lon=-117.4
+    → 1,963 kWh/kW/yr (22.4% CF)
+  CZ 13 (Modesto): lat=37.72, lon=-121.05
+    → 1,850 kWh/kW/yr (21.1% CF)
+  CZ 14 (Palmdale area): lat=34.27, lon=-118.4
+    → 1,852 kWh/kW/yr (21.1% CF)
+  CZ 15 (Palm Springs): lat=33.75, lon=-116.53
+    → 1,930 kWh/kW/yr (22.0% CF)
+  CZ 16 (Mountain/high desert): lat=34.75, lon=-118.35
+    → 2,000 kWh/kW/yr (22.8% CF)
+
+  Average: 1,935 kWh/kW across 8 zones
+
+================================================================================
+STAGE 6: POST-ADOPTION BILLS
+================================================================================
+  Buildings with tech adoption: 4776
+  Loaded EEC rates from eec_hourly_2025_wide.csv (sce_total)
+  EV VMT: mean=24.8 mi/day, median=22.7
+  SCE buildings in metadata: 19863
+  Loaded TOU-D-4-9: bl_credit=0.100, has_fixed=False
+  Loaded TOU-D-4-9-F: bl_credit=0.100, has_fixed=True
+  CARE discount: 32.50%
+  Built rate arrays for 6 designed scenarios
+<<<<<<< Updated upstream
+  200/4776 | 213s
+  400/4776 | 428s
+  600/4776 | 678s
+  800/4776 | 918s
+  1000/4776 | 1141s
+  1200/4776 | 1357s
+  1400/4776 | 1576s
+  1600/4776 | 1828s
+  1800/4776 | 2042s
+  2000/4776 | 2261s
+  2200/4776 | 2489s
+  2400/4776 | 2722s
+  2600/4776 | 2944s
+  2800/4776 | 3178s
+  3000/4776 | 3405s
+  3200/4776 | 3651s
+  3400/4776 | 3864s
+  3600/4776 | 4075s
+  3800/4776 | 4314s
+  4000/4776 | 4548s
+  4200/4776 | 4780s
+  4400/4776 | 4987s
+  4600/4776 | 5193s
+
+  Processed 4776 buildings in 5368.2s
+=======
+  200/4776 | 74s
+  400/4776 | 152s
+  600/4776 | 233s
+  800/4776 | 320s
+  1000/4776 | 401s
+  1200/4776 | 481s
+  1400/4776 | 552s
+  1600/4776 | 636s
+  1800/4776 | 716s
+  2000/4776 | 796s
+  2200/4776 | 880s
+  2400/4776 | 963s
+  2600/4776 | 1041s
+  2800/4776 | 1126s
+  3000/4776 | 1204s
+  3200/4776 | 1292s
+  3400/4776 | 1373s
+  3600/4776 | 1448s
+  3800/4776 | 1523s
+  4000/4776 | 1603s
+  4200/4776 | 1689s
+  4400/4776 | 1767s
+  4600/4776 | 1846s
+
+  Processed 4776 buildings in 1918.0s
+>>>>>>> Stashed changes
+  PV sizing (90% native offset):
+    Mean: 4.9 kW | Median: 4.0 kW
+    Range: 4.0–15.0 kW
+  Saved to: post_adoption_bills_sce.csv
+
+================================================================================
+STAGE 7: DISTRIBUTIONAL ANALYSIS
+================================================================================
+
+--- Revenue Neutrality Check ---
+  Filed residential revenue: $7.7500B
+  Total customers: 4,594,415
+
+  Sample: 18085 buildings
+
+  Rate                         Mean Bill    Pop Revenue vs TOU-D-4-9   vs Filed
+  -------------------------------------------------------------------------
+  TOU-D-4-9                 $     2,886 $     13.2604B            —    +71.10%
+  TOU-D-4-9-F               $     2,779 $     12.7695B       -3.70%    +64.77%
+  F0_WF0_ROE0               $     2,887 $     13.2623B       +0.01%    +71.13%
+<<<<<<< Updated upstream
+  F50_WF0_ROE0              $     2,815 $     12.9321B       -2.48%    +66.87%
+  F100_WF0_ROE0             $     2,743 $     12.6026B       -4.96%    +62.61%
+  F0_WF1_ROE0               $     2,404 $     11.0453B      -16.70%    +42.52%
+  F0_WF0_ROE1.0             $     2,851 $     13.0989B       -1.22%    +69.02%
+  F50_WF1_ROE1.0            $     2,326 $     10.6881B      -19.40%    +37.91%
+=======
+  F50_WF0_ROE0              $     2,886 $     13.2617B       +0.01%    +71.12%
+  F100_WF0_ROE0             $     2,886 $     13.2617B       +0.01%    +71.12%
+  F0_WF1_ROE0               $     2,404 $     11.0453B      -16.70%    +42.52%
+  F0_WF0_ROE1.0             $     2,851 $     13.0989B       -1.22%    +69.02%
+  F50_WF1_ROE1.0            $     2,369 $     10.8821B      -17.94%    +40.41%
+>>>>>>> Stashed changes
+
+--- Bill Changes by Customer Type ---
+
+  Non-adopter (n=13309):
+    F0_WF0_ROE0              : Δ$+0/yr (+0.0%)  winners=5789/13309
+<<<<<<< Updated upstream
+    F50_WF0_ROE0             : Δ$-50/yr (+inf%)  winners=6933/13309
+    F100_WF0_ROE0            : Δ$-100/yr (+inf%)  winners=6938/13309
+    F0_WF1_ROE0              : Δ$-467/yr (-17.5%)  winners=13308/13309
+    F0_WF0_ROE1.0            : Δ$-34/yr (-1.3%)  winners=13308/13309
+    F50_WF1_ROE1.0           : Δ$-531/yr (+inf%)  winners=11470/13309
+=======
+    F50_WF0_ROE0             : Δ$+22/yr (+inf%)  winners=6176/13309
+    F100_WF0_ROE0            : Δ$+43/yr (+inf%)  winners=6177/13309
+    F0_WF1_ROE0              : Δ$-467/yr (-17.5%)  winners=13308/13309
+    F0_WF0_ROE1.0            : Δ$-34/yr (-1.3%)  winners=13308/13309
+    F50_WF1_ROE1.0           : Δ$-489/yr (+inf%)  winners=11070/13309
+>>>>>>> Stashed changes
+
+  EV only (n=1691):
+    tou_d_4_9                : savings $-1,087/yr (-71.1%)
+    tou_d_4_9_f              : savings $-955/yr (-53.0%)
+    F0_WF0_ROE0              : savings $-1,087/yr (-71.1%)
+<<<<<<< Updated upstream
+    F50_WF0_ROE0             : savings $-802/yr (-37.1%)
+    F100_WF0_ROE0            : savings $-517/yr (-22.1%)
+    F0_WF1_ROE0              : savings $-921/yr (-72.4%)
+    F0_WF0_ROE1.0            : savings $-1,074/yr (-71.2%)
+    F50_WF1_ROE1.0           : savings $-741/yr (-43.7%)
+=======
+    F50_WF0_ROE0             : savings $-802/yr (-35.8%)
+    F100_WF0_ROE0            : savings $-517/yr (-20.9%)
+    F0_WF1_ROE0              : savings $-921/yr (-72.4%)
+    F0_WF0_ROE1.0            : savings $-1,074/yr (-71.2%)
+    F50_WF1_ROE1.0           : savings $-741/yr (-42.4%)
+>>>>>>> Stashed changes
+
+  PV + storage (n=2627):
+    tou_d_4_9                : savings $+3,105/yr (+96.8%)
+    tou_d_4_9_f              : savings $+2,794/yr (+87.0%)
+    F0_WF0_ROE0              : savings $+3,106/yr (+96.8%)
+<<<<<<< Updated upstream
+    F50_WF0_ROE0             : savings $+2,310/yr (+69.5%)
+    F100_WF0_ROE0            : savings $+1,425/yr (+44.5%)
+    F0_WF1_ROE0              : savings $+2,653/yr (+98.2%)
+    F0_WF0_ROE1.0            : savings $+3,073/yr (+96.9%)
+    F50_WF1_ROE1.0           : savings $+2,127/yr (+77.0%)
+=======
+    F50_WF0_ROE0             : savings $+2,310/yr (+67.8%)
+    F100_WF0_ROE0            : savings $+1,425/yr (+42.5%)
+    F0_WF1_ROE0              : savings $+2,653/yr (+98.2%)
+    F0_WF0_ROE1.0            : savings $+3,073/yr (+96.9%)
+    F50_WF1_ROE1.0           : savings $+2,127/yr (+75.6%)
+>>>>>>> Stashed changes
+
+  PV + EV + storage (n=438):
+    tou_d_4_9                : savings $+2,632/yr (+85.0%)
+    tou_d_4_9_f              : savings $+2,419/yr (+78.1%)
+    F0_WF0_ROE0              : savings $+2,632/yr (+85.0%)
+<<<<<<< Updated upstream
+    F50_WF0_ROE0             : savings $+2,054/yr (+63.9%)
+    F100_WF0_ROE0            : savings $+1,378/yr (+43.9%)
+    F0_WF1_ROE0              : savings $+2,301/yr (+88.5%)
+    F0_WF0_ROE1.0            : savings $+2,608/yr (+85.3%)
+    F50_WF1_ROE1.0           : savings $+1,922/yr (+71.8%)
+=======
+    F50_WF0_ROE0             : savings $+2,054/yr (+62.3%)
+    F100_WF0_ROE0            : savings $+1,378/yr (+42.0%)
+    F0_WF1_ROE0              : savings $+2,301/yr (+88.5%)
+    F0_WF0_ROE1.0            : savings $+2,608/yr (+85.3%)
+    F50_WF1_ROE1.0           : savings $+1,922/yr (+70.5%)
+>>>>>>> Stashed changes
+
+  Fully electrified (HP+PV+EV+stor) (n=20):
+    tou_d_4_9                : savings $+3,315/yr (+82.1%)
+    tou_d_4_9_f              : savings $+3,055/yr (+77.2%)
+    F0_WF0_ROE0              : savings $+3,316/yr (+82.1%)
+<<<<<<< Updated upstream
+    F50_WF0_ROE0             : savings $+2,605/yr (+66.1%)
+    F100_WF0_ROE0            : savings $+1,779/yr (+49.3%)
+    F0_WF1_ROE0              : savings $+2,910/yr (+85.9%)
+    F0_WF0_ROE1.0            : savings $+3,287/yr (+82.4%)
+    F50_WF1_ROE1.0           : savings $+2,443/yr (+73.3%)
+=======
+    F50_WF0_ROE0             : savings $+2,605/yr (+64.8%)
+    F100_WF0_ROE0            : savings $+1,779/yr (+47.4%)
+    F0_WF1_ROE0              : savings $+2,910/yr (+85.9%)
+    F0_WF0_ROE1.0            : savings $+3,287/yr (+82.4%)
+    F50_WF1_ROE1.0           : savings $+2,443/yr (+72.2%)
+>>>>>>> Stashed changes
+
+--- Mean Annual Bill by CARE Status ---
+    tou_d_4_9_bill                          CARE: mean=$1,536  median=$1,311
+    tou_d_4_9_bill                      non-CARE: mean=$3,297  median=$2,890
+    tou_d_4_9_f_bill                        CARE: mean=$1,419  median=$1,215
+    tou_d_4_9_f_bill                    non-CARE: mean=$3,194  median=$2,828
+    F0_WF0_ROE0_bill                        CARE: mean=$1,537  median=$1,311
+    F0_WF0_ROE0_bill                    non-CARE: mean=$3,298  median=$2,891
+    F0_WF0_ROE1.0_bill                      CARE: mean=$1,517  median=$1,294
+    F0_WF0_ROE1.0_bill                  non-CARE: mean=$3,257  median=$2,855
+    F0_WF1_ROE0_bill                        CARE: mean=$1,271  median=$1,076
+    F0_WF1_ROE0_bill                    non-CARE: mean=$2,749  median=$2,398
+<<<<<<< Updated upstream
+    F50_WF0_ROE0_bill                       CARE: mean=$1,309  median=$1,135
+    F50_WF0_ROE0_bill                   non-CARE: mean=$3,273  median=$2,964
+    F50_WF1_ROE1.0_bill                     CARE: mean=$1,118  median=$954
+    F50_WF1_ROE1.0_bill                 non-CARE: mean=$2,694  median=$2,406
+    F100_WF0_ROE0_bill                      CARE: mean=$1,081  median=$957
+    F100_WF0_ROE0_bill                  non-CARE: mean=$3,249  median=$3,029
+=======
+    F50_WF0_ROE0_bill                       CARE: mean=$1,331  median=$1,157
+    F50_WF0_ROE0_bill                   non-CARE: mean=$3,360  median=$3,051
+    F50_WF1_ROE1.0_bill                     CARE: mean=$1,131  median=$966
+    F50_WF1_ROE1.0_bill                 non-CARE: mean=$2,746  median=$2,457
+    F100_WF0_ROE0_bill                      CARE: mean=$1,125  median=$1,000
+    F100_WF0_ROE0_bill                  non-CARE: mean=$3,423  median=$3,203
+>>>>>>> Stashed changes
+
+--- Bill Changes by CEC Climate Zone ---
+  CZ  5 (n=   3): TOU-D-4-9=$2,365  F0_WF0_ROE0=$2,365 (Δ$+1)
+  CZ  6 (n=2826): TOU-D-4-9=$2,621  F0_WF0_ROE0=$2,621 (Δ$+0)
+  CZ  8 (n=4881): TOU-D-4-9=$2,742  F0_WF0_ROE0=$2,742 (Δ$+0)
+  CZ  9 (n=3481): TOU-D-4-9=$2,866  F0_WF0_ROE0=$2,866 (Δ$+0)
+  CZ 10 (n=4123): TOU-D-4-9=$3,270  F0_WF0_ROE0=$3,271 (Δ$+1)
+  CZ 13 (n=  85): TOU-D-4-9=$3,685  F0_WF0_ROE0=$3,684 (Δ$-1)
+  CZ 14 (n=1407): TOU-D-4-9=$3,122  F0_WF0_ROE0=$3,122 (Δ$+1)
+  CZ 15 (n= 815): TOU-D-4-9=$2,423  F0_WF0_ROE0=$2,424 (Δ$+1)
+  CZ 16 (n= 464): TOU-D-4-9=$2,713  F0_WF0_ROE0=$2,714 (Δ$+1)
+
+--- Grid Demand & Export Metrics ---
+
+  EV only (n=2149):
+    Native demand:    17,251,823 kWh
+    Grid import:      23,744,148 kWh (Δ+6,492,325, +37.6%)
+    Grid export:               0 kWh
+    Export value:   $          0 (EEC)
+
+  PV+stor (n=3085):
+    Native demand:    27,002,408 kWh
+    Grid import:       8,720,747 kWh (Δ-18,281,661, -67.7%)
+    Grid export:       9,909,691 kWh
+    Export value:   $  3,205,174 (EEC)
+
+  PV+EV+stor (n=458):
+    Native demand:     4,031,100 kWh
+    Grid import:       2,125,824 kWh (Δ-1,905,276, -47.3%)
+    Grid export:         953,710 kWh
+    Export value:   $    435,147 (EEC)
+
+--- Self-Sufficiency (Energy Resilience) ---
+  Fraction of native demand met by self-generation + self-optimization
+
+  PV+stor (n=3085):
+    Mean:   95.1%
+    Median: 95.7%
+    P10:    90.0%
+    P90:    100.0%
+      CZ  6: 95.1% (n=421)
+      CZ  8: 95.3% (n=630)
+      CZ  9: 95.4% (n=511)
+      CZ 10: 94.2% (n=907)
+      CZ 13: 94.2% (n=19)
+      CZ 14: 95.6% (n=339)
+      CZ 15: 96.3% (n=180)
+      CZ 16: 96.8% (n=78)
+
+  PV+EV+stor (n=458):
+    Mean:   81.5%
+    Median: 79.5%
+    P10:    64.0%
+    P90:    100.0%
+      CZ  6: 80.8% (n=69)
+      CZ  8: 82.8% (n=102)
+      CZ  9: 80.8% (n=83)
+      CZ 10: 80.2% (n=144)
+      CZ 13: 85.5% (n=4)
+      CZ 14: 84.7% (n=24)
+      CZ 15: 84.7% (n=23)
+      CZ 16: 83.0% (n=9)
+
+--- PV System Sizing (90% native offset) ---
+  pv_size_kw_s2: mean=4.9 kW, median=4.0 kW, range=[4.0, 15.0]
+  pv_size_kw_s3: mean=4.9 kW, median=4.0 kW, range=[4.0, 15.0]
+
+  Summary saved to: pipeline_summary_sce.csv
+
+================================================================================
+PIPELINE COMPLETE
+<<<<<<< Updated upstream
+Total time: 21578.5s (359.6 min)
+Finished: 2026-04-24 17:36:52
+=======
+Total time: 2466.7s (41.1 min)
+Finished: 2026-05-07 03:23:21
+>>>>>>> Stashed changes
+================================================================================
